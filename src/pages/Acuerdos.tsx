@@ -20,7 +20,7 @@ const REDES_SOCIALES = ["Instagram", "TikTok", "YouTube", "Twitter", "Facebook"]
 const TIPOS_CONTENIDO = ["Reel", "Story", "Collab", "UGC"];
 
 const emptyAcuerdo = (): Omit<Acuerdo, "id" | "createdAt"> => ({
-  influencer: "", redSocial: [], seguidores: 0, plataforma: "", tipoContenido: "",
+  influencer: "", redSocial: [], seguidores: 0, plataforma: "", tipoContenido: [],
   reelsPactados: 0, storiesPactadas: 0, fechaInicio: "", fechaFin: "",
   duracionMeses: 0, valorTotal: 0, moneda: "COP", estado: "Activo", contacto: "", notas: "",
 });
@@ -135,6 +135,13 @@ export default function AcuerdosPage() {
     }));
   };
 
+  const toggleTipoContenido = (tipo: string) => {
+    setForm((p) => ({
+      ...p,
+      tipoContenido: p.tipoContenido.includes(tipo) ? p.tipoContenido.filter((t) => t !== tipo) : [...p.tipoContenido, tipo],
+    }));
+  };
+
   const handleStatusChange = (item: Acuerdo, newStatus: string) => {
     const updated = { ...item, estado: newStatus as Acuerdo["estado"] };
     saveAcuerdo(updated); refresh();
@@ -196,7 +203,7 @@ export default function AcuerdosPage() {
                     <TableCell className="font-medium">{a.influencer}</TableCell>
                     <TableCell>{(Array.isArray(a.redSocial) ? a.redSocial : [a.redSocial]).join(", ")}</TableCell>
                     <TableCell>{a.seguidores.toLocaleString()}</TableCell>
-                    <TableCell>{a.tipoContenido}</TableCell>
+                    <TableCell>{(Array.isArray(a.tipoContenido) ? a.tipoContenido : [a.tipoContenido]).filter(Boolean).join(", ")}</TableCell>
                     <TableCell>{a.reelsPactados}</TableCell>
                     <TableCell>{a.storiesPactadas}</TableCell>
                     <TableCell>{a.fechaInicio}</TableCell>
@@ -236,10 +243,14 @@ export default function AcuerdosPage() {
             <div className="space-y-2"><FieldLabel field="plataforma">Plataforma</FieldLabel><Input value={form.plataforma} onChange={(e) => update("plataforma", e.target.value)} placeholder="Ej: CreatorIQ, directo" /></div>
             <div className="space-y-2">
               <FieldLabel field="tipoContenido">Tipo de Contenido</FieldLabel>
-              <Select value={form.tipoContenido} onValueChange={(v) => update("tipoContenido", v)}>
-                <SelectTrigger><SelectValue placeholder="Seleccionar" /></SelectTrigger>
-                <SelectContent>{TIPOS_CONTENIDO.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
-              </Select>
+              <div className="flex flex-wrap gap-3 pt-1">
+                {TIPOS_CONTENIDO.map((tipo) => (
+                  <label key={tipo} className="flex items-center gap-1.5 text-sm cursor-pointer">
+                    <Checkbox checked={(form.tipoContenido || []).includes(tipo)} onCheckedChange={() => toggleTipoContenido(tipo)} />
+                    {tipo}
+                  </label>
+                ))}
+              </div>
             </div>
             <div className="space-y-2"><FieldLabel field="reelsPactados"># Reels Pactados</FieldLabel><NumericInput value={form.reelsPactados} onChange={(v) => update("reelsPactados", v)} /></div>
             <div className="space-y-2"><FieldLabel field="storiesPactadas"># Stories Pactadas</FieldLabel><NumericInput value={form.storiesPactadas} onChange={(v) => update("storiesPactadas", v)} /></div>
