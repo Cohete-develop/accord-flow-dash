@@ -4,7 +4,7 @@ export interface Acuerdo {
   redSocial: string[];
   seguidores: number;
   plataforma: string;
-  tipoContenido: string;
+  tipoContenido: string[];
   reelsPactados: number;
   storiesPactadas: number;
   fechaInicio: string;
