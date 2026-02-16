@@ -1,0 +1,66 @@
+export interface Acuerdo {
+  id: string;
+  influencer: string;
+  redSocial: string;
+  seguidores: number;
+  plataforma: string;
+  tipoContenido: string;
+  reelsPactados: number;
+  storiesPactadas: number;
+  fechaInicio: string;
+  fechaFin: string;
+  duracionMeses: number;
+  valorTotal: number;
+  moneda: string;
+  estado: "Activo" | "Pausado" | "Finalizado" | "Cancelado";
+  contacto: string;
+  notas: string;
+  createdAt: string;
+}
+
+export interface Pago {
+  id: string;
+  acuerdoId: string;
+  influencer: string;
+  concepto: string;
+  monto: number;
+  moneda: string;
+  fechaPago: string;
+  fechaVencimiento: string;
+  estado: "Pendiente" | "Pagado" | "Vencido" | "Cancelado";
+  metodoPago: string;
+  comprobante: string;
+  notas: string;
+  createdAt: string;
+}
+
+export interface Entregable {
+  id: string;
+  acuerdoId: string;
+  influencer: string;
+  tipoContenido: "Reel" | "Story" | "Post" | "Otro";
+  descripcion: string;
+  fechaProgramada: string;
+  fechaEntrega: string;
+  estado: "Pendiente" | "En progreso" | "Entregado" | "Aprobado" | "Rechazado";
+  urlContenido: string;
+  notas: string;
+  createdAt: string;
+}
+
+export interface KPI {
+  id: string;
+  entregableId: string;
+  acuerdoId: string;
+  influencer: string;
+  alcance: number;
+  impresiones: number;
+  interacciones: number;
+  clicks: number;
+  engagement: number;
+  cpr: number;
+  cpc: number;
+  periodo: string;
+  notas: string;
+  createdAt: string;
+}
