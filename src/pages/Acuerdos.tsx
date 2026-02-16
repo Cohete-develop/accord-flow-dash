@@ -22,7 +22,7 @@ const TIPOS_CONTENIDO = ["Reel", "Story", "Collab", "UGC"];
 const emptyAcuerdo = (): Omit<Acuerdo, "id" | "createdAt"> => ({
   influencer: "", redSocial: [], seguidores: 0, plataforma: "", tipoContenido: [],
   reelsPactados: 0, storiesPactadas: 0, fechaInicio: "", fechaFin: "",
-  duracionMeses: 0, valorTotal: 0, moneda: "COP", estado: "Activo", contacto: "", notas: "",
+  duracionMeses: 0, valorMensual: 0, valorTotal: 0, moneda: "COP", estado: "Activo", contacto: "", notas: "",
 });
 
 const estadoColors: Record<string, string> = {
@@ -58,7 +58,8 @@ const fieldDescriptions: Record<string, string> = {
   storiesPactadas: "Cantidad de stories acordadas en el contrato",
   fechaInicio: "Fecha de inicio del acuerdo",
   fechaFin: "Fecha de finalización del acuerdo",
-  valorTotal: "Monto total del acuerdo",
+  valorMensual: "Monto mensual antes de IVA",
+  valorTotal: "Valor total del acuerdo (calculado: mensual × duración)",
   moneda: "Divisa del pago",
   estado: "Estado actual del acuerdo",
   contacto: "Email o teléfono de contacto del influencer o agencia",
@@ -106,13 +107,14 @@ export default function AcuerdosPage() {
 
   const filtered = filterAcuerdo === "all" ? acuerdos : acuerdos.filter((a) => a.id === filterAcuerdo);
 
-  // Auto-calc duration when dates change
+  // Auto-calc duration and valorTotal when dates or valorMensual change
   useEffect(() => {
     const dur = calcDuration(form.fechaInicio, form.fechaFin);
-    if (dur !== form.duracionMeses) {
-      setForm((p) => ({ ...p, duracionMeses: dur }));
+    const total = dur * form.valorMensual;
+    if (dur !== form.duracionMeses || total !== form.valorTotal) {
+      setForm((p) => ({ ...p, duracionMeses: dur, valorTotal: dur * p.valorMensual }));
     }
-  }, [form.fechaInicio, form.fechaFin]);
+  }, [form.fechaInicio, form.fechaFin, form.valorMensual]);
 
   const handleOpen = (a?: Acuerdo) => {
     if (a) {
@@ -199,7 +201,7 @@ export default function AcuerdosPage() {
                   <TableHead>Influencer</TableHead><TableHead>Red Social</TableHead><TableHead>Seguidores</TableHead>
                   <TableHead>Tipo</TableHead><TableHead>Reels</TableHead><TableHead>Stories</TableHead>
                   <TableHead>Inicio</TableHead><TableHead>Fin</TableHead><TableHead>Duración</TableHead>
-                  <TableHead>Valor</TableHead><TableHead>Estado</TableHead><TableHead className="text-right">Acciones</TableHead>
+                  <TableHead>V. Mensual</TableHead><TableHead>V. Total</TableHead><TableHead>Estado</TableHead><TableHead className="text-right">Acciones</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -216,6 +218,7 @@ export default function AcuerdosPage() {
                     <TableCell>{a.fechaInicio}</TableCell>
                     <TableCell>{a.fechaFin}</TableCell>
                     <TableCell>{a.duracionMeses} meses</TableCell>
+                    <TableCell>${(a.valorMensual || 0).toLocaleString()}</TableCell>
                     <TableCell>${a.valorTotal.toLocaleString()}</TableCell>
                     <TableCell><Badge variant="secondary" className={estadoColors[a.estado]}>{a.estado}</Badge></TableCell>
                     <TableCell className="text-right">
@@ -268,7 +271,11 @@ export default function AcuerdosPage() {
               <p className="text-xs text-muted-foreground">Calculado automáticamente desde las fechas</p>
               <Input type="number" value={form.duracionMeses} disabled className="bg-muted" />
             </div>
-            <div className="space-y-2"><FieldLabel field="valorTotal">Valor Total</FieldLabel><NumericInput value={form.valorTotal} onChange={(v) => update("valorTotal", v)} /></div>
+            <div className="space-y-2"><FieldLabel field="valorMensual">Valor Mensual (antes de IVA)</FieldLabel><NumericInput value={form.valorMensual} onChange={(v) => update("valorMensual", v)} /></div>
+            <div className="space-y-2">
+              <FieldLabel field="valorTotal">Valor Total</FieldLabel>
+              <Input type="number" value={form.valorTotal} disabled className="bg-muted" />
+            </div>
             <div className="space-y-2"><FieldLabel field="moneda">Moneda</FieldLabel><Select value={form.moneda} onValueChange={(v) => update("moneda", v)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="COP">COP</SelectItem><SelectItem value="USD">USD</SelectItem></SelectContent></Select></div>
             <div className="space-y-2"><FieldLabel field="estado">Estado</FieldLabel><Select value={form.estado} onValueChange={(v) => update("estado", v)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="Activo">Activo</SelectItem><SelectItem value="Pausado">Pausado</SelectItem><SelectItem value="Finalizado">Finalizado</SelectItem><SelectItem value="Cancelado">Cancelado</SelectItem></SelectContent></Select></div>
             <div className="space-y-2"><FieldLabel field="contacto">Contacto</FieldLabel><Input value={form.contacto} onChange={(e) => update("contacto", e.target.value)} /></div>
