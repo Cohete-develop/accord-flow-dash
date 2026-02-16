@@ -14,6 +14,7 @@ export default {
     },
     extend: {
       fontFamily: {
+        sans: ["Syne", "ui-sans-serif", "system-ui", "sans-serif"],
         syne: ["Syne", "sans-serif"],
       },
       colors: {
