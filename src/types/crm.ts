@@ -1,7 +1,7 @@
 export interface Acuerdo {
   id: string;
   influencer: string;
-  redSocial: string;
+  redSocial: string[];
   seguidores: number;
   plataforma: string;
   tipoContenido: string;
@@ -38,7 +38,7 @@ export interface Entregable {
   id: string;
   acuerdoId: string;
   influencer: string;
-  tipoContenido: "Reel" | "Story" | "Post" | "Otro";
+  tipoContenido: "Reel" | "Story" | "Collab" | "UGC" | "Post" | "Otro";
   descripcion: string;
   fechaProgramada: string;
   fechaEntrega: string;

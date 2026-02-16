@@ -1,7 +1,8 @@
 import { NavLink } from "@/components/NavLink";
-import { Handshake, CreditCard, Package, BarChart3 } from "lucide-react";
+import { Handshake, CreditCard, Package, BarChart3, LayoutDashboard } from "lucide-react";
 
 const navItems = [
+  { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { to: "/acuerdos", label: "Acuerdos", icon: Handshake },
   { to: "/pagos", label: "Pagos", icon: CreditCard },
   { to: "/entregables", label: "Entregables Detalles", icon: Package },

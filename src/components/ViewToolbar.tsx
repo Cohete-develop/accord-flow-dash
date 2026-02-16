@@ -61,7 +61,7 @@ export default function ViewToolbar({
           <SelectItem value="all">Todos los influencers</SelectItem>
           {acuerdos.map((a) => (
             <SelectItem key={a.id} value={a.id}>
-              {a.influencer} — {a.redSocial}
+              {a.influencer} — {(Array.isArray(a.redSocial) ? a.redSocial : [a.redSocial]).join(", ")}
             </SelectItem>
           ))}
         </SelectContent>

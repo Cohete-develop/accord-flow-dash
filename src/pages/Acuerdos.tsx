@@ -10,13 +10,17 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Plus, Pencil, Trash2, Users } from "lucide-react";
 import ViewToolbar, { ViewMode } from "@/components/ViewToolbar";
 import KanbanBoard, { KanbanColumn } from "@/components/KanbanBoard";
 import ForecastBoard from "@/components/ForecastBoard";
 
+const REDES_SOCIALES = ["Instagram", "TikTok", "YouTube", "Twitter", "Facebook"];
+const TIPOS_CONTENIDO = ["Reel", "Story", "Collab", "UGC"];
+
 const emptyAcuerdo = (): Omit<Acuerdo, "id" | "createdAt"> => ({
-  influencer: "", redSocial: "", seguidores: 0, plataforma: "", tipoContenido: "",
+  influencer: "", redSocial: [], seguidores: 0, plataforma: "", tipoContenido: "",
   reelsPactados: 0, storiesPactadas: 0, fechaInicio: "", fechaFin: "",
   duracionMeses: 0, valorTotal: 0, moneda: "COP", estado: "Activo", contacto: "", notas: "",
 });
@@ -35,6 +39,60 @@ const kanbanColumns: KanbanColumn[] = [
   { key: "Cancelado", label: "Cancelado", colorClass: "bg-red-100 text-red-800" },
 ];
 
+function calcDuration(start: string, end: string): number {
+  if (!start || !end) return 0;
+  const s = new Date(start);
+  const e = new Date(end);
+  if (isNaN(s.getTime()) || isNaN(e.getTime())) return 0;
+  const months = (e.getFullYear() - s.getFullYear()) * 12 + (e.getMonth() - s.getMonth());
+  return Math.max(0, months);
+}
+
+const fieldDescriptions: Record<string, string> = {
+  influencer: "Nombre del influencer o creador de contenido",
+  redSocial: "Redes sociales donde el influencer publica contenido",
+  seguidores: "Cantidad total de seguidores del influencer",
+  plataforma: "Herramienta o agencia intermediaria (ej: CreatorIQ, AspireIQ, directo)",
+  tipoContenido: "Formato principal del contenido pactado",
+  reelsPactados: "Cantidad de reels acordados en el contrato",
+  storiesPactadas: "Cantidad de stories acordadas en el contrato",
+  fechaInicio: "Fecha de inicio del acuerdo",
+  fechaFin: "Fecha de finalización del acuerdo",
+  valorTotal: "Monto total del acuerdo",
+  moneda: "Divisa del pago",
+  estado: "Estado actual del acuerdo",
+  contacto: "Email o teléfono de contacto del influencer o agencia",
+  notas: "Observaciones adicionales sobre el acuerdo",
+};
+
+function FieldLabel({ field, children }: { field: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <Label>{children}</Label>
+      {fieldDescriptions[field] && (
+        <p className="text-xs text-muted-foreground mt-0.5">{fieldDescriptions[field]}</p>
+      )}
+    </div>
+  );
+}
+
+function NumericInput({ value, onChange, ...props }: { value: number; onChange: (v: number) => void } & Omit<React.ComponentProps<typeof Input>, "value" | "onChange">) {
+  const [display, setDisplay] = useState(value === 0 ? "" : String(value));
+  useEffect(() => { setDisplay(value === 0 ? "" : String(value)); }, [value]);
+  return (
+    <Input
+      {...props}
+      type="number"
+      value={display}
+      onChange={(e) => {
+        setDisplay(e.target.value);
+        onChange(e.target.value === "" ? 0 : +e.target.value);
+      }}
+      placeholder="0"
+    />
+  );
+}
+
 export default function AcuerdosPage() {
   const [acuerdos, setAcuerdos] = useState<Acuerdo[]>([]);
   const [open, setOpen] = useState(false);
@@ -47,6 +105,14 @@ export default function AcuerdosPage() {
   const refresh = () => setAcuerdos(getAcuerdos());
 
   const filtered = filterAcuerdo === "all" ? acuerdos : acuerdos.filter((a) => a.id === filterAcuerdo);
+
+  // Auto-calc duration when dates change
+  useEffect(() => {
+    const dur = calcDuration(form.fechaInicio, form.fechaFin);
+    if (dur !== form.duracionMeses) {
+      setForm((p) => ({ ...p, duracionMeses: dur }));
+    }
+  }, [form.fechaInicio, form.fechaFin]);
 
   const handleOpen = (a?: Acuerdo) => {
     if (a) { setEditing(a); const { id, createdAt, ...rest } = a; setForm(rest); }
@@ -62,6 +128,13 @@ export default function AcuerdosPage() {
   const handleDelete = (id: string) => { deleteAcuerdo(id); refresh(); };
   const update = (field: string, value: any) => setForm((p) => ({ ...p, [field]: value }));
 
+  const toggleRedSocial = (red: string) => {
+    setForm((p) => ({
+      ...p,
+      redSocial: p.redSocial.includes(red) ? p.redSocial.filter((r) => r !== red) : [...p.redSocial, red],
+    }));
+  };
+
   const handleStatusChange = (item: Acuerdo, newStatus: string) => {
     const updated = { ...item, estado: newStatus as Acuerdo["estado"] };
     saveAcuerdo(updated); refresh();
@@ -70,7 +143,7 @@ export default function AcuerdosPage() {
   const renderCard = (a: Acuerdo) => (
     <div>
       <div className="font-semibold">{a.influencer}</div>
-      <div className="text-muted-foreground text-xs">{a.redSocial} · {a.seguidores.toLocaleString()} seg.</div>
+      <div className="text-muted-foreground text-xs">{(a.redSocial || []).join(", ")} · {a.seguidores.toLocaleString()} seg.</div>
       <div className="font-bold mt-1">${a.valorTotal.toLocaleString()} {a.moneda}</div>
       <div className="text-xs text-muted-foreground">{a.fechaInicio} → {a.fechaFin}</div>
     </div>
@@ -110,19 +183,20 @@ export default function AcuerdosPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Influencer</TableHead><TableHead>Red Social</TableHead><TableHead>Seguidores</TableHead>
-                  <TableHead>Reels</TableHead><TableHead>Stories</TableHead><TableHead>Inicio</TableHead>
-                  <TableHead>Fin</TableHead><TableHead>Duración</TableHead><TableHead>Valor</TableHead>
-                  <TableHead>Estado</TableHead><TableHead className="text-right">Acciones</TableHead>
+                  <TableHead>Tipo</TableHead><TableHead>Reels</TableHead><TableHead>Stories</TableHead>
+                  <TableHead>Inicio</TableHead><TableHead>Fin</TableHead><TableHead>Duración</TableHead>
+                  <TableHead>Valor</TableHead><TableHead>Estado</TableHead><TableHead className="text-right">Acciones</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filtered.length === 0 ? (
-                  <TableRow><TableCell colSpan={11} className="text-center py-8 text-muted-foreground">No hay acuerdos registrados.</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={12} className="text-center py-8 text-muted-foreground">No hay acuerdos registrados.</TableCell></TableRow>
                 ) : filtered.map((a) => (
                   <TableRow key={a.id}>
                     <TableCell className="font-medium">{a.influencer}</TableCell>
-                    <TableCell>{a.redSocial}</TableCell>
+                    <TableCell>{(Array.isArray(a.redSocial) ? a.redSocial : [a.redSocial]).join(", ")}</TableCell>
                     <TableCell>{a.seguidores.toLocaleString()}</TableCell>
+                    <TableCell>{a.tipoContenido}</TableCell>
                     <TableCell>{a.reelsPactados}</TableCell>
                     <TableCell>{a.storiesPactadas}</TableCell>
                     <TableCell>{a.fechaInicio}</TableCell>
@@ -146,21 +220,41 @@ export default function AcuerdosPage() {
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader><DialogTitle>{editing ? "Editar Acuerdo" : "Nuevo Acuerdo"}</DialogTitle></DialogHeader>
           <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2"><Label>Influencer</Label><Input value={form.influencer} onChange={(e) => update("influencer", e.target.value)} /></div>
-            <div className="space-y-2"><Label>Red Social</Label><Select value={form.redSocial} onValueChange={(v) => update("redSocial", v)}><SelectTrigger><SelectValue placeholder="Seleccionar" /></SelectTrigger><SelectContent><SelectItem value="Instagram">Instagram</SelectItem><SelectItem value="TikTok">TikTok</SelectItem><SelectItem value="YouTube">YouTube</SelectItem><SelectItem value="Twitter">Twitter</SelectItem><SelectItem value="Facebook">Facebook</SelectItem></SelectContent></Select></div>
-            <div className="space-y-2"><Label>Seguidores</Label><Input type="number" value={form.seguidores} onChange={(e) => update("seguidores", +e.target.value)} /></div>
-            <div className="space-y-2"><Label>Plataforma</Label><Input value={form.plataforma} onChange={(e) => update("plataforma", e.target.value)} /></div>
-            <div className="space-y-2"><Label>Tipo de Contenido</Label><Input value={form.tipoContenido} onChange={(e) => update("tipoContenido", e.target.value)} /></div>
-            <div className="space-y-2"><Label># Reels Pactados</Label><Input type="number" value={form.reelsPactados} onChange={(e) => update("reelsPactados", +e.target.value)} /></div>
-            <div className="space-y-2"><Label># Stories Pactadas</Label><Input type="number" value={form.storiesPactadas} onChange={(e) => update("storiesPactadas", +e.target.value)} /></div>
-            <div className="space-y-2"><Label>Fecha Inicio</Label><Input type="date" value={form.fechaInicio} onChange={(e) => update("fechaInicio", e.target.value)} /></div>
-            <div className="space-y-2"><Label>Fecha Fin</Label><Input type="date" value={form.fechaFin} onChange={(e) => update("fechaFin", e.target.value)} /></div>
-            <div className="space-y-2"><Label>Duración (meses)</Label><Input type="number" value={form.duracionMeses} onChange={(e) => update("duracionMeses", +e.target.value)} /></div>
-            <div className="space-y-2"><Label>Valor Total</Label><Input type="number" value={form.valorTotal} onChange={(e) => update("valorTotal", +e.target.value)} /></div>
-            <div className="space-y-2"><Label>Moneda</Label><Select value={form.moneda} onValueChange={(v) => update("moneda", v)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="COP">COP</SelectItem><SelectItem value="USD">USD</SelectItem></SelectContent></Select></div>
-            <div className="space-y-2"><Label>Estado</Label><Select value={form.estado} onValueChange={(v) => update("estado", v)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="Activo">Activo</SelectItem><SelectItem value="Pausado">Pausado</SelectItem><SelectItem value="Finalizado">Finalizado</SelectItem><SelectItem value="Cancelado">Cancelado</SelectItem></SelectContent></Select></div>
-            <div className="space-y-2"><Label>Contacto</Label><Input value={form.contacto} onChange={(e) => update("contacto", e.target.value)} /></div>
-            <div className="col-span-2 space-y-2"><Label>Notas</Label><Textarea value={form.notas} onChange={(e) => update("notas", e.target.value)} /></div>
+            <div className="space-y-2"><FieldLabel field="influencer">Influencer</FieldLabel><Input value={form.influencer} onChange={(e) => update("influencer", e.target.value)} /></div>
+            <div className="space-y-2">
+              <FieldLabel field="redSocial">Redes Sociales</FieldLabel>
+              <div className="flex flex-wrap gap-3 pt-1">
+                {REDES_SOCIALES.map((red) => (
+                  <label key={red} className="flex items-center gap-1.5 text-sm cursor-pointer">
+                    <Checkbox checked={form.redSocial.includes(red)} onCheckedChange={() => toggleRedSocial(red)} />
+                    {red}
+                  </label>
+                ))}
+              </div>
+            </div>
+            <div className="space-y-2"><FieldLabel field="seguidores">Seguidores</FieldLabel><NumericInput value={form.seguidores} onChange={(v) => update("seguidores", v)} /></div>
+            <div className="space-y-2"><FieldLabel field="plataforma">Plataforma</FieldLabel><Input value={form.plataforma} onChange={(e) => update("plataforma", e.target.value)} placeholder="Ej: CreatorIQ, directo" /></div>
+            <div className="space-y-2">
+              <FieldLabel field="tipoContenido">Tipo de Contenido</FieldLabel>
+              <Select value={form.tipoContenido} onValueChange={(v) => update("tipoContenido", v)}>
+                <SelectTrigger><SelectValue placeholder="Seleccionar" /></SelectTrigger>
+                <SelectContent>{TIPOS_CONTENIDO.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2"><FieldLabel field="reelsPactados"># Reels Pactados</FieldLabel><NumericInput value={form.reelsPactados} onChange={(v) => update("reelsPactados", v)} /></div>
+            <div className="space-y-2"><FieldLabel field="storiesPactadas"># Stories Pactadas</FieldLabel><NumericInput value={form.storiesPactadas} onChange={(v) => update("storiesPactadas", v)} /></div>
+            <div className="space-y-2"><FieldLabel field="fechaInicio">Fecha Inicio</FieldLabel><Input type="date" value={form.fechaInicio} onChange={(e) => update("fechaInicio", e.target.value)} /></div>
+            <div className="space-y-2"><FieldLabel field="fechaFin">Fecha Fin</FieldLabel><Input type="date" value={form.fechaFin} onChange={(e) => update("fechaFin", e.target.value)} /></div>
+            <div className="space-y-2">
+              <Label>Duración (meses)</Label>
+              <p className="text-xs text-muted-foreground">Calculado automáticamente desde las fechas</p>
+              <Input type="number" value={form.duracionMeses} disabled className="bg-muted" />
+            </div>
+            <div className="space-y-2"><FieldLabel field="valorTotal">Valor Total</FieldLabel><NumericInput value={form.valorTotal} onChange={(v) => update("valorTotal", v)} /></div>
+            <div className="space-y-2"><FieldLabel field="moneda">Moneda</FieldLabel><Select value={form.moneda} onValueChange={(v) => update("moneda", v)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="COP">COP</SelectItem><SelectItem value="USD">USD</SelectItem></SelectContent></Select></div>
+            <div className="space-y-2"><FieldLabel field="estado">Estado</FieldLabel><Select value={form.estado} onValueChange={(v) => update("estado", v)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="Activo">Activo</SelectItem><SelectItem value="Pausado">Pausado</SelectItem><SelectItem value="Finalizado">Finalizado</SelectItem><SelectItem value="Cancelado">Cancelado</SelectItem></SelectContent></Select></div>
+            <div className="space-y-2"><FieldLabel field="contacto">Contacto</FieldLabel><Input value={form.contacto} onChange={(e) => update("contacto", e.target.value)} /></div>
+            <div className="col-span-2 space-y-2"><FieldLabel field="notas">Notas</FieldLabel><Textarea value={form.notas} onChange={(e) => update("notas", e.target.value)} /></div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>

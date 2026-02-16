@@ -151,10 +151,23 @@ export default function EntregablesPage() {
               <Label>Acuerdo (Influencer)</Label>
               <Select value={form.acuerdoId} onValueChange={(v) => update("acuerdoId", v)}>
                 <SelectTrigger><SelectValue placeholder="Seleccionar acuerdo" /></SelectTrigger>
-                <SelectContent>{acuerdos.map((a) => <SelectItem key={a.id} value={a.id}>{a.influencer} — {a.redSocial}</SelectItem>)}</SelectContent>
+                <SelectContent>{acuerdos.map((a) => <SelectItem key={a.id} value={a.id}>{a.influencer} — {(Array.isArray(a.redSocial) ? a.redSocial : [a.redSocial]).join(", ")}</SelectItem>)}</SelectContent>
               </Select>
             </div>
-            <div className="space-y-2"><Label>Tipo de Contenido</Label><Select value={form.tipoContenido} onValueChange={(v) => update("tipoContenido", v)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="Reel">Reel</SelectItem><SelectItem value="Story">Story</SelectItem><SelectItem value="Post">Post</SelectItem><SelectItem value="Otro">Otro</SelectItem></SelectContent></Select></div>
+            <div className="space-y-2">
+              <Label>Tipo de Contenido</Label>
+              <Select value={form.tipoContenido} onValueChange={(v) => update("tipoContenido", v)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Reel">Reel</SelectItem>
+                  <SelectItem value="Story">Story</SelectItem>
+                  <SelectItem value="Collab">Collab</SelectItem>
+                  <SelectItem value="UGC">UGC</SelectItem>
+                  <SelectItem value="Post">Post</SelectItem>
+                  <SelectItem value="Otro">Otro</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
             <div className="space-y-2"><Label>Estado</Label><Select value={form.estado} onValueChange={(v) => update("estado", v)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="Pendiente">Pendiente</SelectItem><SelectItem value="En progreso">En progreso</SelectItem><SelectItem value="Entregado">Entregado</SelectItem><SelectItem value="Aprobado">Aprobado</SelectItem><SelectItem value="Rechazado">Rechazado</SelectItem></SelectContent></Select></div>
             <div className="space-y-2"><Label>Fecha Programada</Label><Input type="date" value={form.fechaProgramada} onChange={(e) => update("fechaProgramada", e.target.value)} /></div>
             <div className="space-y-2"><Label>Fecha Entrega</Label><Input type="date" value={form.fechaEntrega} onChange={(e) => update("fechaEntrega", e.target.value)} /></div>
