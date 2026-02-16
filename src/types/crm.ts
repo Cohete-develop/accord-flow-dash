@@ -61,6 +61,7 @@ export interface KPI {
   cpr: number;
   cpc: number;
   periodo: string;
+  estado: "Pendiente" | "Medido" | "Revisado" | "Aprobado";
   notas: string;
   createdAt: string;
 }

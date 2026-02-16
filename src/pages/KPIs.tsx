@@ -11,20 +11,20 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Textarea } from "@/components/ui/textarea";
 import { Plus, Pencil, Trash2, TrendingUp, Eye, MousePointerClick } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
+import ViewToolbar, { ViewMode } from "@/components/ViewToolbar";
+import KanbanBoard, { KanbanColumn } from "@/components/KanbanBoard";
+import ForecastBoard from "@/components/ForecastBoard";
+
+const kanbanColumns: KanbanColumn[] = [
+  { key: "Pendiente", label: "Pendiente", colorClass: "bg-amber-100 text-amber-800" },
+  { key: "Medido", label: "Medido", colorClass: "bg-blue-100 text-blue-800" },
+  { key: "Revisado", label: "Revisado", colorClass: "bg-purple-100 text-purple-800" },
+  { key: "Aprobado", label: "Aprobado", colorClass: "bg-emerald-100 text-emerald-800" },
+];
 
 const emptyKPI = (): Omit<KPI, "id" | "createdAt"> => ({
-  entregableId: "",
-  acuerdoId: "",
-  influencer: "",
-  alcance: 0,
-  impresiones: 0,
-  interacciones: 0,
-  clicks: 0,
-  engagement: 0,
-  cpr: 0,
-  cpc: 0,
-  periodo: "",
-  notas: "",
+  entregableId: "", acuerdoId: "", influencer: "", alcance: 0, impresiones: 0,
+  interacciones: 0, clicks: 0, engagement: 0, cpr: 0, cpc: 0, periodo: "", estado: "Pendiente", notas: "",
 });
 
 export default function KPIsPage() {
@@ -32,11 +32,15 @@ export default function KPIsPage() {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<KPI | null>(null);
   const [form, setForm] = useState(emptyKPI());
+  const [view, setView] = useState<ViewMode>("list");
+  const [filterAcuerdo, setFilterAcuerdo] = useState("all");
   const acuerdos = getAcuerdos();
   const entregables = getEntregables();
 
   useEffect(() => { setKpis(getKPIs()); }, []);
   const refresh = () => setKpis(getKPIs());
+
+  const filtered = filterAcuerdo === "all" ? kpis : kpis.filter((k) => k.acuerdoId === filterAcuerdo);
 
   const handleOpen = (k?: KPI) => {
     if (k) { setEditing(k); const { id, createdAt, ...rest } = k; setForm(rest); }
@@ -46,32 +50,42 @@ export default function KPIsPage() {
 
   const handleSave = () => {
     const selected = acuerdos.find((a) => a.id === form.acuerdoId);
-    const kpi: KPI = {
-      ...form,
-      influencer: selected?.influencer || form.influencer,
-      id: editing?.id || generateId(),
-      createdAt: editing?.createdAt || new Date().toISOString(),
-    };
-    saveKPI(kpi);
-    refresh();
-    setOpen(false);
+    const kpi: KPI = { ...form, influencer: selected?.influencer || form.influencer, id: editing?.id || generateId(), createdAt: editing?.createdAt || new Date().toISOString() };
+    saveKPI(kpi); refresh(); setOpen(false);
   };
 
   const handleDelete = (id: string) => { deleteKPI(id); refresh(); };
   const update = (field: string, value: any) => setForm((p) => ({ ...p, [field]: value }));
 
-  const avgEngagement = kpis.length > 0 ? (kpis.reduce((s, k) => s + k.engagement, 0) / kpis.length).toFixed(2) : "0";
-  const totalAlcance = kpis.reduce((s, k) => s + k.alcance, 0);
-  const totalClicks = kpis.reduce((s, k) => s + k.clicks, 0);
+  const handleStatusChange = (item: KPI, newStatus: string) => {
+    const updated = { ...item, estado: newStatus as KPI["estado"] };
+    saveKPI(updated); refresh();
+  };
 
-  // Chart data: group by influencer
-  const byInfluencer = kpis.reduce<Record<string, { alcance: number; interacciones: number }>>((acc, k) => {
+  const avgEngagement = filtered.length > 0 ? (filtered.reduce((s, k) => s + k.engagement, 0) / filtered.length).toFixed(2) : "0";
+  const totalAlcance = filtered.reduce((s, k) => s + k.alcance, 0);
+  const totalClicks = filtered.reduce((s, k) => s + k.clicks, 0);
+
+  const byInfluencer = filtered.reduce<Record<string, { alcance: number; interacciones: number }>>((acc, k) => {
     if (!acc[k.influencer]) acc[k.influencer] = { alcance: 0, interacciones: 0 };
     acc[k.influencer].alcance += k.alcance;
     acc[k.influencer].interacciones += k.interacciones;
     return acc;
   }, {});
   const chartData = Object.entries(byInfluencer).map(([name, data]) => ({ name, ...data }));
+
+  const renderCard = (k: KPI) => (
+    <div>
+      <div className="font-semibold">{k.influencer}</div>
+      <div className="text-muted-foreground text-xs">{k.periodo}</div>
+      <div className="grid grid-cols-2 gap-1 mt-1 text-xs">
+        <span>Alcance: {k.alcance.toLocaleString()}</span>
+        <span>Eng: {k.engagement}%</span>
+        <span>Clicks: {k.clicks}</span>
+        <span>CPR: ${k.cpr}</span>
+      </div>
+    </div>
+  );
 
   return (
     <div className="space-y-6">
@@ -80,19 +94,19 @@ export default function KPIsPage() {
           <h1 className="text-2xl font-bold tracking-tight">KPIs</h1>
           <p className="text-muted-foreground text-sm">Métricas de rendimiento por influencer</p>
         </div>
-        <Button onClick={() => handleOpen()} disabled={acuerdos.length === 0}>
-          <Plus className="h-4 w-4 mr-2" /> Nuevo KPI
-        </Button>
+        <Button onClick={() => handleOpen()} disabled={acuerdos.length === 0}><Plus className="h-4 w-4 mr-2" /> Nuevo KPI</Button>
       </div>
 
+      <ViewToolbar view={view} onViewChange={setView} acuerdos={acuerdos} selectedAcuerdo={filterAcuerdo} onAcuerdoChange={setFilterAcuerdo} />
+
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Registros</CardTitle></CardHeader><CardContent><div className="text-2xl font-bold">{kpis.length}</div></CardContent></Card>
+        <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Registros</CardTitle></CardHeader><CardContent><div className="text-2xl font-bold">{filtered.length}</div></CardContent></Card>
         <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Alcance Total</CardTitle></CardHeader><CardContent><div className="flex items-center gap-2"><Eye className="h-5 w-5 text-muted-foreground" /><span className="text-2xl font-bold">{totalAlcance.toLocaleString()}</span></div></CardContent></Card>
         <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Clicks Totales</CardTitle></CardHeader><CardContent><div className="flex items-center gap-2"><MousePointerClick className="h-5 w-5 text-muted-foreground" /><span className="text-2xl font-bold">{totalClicks.toLocaleString()}</span></div></CardContent></Card>
         <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Engagement Promedio</CardTitle></CardHeader><CardContent><div className="flex items-center gap-2"><TrendingUp className="h-5 w-5 text-muted-foreground" /><span className="text-2xl font-bold">{avgEngagement}%</span></div></CardContent></Card>
       </div>
 
-      {chartData.length > 0 && (
+      {view === "list" && chartData.length > 0 && (
         <Card>
           <CardHeader><CardTitle className="text-base">Alcance e Interacciones por Influencer</CardTitle></CardHeader>
           <CardContent>
@@ -110,47 +124,51 @@ export default function KPIsPage() {
         </Card>
       )}
 
-      <Card>
-        <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Influencer</TableHead>
-                <TableHead>Alcance</TableHead>
-                <TableHead>Impresiones</TableHead>
-                <TableHead>Interacciones</TableHead>
-                <TableHead>Clicks</TableHead>
-                <TableHead>Engagement</TableHead>
-                <TableHead>CPR</TableHead>
-                <TableHead>CPC</TableHead>
-                <TableHead>Periodo</TableHead>
-                <TableHead className="text-right">Acciones</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {kpis.length === 0 ? (
-                <TableRow><TableCell colSpan={10} className="text-center py-8 text-muted-foreground">No hay KPIs registrados.</TableCell></TableRow>
-              ) : kpis.map((k) => (
-                <TableRow key={k.id}>
-                  <TableCell className="font-medium">{k.influencer}</TableCell>
-                  <TableCell>{k.alcance.toLocaleString()}</TableCell>
-                  <TableCell>{k.impresiones.toLocaleString()}</TableCell>
-                  <TableCell>{k.interacciones.toLocaleString()}</TableCell>
-                  <TableCell>{k.clicks.toLocaleString()}</TableCell>
-                  <TableCell>{k.engagement}%</TableCell>
-                  <TableCell>${k.cpr}</TableCell>
-                  <TableCell>${k.cpc}</TableCell>
-                  <TableCell>{k.periodo}</TableCell>
-                  <TableCell className="text-right">
-                    <Button variant="ghost" size="icon" onClick={() => handleOpen(k)}><Pencil className="h-4 w-4" /></Button>
-                    <Button variant="ghost" size="icon" onClick={() => handleDelete(k.id)}><Trash2 className="h-4 w-4" /></Button>
-                  </TableCell>
+      {view === "kanban" && (
+        <KanbanBoard items={filtered} columns={kanbanColumns} getId={(k) => k.id} getStatus={(k) => k.estado} getValue={(k) => k.alcance} renderCard={renderCard} onStatusChange={handleStatusChange} valuePrefix="" />
+      )}
+
+      {view === "forecast" && (
+        <ForecastBoard items={filtered} getDate={() => ""} getValue={(k) => k.alcance} renderCard={renderCard} getId={(k) => k.id} valuePrefix="" emptyLabel="Los KPIs se agrupan por periodo. Usa la vista Kanban o Lista." />
+      )}
+
+      {view === "list" && (
+        <Card>
+          <CardContent className="p-0">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Influencer</TableHead><TableHead>Alcance</TableHead><TableHead>Impresiones</TableHead>
+                  <TableHead>Interacciones</TableHead><TableHead>Clicks</TableHead><TableHead>Engagement</TableHead>
+                  <TableHead>CPR</TableHead><TableHead>CPC</TableHead><TableHead>Periodo</TableHead>
+                  <TableHead className="text-right">Acciones</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+              </TableHeader>
+              <TableBody>
+                {filtered.length === 0 ? (
+                  <TableRow><TableCell colSpan={10} className="text-center py-8 text-muted-foreground">No hay KPIs registrados.</TableCell></TableRow>
+                ) : filtered.map((k) => (
+                  <TableRow key={k.id}>
+                    <TableCell className="font-medium">{k.influencer}</TableCell>
+                    <TableCell>{k.alcance.toLocaleString()}</TableCell>
+                    <TableCell>{k.impresiones.toLocaleString()}</TableCell>
+                    <TableCell>{k.interacciones.toLocaleString()}</TableCell>
+                    <TableCell>{k.clicks.toLocaleString()}</TableCell>
+                    <TableCell>{k.engagement}%</TableCell>
+                    <TableCell>${k.cpr}</TableCell>
+                    <TableCell>${k.cpc}</TableCell>
+                    <TableCell>{k.periodo}</TableCell>
+                    <TableCell className="text-right">
+                      <Button variant="ghost" size="icon" onClick={() => handleOpen(k)}><Pencil className="h-4 w-4" /></Button>
+                      <Button variant="ghost" size="icon" onClick={() => handleDelete(k.id)}><Trash2 className="h-4 w-4" /></Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      )}
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -163,6 +181,8 @@ export default function KPIsPage() {
                 <SelectContent>{acuerdos.map((a) => <SelectItem key={a.id} value={a.id}>{a.influencer} — {a.redSocial}</SelectItem>)}</SelectContent>
               </Select>
             </div>
+            <div className="space-y-2"><Label>Estado</Label><Select value={form.estado} onValueChange={(v) => update("estado", v)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="Pendiente">Pendiente</SelectItem><SelectItem value="Medido">Medido</SelectItem><SelectItem value="Revisado">Revisado</SelectItem><SelectItem value="Aprobado">Aprobado</SelectItem></SelectContent></Select></div>
+            <div className="space-y-2"><Label>Periodo</Label><Input value={form.periodo} onChange={(e) => update("periodo", e.target.value)} placeholder="Ej: Enero 2025" /></div>
             <div className="space-y-2"><Label>Alcance</Label><Input type="number" value={form.alcance} onChange={(e) => update("alcance", +e.target.value)} /></div>
             <div className="space-y-2"><Label>Impresiones</Label><Input type="number" value={form.impresiones} onChange={(e) => update("impresiones", +e.target.value)} /></div>
             <div className="space-y-2"><Label>Interacciones</Label><Input type="number" value={form.interacciones} onChange={(e) => update("interacciones", +e.target.value)} /></div>
@@ -170,7 +190,6 @@ export default function KPIsPage() {
             <div className="space-y-2"><Label>Engagement (%)</Label><Input type="number" step="0.01" value={form.engagement} onChange={(e) => update("engagement", +e.target.value)} /></div>
             <div className="space-y-2"><Label>CPR</Label><Input type="number" step="0.01" value={form.cpr} onChange={(e) => update("cpr", +e.target.value)} /></div>
             <div className="space-y-2"><Label>CPC</Label><Input type="number" step="0.01" value={form.cpc} onChange={(e) => update("cpc", +e.target.value)} /></div>
-            <div className="space-y-2"><Label>Periodo</Label><Input value={form.periodo} onChange={(e) => update("periodo", e.target.value)} placeholder="Ej: Enero 2025" /></div>
             <div className="col-span-2 space-y-2"><Label>Notas</Label><Textarea value={form.notas} onChange={(e) => update("notas", e.target.value)} /></div>
           </div>
           <DialogFooter>
