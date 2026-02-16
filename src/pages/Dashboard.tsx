@@ -51,6 +51,24 @@ export default function DashboardPage() {
   acuerdos.forEach((a) => { moneyByInfluencer[a.influencer] = (moneyByInfluencer[a.influencer] || 0) + a.valorTotal; });
   const moneyBarData = Object.entries(moneyByInfluencer).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value);
 
+  // Inversión por tipo de contenido
+  const moneyByTipo: Record<string, number> = {};
+  acuerdos.forEach((a) => {
+    const tipos = a.tipoContenido || [];
+    const share = tipos.length > 0 ? a.valorTotal / tipos.length : 0;
+    tipos.forEach((t) => { moneyByTipo[t] = (moneyByTipo[t] || 0) + share; });
+  });
+  const moneyByTipoData = Object.entries(moneyByTipo).map(([name, value]) => ({ name, value: Math.round(value) })).sort((a, b) => b.value - a.value);
+
+  // Inversión por red social
+  const moneyByRed: Record<string, number> = {};
+  acuerdos.forEach((a) => {
+    const redes = a.redSocial || [];
+    const share = redes.length > 0 ? a.valorTotal / redes.length : 0;
+    redes.forEach((r) => { moneyByRed[r] = (moneyByRed[r] || 0) + share; });
+  });
+  const moneyByRedData = Object.entries(moneyByRed).map(([name, value]) => ({ name, value: Math.round(value) })).sort((a, b) => b.value - a.value);
+
   // Forecast: pagos by month
   const pagosByMonth: Record<string, number> = {};
   pagos.forEach((p) => {
@@ -143,6 +161,46 @@ export default function DashboardPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Inversión por Tipo de Contenido y Red Social */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <Card>
+          <CardHeader><CardTitle className="text-base">Inversión por Tipo de Contenido</CardTitle></CardHeader>
+          <CardContent>
+            {moneyByTipoData.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-8">Sin datos</p>
+            ) : (
+              <ResponsiveContainer width="100%" height={280}>
+                <BarChart data={moneyByTipoData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="name" fontSize={12} />
+                  <YAxis fontSize={12} />
+                  <Tooltip formatter={(v: number) => `$${v.toLocaleString()}`} />
+                  <Bar dataKey="value" fill="hsl(38, 92%, 50%)" name="Inversión" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            )}
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader><CardTitle className="text-base">Inversión por Red Social</CardTitle></CardHeader>
+          <CardContent>
+            {moneyByRedData.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-8">Sin datos</p>
+            ) : (
+              <ResponsiveContainer width="100%" height={280}>
+                <BarChart data={moneyByRedData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="name" fontSize={12} />
+                  <YAxis fontSize={12} />
+                  <Tooltip formatter={(v: number) => `$${v.toLocaleString()}`} />
+                  <Bar dataKey="value" fill="hsl(220, 60%, 50%)" name="Inversión" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            )}
+          </CardContent>
+        </Card>
+      </div>
 
       {/* Forecast charts */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
