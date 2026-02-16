@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { Pago } from "@/types/crm";
 import { getPagos, savePago, deletePago, getAcuerdos, generateId } from "@/data/crm-store";
 import { Button } from "@/components/ui/button";
@@ -10,7 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus, Pencil, Trash2, Upload, FileText, X } from "lucide-react";
+import { Plus, Pencil, Trash2 } from "lucide-react";
 import ViewToolbar, { ViewMode } from "@/components/ViewToolbar";
 import KanbanBoard, { KanbanColumn } from "@/components/KanbanBoard";
 import ForecastBoard from "@/components/ForecastBoard";
@@ -56,7 +56,7 @@ export default function PagosPage() {
   const [view, setView] = useState<ViewMode>("list");
   const [filterAcuerdo, setFilterAcuerdo] = useState("all");
   const acuerdos = getAcuerdos();
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  
 
   useEffect(() => { setPagos(getPagos()); }, []);
   const refresh = () => setPagos(getPagos());
@@ -78,27 +78,6 @@ export default function PagosPage() {
   const handleDelete = (id: string) => { deletePago(id); refresh(); };
   const update = (field: string, value: any) => setForm((p) => ({ ...p, [field]: value }));
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (!["image/jpeg", "image/jpg", "image/png", "application/pdf"].includes(file.type)) {
-      alert("Solo se permiten archivos JPG, PNG o PDF");
-      return;
-    }
-    const reader = new FileReader();
-    reader.onload = () => {
-      update("comprobante", JSON.stringify({ name: file.name, type: file.type, data: reader.result }));
-    };
-    reader.readAsDataURL(file);
-  };
-
-  const getComprobanteName = (comprobante: string): string | null => {
-    if (!comprobante) return null;
-    try {
-      const parsed = JSON.parse(comprobante);
-      return parsed.name || null;
-    } catch { return comprobante || null; }
-  };
 
   const handleStatusChange = (item: Pago, newStatus: string) => {
     const updated = { ...item, estado: newStatus as Pago["estado"] };
@@ -200,21 +179,7 @@ export default function PagosPage() {
             <div className="space-y-2"><Label>Fecha Vencimiento</Label><Input type="date" value={form.fechaVencimiento} onChange={(e) => update("fechaVencimiento", e.target.value)} /></div>
             <div className="space-y-2"><Label>Método de Pago</Label><Select value={form.metodoPago} onValueChange={(v) => update("metodoPago", v)}><SelectTrigger><SelectValue placeholder="Seleccionar" /></SelectTrigger><SelectContent><SelectItem value="Transferencia">Transferencia</SelectItem><SelectItem value="Efectivo">Efectivo</SelectItem><SelectItem value="PayPal">PayPal</SelectItem><SelectItem value="Otro">Otro</SelectItem></SelectContent></Select></div>
             <div className="space-y-2"><Label>Estado</Label><Select value={form.estado} onValueChange={(v) => update("estado", v)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="Pendiente">Pendiente</SelectItem><SelectItem value="Pagado">Pagado</SelectItem><SelectItem value="Vencido">Vencido</SelectItem><SelectItem value="Cancelado">Cancelado</SelectItem></SelectContent></Select></div>
-            <div className="col-span-2 space-y-2">
-              <Label>Comprobante (JPG, PNG o PDF)</Label>
-              <input ref={fileInputRef} type="file" accept=".jpg,.jpeg,.png,.pdf" className="hidden" onChange={handleFileUpload} />
-              {getComprobanteName(form.comprobante) ? (
-                <div className="flex items-center gap-2 p-2 rounded-md border border-border bg-muted/50">
-                  <FileText className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm flex-1 truncate">{getComprobanteName(form.comprobante)}</span>
-                  <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => update("comprobante", "")}><X className="h-3 w-3" /></Button>
-                </div>
-              ) : (
-                <Button variant="outline" className="w-full" onClick={() => fileInputRef.current?.click()}>
-                  <Upload className="h-4 w-4 mr-2" /> Subir comprobante
-                </Button>
-              )}
-            </div>
+            <div className="col-span-2 space-y-2"><Label>Comprobante</Label><Input value={form.comprobante} onChange={(e) => update("comprobante", e.target.value)} placeholder="Referencia o número de comprobante" /></div>
             <div className="col-span-2 space-y-2"><Label>Notas</Label><Textarea value={form.notas} onChange={(e) => update("notas", e.target.value)} /></div>
           </div>
           <DialogFooter>
