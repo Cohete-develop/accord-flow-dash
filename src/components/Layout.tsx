@@ -14,8 +14,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     <div className="flex min-h-screen">
       <aside className="w-64 border-r bg-sidebar text-sidebar-foreground flex flex-col">
         <div className="p-6 border-b border-sidebar-border">
-          <h1 className="text-lg font-bold tracking-tight">Japani CRM</h1>
-          <p className="text-xs text-muted-foreground mt-1">Gestión de Influencers</p>
+          <h1 className="text-lg font-bold tracking-tight">InfluXpert</h1>
+          <p className="text-xs text-muted-foreground mt-1">by Cohete</p>
         </div>
         <nav className="flex-1 p-3 space-y-1">
           {navItems.map((item) => (
