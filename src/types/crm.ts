@@ -10,6 +10,7 @@ export interface Acuerdo {
   fechaInicio: string;
   fechaFin: string;
   duracionMeses: number;
+  valorMensual: number;
   valorTotal: number;
   moneda: string;
   estado: "Activo" | "Pausado" | "Finalizado" | "Cancelado";
