@@ -37,7 +37,7 @@ export default function DashboardPage() {
   })).filter((d) => d.value > 0);
 
   // Entregables by tipo
-  const entregablesByTipo = ["Reel", "Story", "Collab", "UGC", "Post", "Otro"].map((tipo) => ({
+  const entregablesByTipo = ["Reel", "Story", "Collab", "UGC"].map((tipo) => ({
     name: tipo, value: entregables.filter((e) => e.tipoContenido === tipo).length,
   })).filter((d) => d.value > 0);
 

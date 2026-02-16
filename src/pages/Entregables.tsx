@@ -163,8 +163,6 @@ export default function EntregablesPage() {
                   <SelectItem value="Story">Story</SelectItem>
                   <SelectItem value="Collab">Collab</SelectItem>
                   <SelectItem value="UGC">UGC</SelectItem>
-                  <SelectItem value="Post">Post</SelectItem>
-                  <SelectItem value="Otro">Otro</SelectItem>
                 </SelectContent>
               </Select>
             </div>
