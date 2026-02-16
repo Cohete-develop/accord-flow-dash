@@ -38,7 +38,7 @@ export interface Entregable {
   id: string;
   acuerdoId: string;
   influencer: string;
-  tipoContenido: "Reel" | "Story" | "Collab" | "UGC" | "Post" | "Otro";
+  tipoContenido: "Reel" | "Story" | "Collab" | "UGC";
   descripcion: string;
   fechaProgramada: string;
   fechaEntrega: string;
