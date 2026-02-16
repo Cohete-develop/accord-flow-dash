@@ -143,7 +143,7 @@ export default function AcuerdosPage() {
   const renderCard = (a: Acuerdo) => (
     <div>
       <div className="font-semibold">{a.influencer}</div>
-      <div className="text-muted-foreground text-xs">{(a.redSocial || []).join(", ")} · {a.seguidores.toLocaleString()} seg.</div>
+      <div className="text-muted-foreground text-xs">{(Array.isArray(a.redSocial) ? a.redSocial : [a.redSocial]).filter(Boolean).join(", ")} · {a.seguidores.toLocaleString()} seg.</div>
       <div className="font-bold mt-1">${a.valorTotal.toLocaleString()} {a.moneda}</div>
       <div className="text-xs text-muted-foreground">{a.fechaInicio} → {a.fechaFin}</div>
     </div>
