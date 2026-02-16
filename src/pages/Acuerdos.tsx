@@ -115,8 +115,15 @@ export default function AcuerdosPage() {
   }, [form.fechaInicio, form.fechaFin]);
 
   const handleOpen = (a?: Acuerdo) => {
-    if (a) { setEditing(a); const { id, createdAt, ...rest } = a; setForm(rest); }
-    else { setEditing(null); setForm(emptyAcuerdo()); }
+    if (a) {
+      setEditing(a);
+      const { id, createdAt, ...rest } = a;
+      setForm({
+        ...rest,
+        redSocial: Array.isArray(rest.redSocial) ? rest.redSocial : rest.redSocial ? [rest.redSocial] : [],
+        tipoContenido: Array.isArray(rest.tipoContenido) ? rest.tipoContenido : rest.tipoContenido ? [rest.tipoContenido] : [],
+      });
+    } else { setEditing(null); setForm(emptyAcuerdo()); }
     setOpen(true);
   };
 
