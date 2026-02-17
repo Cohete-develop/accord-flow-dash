@@ -119,7 +119,7 @@ export default function PagosPage() {
       </div>
 
       {view === "kanban" && (
-        <KanbanBoard items={filtered} columns={kanbanColumns} getId={(p) => p.id} getStatus={(p) => p.estado} getValue={(p) => p.monto} renderCard={renderCard} onStatusChange={handleStatusChange} />
+        <KanbanBoard items={filtered} columns={kanbanColumns} getId={(p) => p.id} getStatus={(p) => p.estado} getValue={(p) => p.monto} renderCard={renderCard} onStatusChange={handleStatusChange} onCardClick={(p) => handleOpen(p)} />
       )}
 
       {view === "forecast" && (

@@ -185,7 +185,7 @@ export default function AcuerdosPage() {
       </div>
 
       {view === "kanban" && (
-        <KanbanBoard items={filtered} columns={kanbanColumns} getId={(a) => a.id} getStatus={(a) => a.estado} getValue={(a) => a.valorTotal} renderCard={renderCard} onStatusChange={handleStatusChange} />
+        <KanbanBoard items={filtered} columns={kanbanColumns} getId={(a) => a.id} getStatus={(a) => a.estado} getValue={(a) => a.valorTotal} renderCard={renderCard} onStatusChange={handleStatusChange} onCardClick={(a) => handleOpen(a)} />
       )}
 
       {view === "forecast" && (
