@@ -10,6 +10,14 @@ const COLORS = [
   "hsl(0, 72%, 51%)", "hsl(220, 60%, 50%)", "hsl(280, 60%, 50%)",
 ];
 
+const fmtCurrency = (v: number) => {
+  if (v >= 1_000_000) return `$${Math.round(v / 1_000_000)}M`;
+  if (v >= 1_000) return `$${Math.round(v / 1_000)}K`;
+  return `$${Math.round(v).toLocaleString()}`;
+};
+
+const fmtTooltip = (v: number) => `$${Math.round(v).toLocaleString()}`;
+
 function getMonthKey(dateStr: string): string {
   if (!dateStr) return "";
   const d = new Date(dateStr);
@@ -234,8 +242,8 @@ export default function DashboardPage() {
               <BarChart data={moneyBarData} onClick={handleBarClickInfluencer}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="name" fontSize={12} />
-                <YAxis fontSize={12} />
-                <Tooltip formatter={(v: number) => `$${v.toLocaleString()}`} />
+                <YAxis fontSize={12} tickFormatter={fmtCurrency} />
+                <Tooltip formatter={(v: number) => fmtTooltip(v)} />
                 <Bar dataKey="value" fill="hsl(250, 60%, 52%)" name="Valor" radius={[4, 4, 0, 0]} className="cursor-pointer" />
               </BarChart>
             </ResponsiveContainer>
@@ -255,8 +263,8 @@ export default function DashboardPage() {
                 <BarChart data={moneyByTipoData} onClick={handleBarClickTipo}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="name" fontSize={12} />
-                  <YAxis fontSize={12} />
-                  <Tooltip formatter={(v: number) => `$${v.toLocaleString()}`} />
+                <YAxis fontSize={12} tickFormatter={fmtCurrency} />
+                <Tooltip formatter={(v: number) => fmtTooltip(v)} />
                   <Bar dataKey="value" fill="hsl(38, 92%, 50%)" name="Inversión" radius={[4, 4, 0, 0]} className="cursor-pointer" />
                 </BarChart>
               </ResponsiveContainer>
@@ -273,8 +281,8 @@ export default function DashboardPage() {
                 <BarChart data={moneyByRedData} onClick={handleBarClickRed}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="name" fontSize={12} />
-                  <YAxis fontSize={12} />
-                  <Tooltip formatter={(v: number) => `$${v.toLocaleString()}`} />
+                <YAxis fontSize={12} tickFormatter={fmtCurrency} />
+                <Tooltip formatter={(v: number) => fmtTooltip(v)} />
                   <Bar dataKey="value" fill="hsl(220, 60%, 50%)" name="Inversión" radius={[4, 4, 0, 0]} className="cursor-pointer" />
                 </BarChart>
               </ResponsiveContainer>
@@ -295,8 +303,8 @@ export default function DashboardPage() {
                 <AreaChart data={forecastData} onClick={handleAreaClickPagos}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="month" fontSize={11} />
-                  <YAxis fontSize={11} />
-                  <Tooltip formatter={(v: number) => `$${v.toLocaleString()}`} />
+                  <YAxis fontSize={11} tickFormatter={fmtCurrency} />
+                  <Tooltip formatter={(v: number) => fmtTooltip(v)} />
                   <Area type="monotone" dataKey="monto" stroke="hsl(250, 60%, 52%)" fill="hsl(250, 60%, 52%)" fillOpacity={0.2} name="Monto" className="cursor-pointer" />
                 </AreaChart>
               </ResponsiveContainer>
@@ -313,8 +321,8 @@ export default function DashboardPage() {
                 <AreaChart data={acuerdoForecast} onClick={handleAreaClickAcuerdos}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="month" fontSize={11} />
-                  <YAxis fontSize={11} />
-                  <Tooltip formatter={(v: number) => `$${v.toLocaleString()}`} />
+                  <YAxis fontSize={11} tickFormatter={fmtCurrency} />
+                  <Tooltip formatter={(v: number) => fmtTooltip(v)} />
                   <Area type="monotone" dataKey="valor" stroke="hsl(152, 60%, 42%)" fill="hsl(152, 60%, 42%)" fillOpacity={0.2} name="Valor" className="cursor-pointer" />
                 </AreaChart>
               </ResponsiveContainer>
