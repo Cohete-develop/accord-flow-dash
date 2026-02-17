@@ -14,7 +14,256 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      acuerdos: {
+        Row: {
+          contacto: string
+          created_at: string
+          duracion_meses: number
+          estado: string
+          fecha_fin: string | null
+          fecha_inicio: string | null
+          id: string
+          influencer: string
+          moneda: string
+          notas: string
+          plataforma: string
+          red_social: string[]
+          reels_pactados: number
+          seguidores: number
+          stories_pactadas: number
+          tipo_contenido: string[]
+          user_id: string
+          valor_mensual: number
+          valor_total: number
+        }
+        Insert: {
+          contacto?: string
+          created_at?: string
+          duracion_meses?: number
+          estado?: string
+          fecha_fin?: string | null
+          fecha_inicio?: string | null
+          id?: string
+          influencer?: string
+          moneda?: string
+          notas?: string
+          plataforma?: string
+          red_social?: string[]
+          reels_pactados?: number
+          seguidores?: number
+          stories_pactadas?: number
+          tipo_contenido?: string[]
+          user_id: string
+          valor_mensual?: number
+          valor_total?: number
+        }
+        Update: {
+          contacto?: string
+          created_at?: string
+          duracion_meses?: number
+          estado?: string
+          fecha_fin?: string | null
+          fecha_inicio?: string | null
+          id?: string
+          influencer?: string
+          moneda?: string
+          notas?: string
+          plataforma?: string
+          red_social?: string[]
+          reels_pactados?: number
+          seguidores?: number
+          stories_pactadas?: number
+          tipo_contenido?: string[]
+          user_id?: string
+          valor_mensual?: number
+          valor_total?: number
+        }
+        Relationships: []
+      }
+      entregables: {
+        Row: {
+          acuerdo_id: string | null
+          created_at: string
+          descripcion: string
+          estado: string
+          fecha_entrega: string | null
+          fecha_programada: string | null
+          id: string
+          influencer: string
+          notas: string
+          tipo_contenido: string
+          url_contenido: string
+          user_id: string
+        }
+        Insert: {
+          acuerdo_id?: string | null
+          created_at?: string
+          descripcion?: string
+          estado?: string
+          fecha_entrega?: string | null
+          fecha_programada?: string | null
+          id?: string
+          influencer?: string
+          notas?: string
+          tipo_contenido?: string
+          url_contenido?: string
+          user_id: string
+        }
+        Update: {
+          acuerdo_id?: string | null
+          created_at?: string
+          descripcion?: string
+          estado?: string
+          fecha_entrega?: string | null
+          fecha_programada?: string | null
+          id?: string
+          influencer?: string
+          notas?: string
+          tipo_contenido?: string
+          url_contenido?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "entregables_acuerdo_id_fkey"
+            columns: ["acuerdo_id"]
+            isOneToOne: false
+            referencedRelation: "acuerdos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      kpis: {
+        Row: {
+          acuerdo_id: string | null
+          alcance: number
+          clicks: number
+          cpc: number
+          cpr: number
+          created_at: string
+          engagement: number
+          entregable_id: string | null
+          estado: string
+          id: string
+          impresiones: number
+          influencer: string
+          interacciones: number
+          notas: string
+          periodo: string
+          user_id: string
+        }
+        Insert: {
+          acuerdo_id?: string | null
+          alcance?: number
+          clicks?: number
+          cpc?: number
+          cpr?: number
+          created_at?: string
+          engagement?: number
+          entregable_id?: string | null
+          estado?: string
+          id?: string
+          impresiones?: number
+          influencer?: string
+          interacciones?: number
+          notas?: string
+          periodo?: string
+          user_id: string
+        }
+        Update: {
+          acuerdo_id?: string | null
+          alcance?: number
+          clicks?: number
+          cpc?: number
+          cpr?: number
+          created_at?: string
+          engagement?: number
+          entregable_id?: string | null
+          estado?: string
+          id?: string
+          impresiones?: number
+          influencer?: string
+          interacciones?: number
+          notas?: string
+          periodo?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kpis_acuerdo_id_fkey"
+            columns: ["acuerdo_id"]
+            isOneToOne: false
+            referencedRelation: "acuerdos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "kpis_entregable_id_fkey"
+            columns: ["entregable_id"]
+            isOneToOne: false
+            referencedRelation: "entregables"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pagos: {
+        Row: {
+          acuerdo_id: string | null
+          comprobante: string
+          concepto: string
+          created_at: string
+          estado: string
+          fecha_pago: string | null
+          fecha_vencimiento: string | null
+          id: string
+          influencer: string
+          metodo_pago: string
+          moneda: string
+          monto: number
+          notas: string
+          user_id: string
+        }
+        Insert: {
+          acuerdo_id?: string | null
+          comprobante?: string
+          concepto?: string
+          created_at?: string
+          estado?: string
+          fecha_pago?: string | null
+          fecha_vencimiento?: string | null
+          id?: string
+          influencer?: string
+          metodo_pago?: string
+          moneda?: string
+          monto?: number
+          notas?: string
+          user_id: string
+        }
+        Update: {
+          acuerdo_id?: string | null
+          comprobante?: string
+          concepto?: string
+          created_at?: string
+          estado?: string
+          fecha_pago?: string | null
+          fecha_vencimiento?: string | null
+          id?: string
+          influencer?: string
+          metodo_pago?: string
+          moneda?: string
+          monto?: number
+          notas?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pagos_acuerdo_id_fkey"
+            columns: ["acuerdo_id"]
+            isOneToOne: false
+            referencedRelation: "acuerdos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
