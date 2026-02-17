@@ -3,12 +3,14 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { AuthProvider } from "@/hooks/useAuth";
 import Layout from "@/components/Layout";
 import DashboardPage from "./pages/Dashboard";
 import AcuerdosPage from "./pages/Acuerdos";
 import PagosPage from "./pages/Pagos";
 import EntregablesPage from "./pages/Entregables";
 import KPIsPage from "./pages/KPIs";
+import AuthPage from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -19,17 +21,18 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
-        <Layout>
+        <AuthProvider>
           <Routes>
+            <Route path="/auth" element={<AuthPage />} />
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
-            <Route path="/dashboard" element={<DashboardPage />} />
-            <Route path="/acuerdos" element={<AcuerdosPage />} />
-            <Route path="/pagos" element={<PagosPage />} />
-            <Route path="/entregables" element={<EntregablesPage />} />
-            <Route path="/kpis" element={<KPIsPage />} />
+            <Route path="/dashboard" element={<Layout><DashboardPage /></Layout>} />
+            <Route path="/acuerdos" element={<Layout><AcuerdosPage /></Layout>} />
+            <Route path="/pagos" element={<Layout><PagosPage /></Layout>} />
+            <Route path="/entregables" element={<Layout><EntregablesPage /></Layout>} />
+            <Route path="/kpis" element={<Layout><KPIsPage /></Layout>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
-        </Layout>
+        </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
