@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { KPI } from "@/types/crm";
-import { getKPIs, saveKPI, deleteKPI, getAcuerdos, getEntregables, generateId } from "@/data/crm-store";
+import { useAcuerdos, useEntregables, useKPIs } from "@/hooks/useCrmData";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -28,17 +28,14 @@ const emptyKPI = (): Omit<KPI, "id" | "createdAt"> => ({
 });
 
 export default function KPIsPage() {
-  const [kpis, setKpis] = useState<KPI[]>([]);
+  const { acuerdos } = useAcuerdos();
+  const { entregables } = useEntregables();
+  const { kpis, isLoading, save, remove } = useKPIs();
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<KPI | null>(null);
   const [form, setForm] = useState(emptyKPI());
   const [view, setView] = useState<ViewMode>("list");
   const [filterAcuerdo, setFilterAcuerdo] = useState("all");
-  const acuerdos = getAcuerdos();
-  const entregables = getEntregables();
-
-  useEffect(() => { setKpis(getKPIs()); }, []);
-  const refresh = () => setKpis(getKPIs());
 
   const filtered = filterAcuerdo === "all" ? kpis : kpis.filter((k) => k.acuerdoId === filterAcuerdo);
 
@@ -48,18 +45,18 @@ export default function KPIsPage() {
     setOpen(true);
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     const selected = acuerdos.find((a) => a.id === form.acuerdoId);
-    const kpi: KPI = { ...form, influencer: selected?.influencer || form.influencer, id: editing?.id || generateId(), createdAt: editing?.createdAt || new Date().toISOString() };
-    saveKPI(kpi); refresh(); setOpen(false);
+    await save({ data: { ...form, influencer: selected?.influencer || form.influencer }, id: editing?.id });
+    setOpen(false);
   };
 
-  const handleDelete = (id: string) => { deleteKPI(id); refresh(); };
+  const handleDelete = async (id: string) => { await remove(id); };
   const update = (field: string, value: any) => setForm((p) => ({ ...p, [field]: value }));
 
-  const handleStatusChange = (item: KPI, newStatus: string) => {
-    const updated = { ...item, estado: newStatus as KPI["estado"] };
-    saveKPI(updated); refresh();
+  const handleStatusChange = async (item: KPI, newStatus: string) => {
+    const { id, createdAt, ...data } = item;
+    await save({ data: { ...data, estado: newStatus as KPI["estado"] }, id });
   };
 
   const avgEngagement = filtered.length > 0 ? (filtered.reduce((s, k) => s + k.engagement, 0) / filtered.length).toFixed(2) : "0";
@@ -86,6 +83,8 @@ export default function KPIsPage() {
       </div>
     </div>
   );
+
+  if (isLoading) return <div className="flex items-center justify-center py-12 text-muted-foreground">Cargando KPIs...</div>;
 
   return (
     <div className="space-y-6">
@@ -178,7 +177,7 @@ export default function KPIsPage() {
               <Label>Acuerdo (Influencer)</Label>
               <Select value={form.acuerdoId} onValueChange={(v) => update("acuerdoId", v)}>
                 <SelectTrigger><SelectValue placeholder="Seleccionar acuerdo" /></SelectTrigger>
-                <SelectContent>{acuerdos.map((a) => <SelectItem key={a.id} value={a.id}>{a.influencer} — {a.redSocial}</SelectItem>)}</SelectContent>
+                <SelectContent>{acuerdos.map((a) => <SelectItem key={a.id} value={a.id}>{a.influencer} — {(Array.isArray(a.redSocial) ? a.redSocial : [a.redSocial]).join(", ")}</SelectItem>)}</SelectContent>
               </Select>
             </div>
             <div className="space-y-2"><Label>Estado</Label><Select value={form.estado} onValueChange={(v) => update("estado", v)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="Pendiente">Pendiente</SelectItem><SelectItem value="Medido">Medido</SelectItem><SelectItem value="Revisado">Revisado</SelectItem><SelectItem value="Aprobado">Aprobado</SelectItem></SelectContent></Select></div>

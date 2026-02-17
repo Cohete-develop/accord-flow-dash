@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import { getAcuerdos, getPagos, getEntregables, getKPIs } from "@/data/crm-store";
+import { useAcuerdos, usePagos, useEntregables, useKPIs } from "@/hooks/useCrmData";
 import { Acuerdo, Pago, Entregable } from "@/types/crm";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, AreaChart, Area } from "recharts";
@@ -41,43 +41,40 @@ type DetailState = {
 };
 
 export default function DashboardPage() {
-  const acuerdos = getAcuerdos();
-  const pagos = getPagos();
-  const entregables = getEntregables();
-  const kpis = getKPIs();
+  const { acuerdos, isLoading: loadingA } = useAcuerdos();
+  const { pagos, isLoading: loadingP } = usePagos();
+  const { entregables, isLoading: loadingE } = useEntregables();
+  const { kpis, isLoading: loadingK } = useKPIs();
 
   const [detail, setDetail] = useState<DetailState>({ open: false, title: "", type: "acuerdos" });
+
+  const isLoading = loadingA || loadingP || loadingE || loadingK;
 
   const showDetail = useCallback((title: string, type: DetailState["type"], data: { acuerdos?: Acuerdo[]; pagos?: Pago[]; entregables?: Entregable[] }) => {
     setDetail({ open: true, title, type, ...data });
   }, []);
 
-  // Acuerdos by estado
+  // ... all the same chart data computation as before
   const acuerdosByEstado = ["Activo", "Pausado", "Finalizado", "Cancelado"].map((estado) => ({
     name: estado, value: acuerdos.filter((a) => a.estado === estado).length,
   })).filter((d) => d.value > 0);
 
-  // Pagos by estado
   const pagosByEstado = ["Pendiente", "Pagado", "Vencido", "Cancelado"].map((estado) => ({
     name: estado, value: pagos.filter((p) => p.estado === estado).length,
   })).filter((d) => d.value > 0);
 
-  // Entregables by tipo
   const entregablesByTipo = ["Reel", "Story", "Collab", "UGC"].map((tipo) => ({
     name: tipo, value: entregables.filter((e) => e.tipoContenido === tipo).length,
   })).filter((d) => d.value > 0);
 
-  // Entregables by estado
   const entregablesByEstado = ["Pendiente", "En progreso", "Entregado", "Aprobado", "Rechazado"].map((estado) => ({
     name: estado, value: entregables.filter((e) => e.estado === estado).length,
   })).filter((d) => d.value > 0);
 
-  // Money by influencer
   const moneyByInfluencer: Record<string, number> = {};
   acuerdos.forEach((a) => { moneyByInfluencer[a.influencer] = (moneyByInfluencer[a.influencer] || 0) + a.valorTotal; });
   const moneyBarData = Object.entries(moneyByInfluencer).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value);
 
-  // Inversión por tipo de contenido
   const moneyByTipo: Record<string, number> = {};
   acuerdos.forEach((a) => {
     const tipos = a.tipoContenido || [];
@@ -86,7 +83,6 @@ export default function DashboardPage() {
   });
   const moneyByTipoData = Object.entries(moneyByTipo).map(([name, value]) => ({ name, value: Math.round(value) })).sort((a, b) => b.value - a.value);
 
-  // Inversión por red social
   const moneyByRed: Record<string, number> = {};
   acuerdos.forEach((a) => {
     const redes = a.redSocial || [];
@@ -95,7 +91,6 @@ export default function DashboardPage() {
   });
   const moneyByRedData = Object.entries(moneyByRed).map(([name, value]) => ({ name, value: Math.round(value) })).sort((a, b) => b.value - a.value);
 
-  // Forecast: pagos by month
   const pagosByMonth: Record<string, number> = {};
   pagos.forEach((p) => {
     const key = getMonthKey(p.fechaVencimiento);
@@ -105,7 +100,6 @@ export default function DashboardPage() {
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([key, value]) => ({ month: formatMonth(key), monthKey: key, monto: value }));
 
-  // Forecast: acuerdos value by end month
   const acuerdosByMonth: Record<string, number> = {};
   acuerdos.forEach((a) => {
     const key = getMonthKey(a.fechaFin);
@@ -115,76 +109,58 @@ export default function DashboardPage() {
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([key, value]) => ({ month: formatMonth(key), monthKey: key, valor: value }));
 
-  // KPIs summary
   const totalAlcance = kpis.reduce((s, k) => s + k.alcance, 0);
   const totalClicks = kpis.reduce((s, k) => s + k.clicks, 0);
   const avgEngagement = kpis.length > 0 ? (kpis.reduce((s, k) => s + k.engagement, 0) / kpis.length).toFixed(2) : "0";
-
   const totalValorAcuerdos = acuerdos.reduce((s, a) => s + a.valorTotal, 0);
   const totalPagado = pagos.filter((p) => p.estado === "Pagado").reduce((s, p) => s + p.monto, 0);
   const totalPendiente = pagos.filter((p) => p.estado === "Pendiente").reduce((s, p) => s + p.monto, 0);
 
-  // Click handlers for charts
+  // Click handlers
   const handlePieClickAcuerdos = (_: any, index: number) => {
     const seg = acuerdosByEstado[index];
     if (!seg) return;
     showDetail(`Acuerdos — ${seg.name}`, "acuerdos", { acuerdos: acuerdos.filter((a) => a.estado === seg.name) });
   };
-
   const handlePieClickPagos = (_: any, index: number) => {
     const seg = pagosByEstado[index];
     if (!seg) return;
     showDetail(`Pagos — ${seg.name}`, "pagos", { pagos: pagos.filter((p) => p.estado === seg.name) });
   };
-
   const handlePieClickEntTipo = (_: any, index: number) => {
     const seg = entregablesByTipo[index];
     if (!seg) return;
     showDetail(`Entregables — ${seg.name}`, "entregables", { entregables: entregables.filter((e) => e.tipoContenido === seg.name) });
   };
-
   const handlePieClickEntEstado = (_: any, index: number) => {
     const seg = entregablesByEstado[index];
     if (!seg) return;
     showDetail(`Entregables — ${seg.name}`, "entregables", { entregables: entregables.filter((e) => e.estado === seg.name) });
   };
-
   const handleBarClickInfluencer = (data: any) => {
     const name = data?.activePayload?.[0]?.payload?.name;
     if (!name) return;
     showDetail(`Acuerdos — ${name}`, "acuerdos", { acuerdos: acuerdos.filter((a) => a.influencer === name) });
   };
-
   const handleBarClickTipo = (data: any) => {
     const name = data?.activePayload?.[0]?.payload?.name;
     if (!name) return;
-    showDetail(`Acuerdos con tipo ${name}`, "acuerdos", {
-      acuerdos: acuerdos.filter((a) => (a.tipoContenido || []).includes(name)),
-    });
+    showDetail(`Acuerdos con tipo ${name}`, "acuerdos", { acuerdos: acuerdos.filter((a) => (a.tipoContenido || []).includes(name)) });
   };
-
   const handleBarClickRed = (data: any) => {
     const name = data?.activePayload?.[0]?.payload?.name;
     if (!name) return;
-    showDetail(`Acuerdos en ${name}`, "acuerdos", {
-      acuerdos: acuerdos.filter((a) => (a.redSocial || []).includes(name)),
-    });
+    showDetail(`Acuerdos en ${name}`, "acuerdos", { acuerdos: acuerdos.filter((a) => (a.redSocial || []).includes(name)) });
   };
-
   const handleAreaClickPagos = (data: any) => {
     if (!data?.activePayload?.[0]?.payload?.monthKey) return;
     const mk = data.activePayload[0].payload.monthKey;
-    showDetail(`Pagos — ${data.activePayload[0].payload.month}`, "pagos", {
-      pagos: pagos.filter((p) => getMonthKey(p.fechaVencimiento) === mk),
-    });
+    showDetail(`Pagos — ${data.activePayload[0].payload.month}`, "pagos", { pagos: pagos.filter((p) => getMonthKey(p.fechaVencimiento) === mk) });
   };
-
   const handleAreaClickAcuerdos = (data: any) => {
     if (!data?.activePayload?.[0]?.payload?.monthKey) return;
     const mk = data.activePayload[0].payload.monthKey;
-    showDetail(`Acuerdos fin — ${data.activePayload[0].payload.month}`, "acuerdos", {
-      acuerdos: acuerdos.filter((a) => getMonthKey(a.fechaFin) === mk),
-    });
+    showDetail(`Acuerdos fin — ${data.activePayload[0].payload.month}`, "acuerdos", { acuerdos: acuerdos.filter((a) => getMonthKey(a.fechaFin) === mk) });
   };
 
   const renderPie = (data: { name: string; value: number }[], title: string, onClick: (_: any, index: number) => void) => (
@@ -207,6 +183,8 @@ export default function DashboardPage() {
     </Card>
   );
 
+  if (isLoading) return <div className="flex items-center justify-center py-12 text-muted-foreground">Cargando dashboard...</div>;
+
   return (
     <div className="space-y-6">
       <div>
@@ -214,7 +192,6 @@ export default function DashboardPage() {
         <p className="text-muted-foreground text-sm">Resumen general de todos los módulos</p>
       </div>
 
-      {/* KPI Summary Cards */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Acuerdos</CardTitle></CardHeader><CardContent><div className="text-2xl font-bold">{acuerdos.length}</div></CardContent></Card>
         <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Valor Total Acuerdos</CardTitle></CardHeader><CardContent><div className="text-2xl font-bold">${totalValorAcuerdos.toLocaleString()}</div></CardContent></Card>
@@ -223,7 +200,6 @@ export default function DashboardPage() {
         <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Engagement Prom.</CardTitle></CardHeader><CardContent><div className="text-2xl font-bold">{avgEngagement}%</div></CardContent></Card>
       </div>
 
-      {/* Pie charts row */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {renderPie(acuerdosByEstado, "Acuerdos por Estado", handlePieClickAcuerdos)}
         {renderPie(pagosByEstado, "Pagos por Estado", handlePieClickPagos)}
@@ -231,7 +207,6 @@ export default function DashboardPage() {
         {renderPie(entregablesByEstado, "Entregables por Estado", handlePieClickEntEstado)}
       </div>
 
-      {/* Bar: money by influencer */}
       <Card>
         <CardHeader><CardTitle className="text-base">Inversión por Influencer</CardTitle></CardHeader>
         <CardContent>
@@ -251,7 +226,6 @@ export default function DashboardPage() {
         </CardContent>
       </Card>
 
-      {/* Inversión por Tipo de Contenido y Red Social */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Card>
           <CardHeader><CardTitle className="text-base">Inversión por Tipo de Contenido</CardTitle></CardHeader>
@@ -263,8 +237,8 @@ export default function DashboardPage() {
                 <BarChart data={moneyByTipoData} onClick={handleBarClickTipo}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="name" fontSize={12} />
-                <YAxis fontSize={12} tickFormatter={fmtCurrency} />
-                <Tooltip formatter={(v: number) => fmtTooltip(v)} />
+                  <YAxis fontSize={12} tickFormatter={fmtCurrency} />
+                  <Tooltip formatter={(v: number) => fmtTooltip(v)} />
                   <Bar dataKey="value" fill="hsl(38, 92%, 50%)" name="Inversión" radius={[4, 4, 0, 0]} className="cursor-pointer" />
                 </BarChart>
               </ResponsiveContainer>
@@ -281,8 +255,8 @@ export default function DashboardPage() {
                 <BarChart data={moneyByRedData} onClick={handleBarClickRed}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="name" fontSize={12} />
-                <YAxis fontSize={12} tickFormatter={fmtCurrency} />
-                <Tooltip formatter={(v: number) => fmtTooltip(v)} />
+                  <YAxis fontSize={12} tickFormatter={fmtCurrency} />
+                  <Tooltip formatter={(v: number) => fmtTooltip(v)} />
                   <Bar dataKey="value" fill="hsl(220, 60%, 50%)" name="Inversión" radius={[4, 4, 0, 0]} className="cursor-pointer" />
                 </BarChart>
               </ResponsiveContainer>
@@ -291,7 +265,6 @@ export default function DashboardPage() {
         </Card>
       </div>
 
-      {/* Forecast charts */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Card>
           <CardHeader><CardTitle className="text-base">Forecast Pagos por Mes</CardTitle></CardHeader>
@@ -331,7 +304,6 @@ export default function DashboardPage() {
         </Card>
       </div>
 
-      {/* KPIs summary */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Alcance Total</CardTitle></CardHeader><CardContent><div className="text-2xl font-bold">{totalAlcance.toLocaleString()}</div></CardContent></Card>
         <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Clicks Totales</CardTitle></CardHeader><CardContent><div className="text-2xl font-bold">{totalClicks.toLocaleString()}</div></CardContent></Card>

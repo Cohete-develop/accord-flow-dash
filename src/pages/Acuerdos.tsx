@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Acuerdo } from "@/types/crm";
-import { getAcuerdos, saveAcuerdo, deleteAcuerdo, generateId } from "@/data/crm-store";
+import { useAcuerdos } from "@/hooks/useCrmData";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -95,19 +95,15 @@ function NumericInput({ value, onChange, ...props }: { value: number; onChange: 
 }
 
 export default function AcuerdosPage() {
-  const [acuerdos, setAcuerdos] = useState<Acuerdo[]>([]);
+  const { acuerdos, isLoading, save, remove } = useAcuerdos();
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Acuerdo | null>(null);
   const [form, setForm] = useState(emptyAcuerdo());
   const [view, setView] = useState<ViewMode>("list");
   const [filterAcuerdo, setFilterAcuerdo] = useState("all");
 
-  useEffect(() => { setAcuerdos(getAcuerdos()); }, []);
-  const refresh = () => setAcuerdos(getAcuerdos());
-
   const filtered = filterAcuerdo === "all" ? acuerdos : acuerdos.filter((a) => a.id === filterAcuerdo);
 
-  // Auto-calc duration and valorTotal when dates or valorMensual change
   useEffect(() => {
     const dur = calcDuration(form.fechaInicio, form.fechaFin);
     const total = dur * form.valorMensual;
@@ -129,12 +125,12 @@ export default function AcuerdosPage() {
     setOpen(true);
   };
 
-  const handleSave = () => {
-    const acuerdo: Acuerdo = { ...form, id: editing?.id || generateId(), createdAt: editing?.createdAt || new Date().toISOString() };
-    saveAcuerdo(acuerdo); refresh(); setOpen(false);
+  const handleSave = async () => {
+    await save({ data: form, id: editing?.id });
+    setOpen(false);
   };
 
-  const handleDelete = (id: string) => { deleteAcuerdo(id); refresh(); };
+  const handleDelete = async (id: string) => { await remove(id); };
   const update = (field: string, value: any) => setForm((p) => ({ ...p, [field]: value }));
 
   const toggleRedSocial = (red: string) => {
@@ -151,9 +147,9 @@ export default function AcuerdosPage() {
     }));
   };
 
-  const handleStatusChange = (item: Acuerdo, newStatus: string) => {
-    const updated = { ...item, estado: newStatus as Acuerdo["estado"] };
-    saveAcuerdo(updated); refresh();
+  const handleStatusChange = async (item: Acuerdo, newStatus: string) => {
+    const { id, createdAt, ...data } = item;
+    await save({ data: { ...data, estado: newStatus as Acuerdo["estado"] }, id });
   };
 
   const renderCard = (a: Acuerdo) => (
@@ -164,6 +160,8 @@ export default function AcuerdosPage() {
       <div className="text-xs text-muted-foreground">{a.fechaInicio} → {a.fechaFin}</div>
     </div>
   );
+
+  if (isLoading) return <div className="flex items-center justify-center py-12 text-muted-foreground">Cargando acuerdos...</div>;
 
   return (
     <div className="space-y-6">

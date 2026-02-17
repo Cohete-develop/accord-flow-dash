@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Entregable } from "@/types/crm";
-import { getEntregables, saveEntregable, deleteEntregable, getAcuerdos, generateId } from "@/data/crm-store";
+import { useAcuerdos, useEntregables } from "@/hooks/useCrmData";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -37,16 +37,13 @@ const emptyEntregable = (): Omit<Entregable, "id" | "createdAt"> => ({
 });
 
 export default function EntregablesPage() {
-  const [entregables, setEntregables] = useState<Entregable[]>([]);
+  const { acuerdos } = useAcuerdos();
+  const { entregables, isLoading, save, remove } = useEntregables();
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Entregable | null>(null);
   const [form, setForm] = useState(emptyEntregable());
   const [view, setView] = useState<ViewMode>("list");
   const [filterAcuerdo, setFilterAcuerdo] = useState("all");
-  const acuerdos = getAcuerdos();
-
-  useEffect(() => { setEntregables(getEntregables()); }, []);
-  const refresh = () => setEntregables(getEntregables());
 
   const filtered = filterAcuerdo === "all" ? entregables : entregables.filter((e) => e.acuerdoId === filterAcuerdo);
 
@@ -56,18 +53,18 @@ export default function EntregablesPage() {
     setOpen(true);
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     const selected = acuerdos.find((a) => a.id === form.acuerdoId);
-    const entregable: Entregable = { ...form, influencer: selected?.influencer || form.influencer, id: editing?.id || generateId(), createdAt: editing?.createdAt || new Date().toISOString() };
-    saveEntregable(entregable); refresh(); setOpen(false);
+    await save({ data: { ...form, influencer: selected?.influencer || form.influencer }, id: editing?.id });
+    setOpen(false);
   };
 
-  const handleDelete = (id: string) => { deleteEntregable(id); refresh(); };
+  const handleDelete = async (id: string) => { await remove(id); };
   const update = (field: string, value: any) => setForm((p) => ({ ...p, [field]: value }));
 
-  const handleStatusChange = (item: Entregable, newStatus: string) => {
-    const updated = { ...item, estado: newStatus as Entregable["estado"] };
-    saveEntregable(updated); refresh();
+  const handleStatusChange = async (item: Entregable, newStatus: string) => {
+    const { id, createdAt, ...data } = item;
+    await save({ data: { ...data, estado: newStatus as Entregable["estado"] }, id });
   };
 
   const entregados = filtered.filter((e) => e.estado === "Entregado" || e.estado === "Aprobado").length;
@@ -81,6 +78,8 @@ export default function EntregablesPage() {
       {e.urlContenido && <a href={e.urlContenido} target="_blank" rel="noopener noreferrer" className="text-primary underline text-xs">Ver contenido</a>}
     </div>
   );
+
+  if (isLoading) return <div className="flex items-center justify-center py-12 text-muted-foreground">Cargando entregables...</div>;
 
   return (
     <div className="space-y-6">
