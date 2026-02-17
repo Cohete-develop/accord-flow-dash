@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Pago } from "@/types/crm";
-import { getPagos, savePago, deletePago, getAcuerdos, generateId } from "@/data/crm-store";
+import { useAcuerdos, usePagos } from "@/hooks/useCrmData";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -49,17 +49,13 @@ function NumericInput({ value, onChange, ...props }: { value: number; onChange: 
 }
 
 export default function PagosPage() {
-  const [pagos, setPagos] = useState<Pago[]>([]);
+  const { acuerdos } = useAcuerdos();
+  const { pagos, isLoading, save, remove } = usePagos();
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Pago | null>(null);
   const [form, setForm] = useState(emptyPago());
   const [view, setView] = useState<ViewMode>("list");
   const [filterAcuerdo, setFilterAcuerdo] = useState("all");
-  const acuerdos = getAcuerdos();
-  
-
-  useEffect(() => { setPagos(getPagos()); }, []);
-  const refresh = () => setPagos(getPagos());
 
   const filtered = filterAcuerdo === "all" ? pagos : pagos.filter((p) => p.acuerdoId === filterAcuerdo);
 
@@ -69,19 +65,18 @@ export default function PagosPage() {
     setOpen(true);
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     const selected = acuerdos.find((a) => a.id === form.acuerdoId);
-    const pago: Pago = { ...form, influencer: selected?.influencer || form.influencer, id: editing?.id || generateId(), createdAt: editing?.createdAt || new Date().toISOString() };
-    savePago(pago); refresh(); setOpen(false);
+    await save({ data: { ...form, influencer: selected?.influencer || form.influencer }, id: editing?.id });
+    setOpen(false);
   };
 
-  const handleDelete = (id: string) => { deletePago(id); refresh(); };
+  const handleDelete = async (id: string) => { await remove(id); };
   const update = (field: string, value: any) => setForm((p) => ({ ...p, [field]: value }));
 
-
-  const handleStatusChange = (item: Pago, newStatus: string) => {
-    const updated = { ...item, estado: newStatus as Pago["estado"] };
-    savePago(updated); refresh();
+  const handleStatusChange = async (item: Pago, newStatus: string) => {
+    const { id, createdAt, ...data } = item;
+    await save({ data: { ...data, estado: newStatus as Pago["estado"] }, id });
   };
 
   const totalPagado = filtered.filter((p) => p.estado === "Pagado").reduce((s, p) => s + p.monto, 0);
@@ -95,6 +90,8 @@ export default function PagosPage() {
       <div className="text-xs text-muted-foreground">{p.metodoPago} · Vence: {p.fechaVencimiento || "—"}</div>
     </div>
   );
+
+  if (isLoading) return <div className="flex items-center justify-center py-12 text-muted-foreground">Cargando pagos...</div>;
 
   return (
     <div className="space-y-6">
