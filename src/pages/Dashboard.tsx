@@ -142,21 +142,24 @@ export default function DashboardPage() {
   };
 
   const handleBarClickInfluencer = (data: any) => {
-    if (!data?.name) return;
-    showDetail(`Acuerdos — ${data.name}`, "acuerdos", { acuerdos: acuerdos.filter((a) => a.influencer === data.name) });
+    const name = data?.activePayload?.[0]?.payload?.name;
+    if (!name) return;
+    showDetail(`Acuerdos — ${name}`, "acuerdos", { acuerdos: acuerdos.filter((a) => a.influencer === name) });
   };
 
   const handleBarClickTipo = (data: any) => {
-    if (!data?.name) return;
-    showDetail(`Acuerdos con tipo ${data.name}`, "acuerdos", {
-      acuerdos: acuerdos.filter((a) => (a.tipoContenido || []).includes(data.name)),
+    const name = data?.activePayload?.[0]?.payload?.name;
+    if (!name) return;
+    showDetail(`Acuerdos con tipo ${name}`, "acuerdos", {
+      acuerdos: acuerdos.filter((a) => (a.tipoContenido || []).includes(name)),
     });
   };
 
   const handleBarClickRed = (data: any) => {
-    if (!data?.name) return;
-    showDetail(`Acuerdos en ${data.name}`, "acuerdos", {
-      acuerdos: acuerdos.filter((a) => (a.redSocial || []).includes(data.name)),
+    const name = data?.activePayload?.[0]?.payload?.name;
+    if (!name) return;
+    showDetail(`Acuerdos en ${name}`, "acuerdos", {
+      acuerdos: acuerdos.filter((a) => (a.redSocial || []).includes(name)),
     });
   };
 
