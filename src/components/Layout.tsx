@@ -2,7 +2,7 @@ import { NavLink } from "@/components/NavLink";
 import { Handshake, CreditCard, Package, BarChart3, LayoutDashboard, LogOut } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
-
+import { Navigate } from "react-router-dom";
 const navItems = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { to: "/acuerdos", label: "Acuerdos", icon: Handshake },
@@ -12,7 +12,16 @@ const navItems = [
 ];
 
 export default function Layout({ children }: { children: React.ReactNode }) {
-  const { signOut, user } = useAuth();
+  const { signOut, user, loading } = useAuth();
+
+  if (loading) {
+    return <div className="min-h-screen flex items-center justify-center bg-background"><p>Cargando...</p></div>;
+  }
+
+  if (!user) {
+    return <Navigate to="/auth" replace />;
+  }
+
   return (
     <div className="flex min-h-screen">
       <aside className="w-64 border-r bg-sidebar text-sidebar-foreground flex flex-col">
