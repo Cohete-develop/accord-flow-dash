@@ -1,5 +1,7 @@
 import { NavLink } from "@/components/NavLink";
-import { Handshake, CreditCard, Package, BarChart3, LayoutDashboard } from "lucide-react";
+import { Handshake, CreditCard, Package, BarChart3, LayoutDashboard, LogOut } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
+import { Button } from "@/components/ui/button";
 
 const navItems = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -10,6 +12,8 @@ const navItems = [
 ];
 
 export default function Layout({ children }: { children: React.ReactNode }) {
+  const { signOut } = useAuth();
+
   return (
     <div className="flex min-h-screen">
       <aside className="w-64 border-r bg-sidebar text-sidebar-foreground flex flex-col">
@@ -30,6 +34,11 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             </NavLink>
           ))}
         </nav>
+        <div className="p-3 border-t border-sidebar-border">
+          <Button variant="ghost" className="w-full justify-start text-sidebar-foreground hover:bg-sidebar-accent" onClick={signOut}>
+            <LogOut className="h-4 w-4 mr-2" /> Cerrar sesión
+          </Button>
+        </div>
       </aside>
       <main className="flex-1 bg-background overflow-auto">
         <div className="p-6 max-w-7xl mx-auto">{children}</div>
