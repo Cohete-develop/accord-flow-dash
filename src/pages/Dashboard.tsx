@@ -1,6 +1,9 @@
+import { useState, useCallback } from "react";
 import { getAcuerdos, getPagos, getEntregables, getKPIs } from "@/data/crm-store";
+import { Acuerdo, Pago, Entregable } from "@/types/crm";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend, AreaChart, Area } from "recharts";
+import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, AreaChart, Area } from "recharts";
+import ChartDetailDialog from "@/components/ChartDetailDialog";
 
 const COLORS = [
   "hsl(250, 60%, 52%)", "hsl(152, 60%, 42%)", "hsl(38, 92%, 50%)",
@@ -20,11 +23,26 @@ function formatMonth(key: string): string {
   return `${months[parseInt(m) - 1]} ${y}`;
 }
 
+type DetailState = {
+  open: boolean;
+  title: string;
+  type: "acuerdos" | "pagos" | "entregables";
+  acuerdos?: Acuerdo[];
+  pagos?: Pago[];
+  entregables?: Entregable[];
+};
+
 export default function DashboardPage() {
   const acuerdos = getAcuerdos();
   const pagos = getPagos();
   const entregables = getEntregables();
   const kpis = getKPIs();
+
+  const [detail, setDetail] = useState<DetailState>({ open: false, title: "", type: "acuerdos" });
+
+  const showDetail = useCallback((title: string, type: DetailState["type"], data: { acuerdos?: Acuerdo[]; pagos?: Pago[]; entregables?: Entregable[] }) => {
+    setDetail({ open: true, title, type, ...data });
+  }, []);
 
   // Acuerdos by estado
   const acuerdosByEstado = ["Activo", "Pausado", "Finalizado", "Cancelado"].map((estado) => ({
@@ -46,7 +64,7 @@ export default function DashboardPage() {
     name: estado, value: entregables.filter((e) => e.estado === estado).length,
   })).filter((d) => d.value > 0);
 
-  // Money by influencer (acuerdos)
+  // Money by influencer
   const moneyByInfluencer: Record<string, number> = {};
   acuerdos.forEach((a) => { moneyByInfluencer[a.influencer] = (moneyByInfluencer[a.influencer] || 0) + a.valorTotal; });
   const moneyBarData = Object.entries(moneyByInfluencer).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value);
@@ -77,7 +95,7 @@ export default function DashboardPage() {
   });
   const forecastData = Object.entries(pagosByMonth)
     .sort(([a], [b]) => a.localeCompare(b))
-    .map(([key, value]) => ({ month: formatMonth(key), monto: value }));
+    .map(([key, value]) => ({ month: formatMonth(key), monthKey: key, monto: value }));
 
   // Forecast: acuerdos value by end month
   const acuerdosByMonth: Record<string, number> = {};
@@ -87,7 +105,7 @@ export default function DashboardPage() {
   });
   const acuerdoForecast = Object.entries(acuerdosByMonth)
     .sort(([a], [b]) => a.localeCompare(b))
-    .map(([key, value]) => ({ month: formatMonth(key), valor: value }));
+    .map(([key, value]) => ({ month: formatMonth(key), monthKey: key, valor: value }));
 
   // KPIs summary
   const totalAlcance = kpis.reduce((s, k) => s + k.alcance, 0);
@@ -98,7 +116,67 @@ export default function DashboardPage() {
   const totalPagado = pagos.filter((p) => p.estado === "Pagado").reduce((s, p) => s + p.monto, 0);
   const totalPendiente = pagos.filter((p) => p.estado === "Pendiente").reduce((s, p) => s + p.monto, 0);
 
-  const renderPie = (data: { name: string; value: number }[], title: string) => (
+  // Click handlers for charts
+  const handlePieClickAcuerdos = (_: any, index: number) => {
+    const seg = acuerdosByEstado[index];
+    if (!seg) return;
+    showDetail(`Acuerdos — ${seg.name}`, "acuerdos", { acuerdos: acuerdos.filter((a) => a.estado === seg.name) });
+  };
+
+  const handlePieClickPagos = (_: any, index: number) => {
+    const seg = pagosByEstado[index];
+    if (!seg) return;
+    showDetail(`Pagos — ${seg.name}`, "pagos", { pagos: pagos.filter((p) => p.estado === seg.name) });
+  };
+
+  const handlePieClickEntTipo = (_: any, index: number) => {
+    const seg = entregablesByTipo[index];
+    if (!seg) return;
+    showDetail(`Entregables — ${seg.name}`, "entregables", { entregables: entregables.filter((e) => e.tipoContenido === seg.name) });
+  };
+
+  const handlePieClickEntEstado = (_: any, index: number) => {
+    const seg = entregablesByEstado[index];
+    if (!seg) return;
+    showDetail(`Entregables — ${seg.name}`, "entregables", { entregables: entregables.filter((e) => e.estado === seg.name) });
+  };
+
+  const handleBarClickInfluencer = (data: any) => {
+    if (!data?.name) return;
+    showDetail(`Acuerdos — ${data.name}`, "acuerdos", { acuerdos: acuerdos.filter((a) => a.influencer === data.name) });
+  };
+
+  const handleBarClickTipo = (data: any) => {
+    if (!data?.name) return;
+    showDetail(`Acuerdos con tipo ${data.name}`, "acuerdos", {
+      acuerdos: acuerdos.filter((a) => (a.tipoContenido || []).includes(data.name)),
+    });
+  };
+
+  const handleBarClickRed = (data: any) => {
+    if (!data?.name) return;
+    showDetail(`Acuerdos en ${data.name}`, "acuerdos", {
+      acuerdos: acuerdos.filter((a) => (a.redSocial || []).includes(data.name)),
+    });
+  };
+
+  const handleAreaClickPagos = (data: any) => {
+    if (!data?.activePayload?.[0]?.payload?.monthKey) return;
+    const mk = data.activePayload[0].payload.monthKey;
+    showDetail(`Pagos — ${data.activePayload[0].payload.month}`, "pagos", {
+      pagos: pagos.filter((p) => getMonthKey(p.fechaVencimiento) === mk),
+    });
+  };
+
+  const handleAreaClickAcuerdos = (data: any) => {
+    if (!data?.activePayload?.[0]?.payload?.monthKey) return;
+    const mk = data.activePayload[0].payload.monthKey;
+    showDetail(`Acuerdos fin — ${data.activePayload[0].payload.month}`, "acuerdos", {
+      acuerdos: acuerdos.filter((a) => getMonthKey(a.fechaFin) === mk),
+    });
+  };
+
+  const renderPie = (data: { name: string; value: number }[], title: string, onClick: (_: any, index: number) => void) => (
     <Card>
       <CardHeader className="pb-2"><CardTitle className="text-base">{title}</CardTitle></CardHeader>
       <CardContent>
@@ -107,7 +185,7 @@ export default function DashboardPage() {
         ) : (
           <ResponsiveContainer width="100%" height={220}>
             <PieChart>
-              <Pie data={data} cx="50%" cy="50%" outerRadius={80} dataKey="value" label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`} labelLine={false} fontSize={11}>
+              <Pie data={data} cx="50%" cy="50%" outerRadius={80} dataKey="value" label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`} labelLine={false} fontSize={11} className="cursor-pointer" onClick={onClick}>
                 {data.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
               </Pie>
               <Tooltip />
@@ -136,10 +214,10 @@ export default function DashboardPage() {
 
       {/* Pie charts row */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {renderPie(acuerdosByEstado, "Acuerdos por Estado")}
-        {renderPie(pagosByEstado, "Pagos por Estado")}
-        {renderPie(entregablesByTipo, "Entregables por Tipo")}
-        {renderPie(entregablesByEstado, "Entregables por Estado")}
+        {renderPie(acuerdosByEstado, "Acuerdos por Estado", handlePieClickAcuerdos)}
+        {renderPie(pagosByEstado, "Pagos por Estado", handlePieClickPagos)}
+        {renderPie(entregablesByTipo, "Entregables por Tipo", handlePieClickEntTipo)}
+        {renderPie(entregablesByEstado, "Entregables por Estado", handlePieClickEntEstado)}
       </div>
 
       {/* Bar: money by influencer */}
@@ -150,12 +228,12 @@ export default function DashboardPage() {
             <p className="text-sm text-muted-foreground text-center py-8">Sin datos</p>
           ) : (
             <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={moneyBarData}>
+              <BarChart data={moneyBarData} onClick={handleBarClickInfluencer}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="name" fontSize={12} />
                 <YAxis fontSize={12} />
                 <Tooltip formatter={(v: number) => `$${v.toLocaleString()}`} />
-                <Bar dataKey="value" fill="hsl(250, 60%, 52%)" name="Valor" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="value" fill="hsl(250, 60%, 52%)" name="Valor" radius={[4, 4, 0, 0]} className="cursor-pointer" />
               </BarChart>
             </ResponsiveContainer>
           )}
@@ -171,12 +249,12 @@ export default function DashboardPage() {
               <p className="text-sm text-muted-foreground text-center py-8">Sin datos</p>
             ) : (
               <ResponsiveContainer width="100%" height={280}>
-                <BarChart data={moneyByTipoData}>
+                <BarChart data={moneyByTipoData} onClick={handleBarClickTipo}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="name" fontSize={12} />
                   <YAxis fontSize={12} />
                   <Tooltip formatter={(v: number) => `$${v.toLocaleString()}`} />
-                  <Bar dataKey="value" fill="hsl(38, 92%, 50%)" name="Inversión" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="value" fill="hsl(38, 92%, 50%)" name="Inversión" radius={[4, 4, 0, 0]} className="cursor-pointer" />
                 </BarChart>
               </ResponsiveContainer>
             )}
@@ -189,12 +267,12 @@ export default function DashboardPage() {
               <p className="text-sm text-muted-foreground text-center py-8">Sin datos</p>
             ) : (
               <ResponsiveContainer width="100%" height={280}>
-                <BarChart data={moneyByRedData}>
+                <BarChart data={moneyByRedData} onClick={handleBarClickRed}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="name" fontSize={12} />
                   <YAxis fontSize={12} />
                   <Tooltip formatter={(v: number) => `$${v.toLocaleString()}`} />
-                  <Bar dataKey="value" fill="hsl(220, 60%, 50%)" name="Inversión" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="value" fill="hsl(220, 60%, 50%)" name="Inversión" radius={[4, 4, 0, 0]} className="cursor-pointer" />
                 </BarChart>
               </ResponsiveContainer>
             )}
@@ -211,12 +289,12 @@ export default function DashboardPage() {
               <p className="text-sm text-muted-foreground text-center py-8">Sin datos</p>
             ) : (
               <ResponsiveContainer width="100%" height={280}>
-                <AreaChart data={forecastData}>
+                <AreaChart data={forecastData} onClick={handleAreaClickPagos}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="month" fontSize={11} />
                   <YAxis fontSize={11} />
                   <Tooltip formatter={(v: number) => `$${v.toLocaleString()}`} />
-                  <Area type="monotone" dataKey="monto" stroke="hsl(250, 60%, 52%)" fill="hsl(250, 60%, 52%)" fillOpacity={0.2} name="Monto" />
+                  <Area type="monotone" dataKey="monto" stroke="hsl(250, 60%, 52%)" fill="hsl(250, 60%, 52%)" fillOpacity={0.2} name="Monto" className="cursor-pointer" />
                 </AreaChart>
               </ResponsiveContainer>
             )}
@@ -229,12 +307,12 @@ export default function DashboardPage() {
               <p className="text-sm text-muted-foreground text-center py-8">Sin datos</p>
             ) : (
               <ResponsiveContainer width="100%" height={280}>
-                <AreaChart data={acuerdoForecast}>
+                <AreaChart data={acuerdoForecast} onClick={handleAreaClickAcuerdos}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="month" fontSize={11} />
                   <YAxis fontSize={11} />
                   <Tooltip formatter={(v: number) => `$${v.toLocaleString()}`} />
-                  <Area type="monotone" dataKey="valor" stroke="hsl(152, 60%, 42%)" fill="hsl(152, 60%, 42%)" fillOpacity={0.2} name="Valor" />
+                  <Area type="monotone" dataKey="valor" stroke="hsl(152, 60%, 42%)" fill="hsl(152, 60%, 42%)" fillOpacity={0.2} name="Valor" className="cursor-pointer" />
                 </AreaChart>
               </ResponsiveContainer>
             )}
@@ -242,12 +320,22 @@ export default function DashboardPage() {
         </Card>
       </div>
 
-      {/* KPIs summary bar */}
+      {/* KPIs summary */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Alcance Total</CardTitle></CardHeader><CardContent><div className="text-2xl font-bold">{totalAlcance.toLocaleString()}</div></CardContent></Card>
         <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Clicks Totales</CardTitle></CardHeader><CardContent><div className="text-2xl font-bold">{totalClicks.toLocaleString()}</div></CardContent></Card>
         <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Entregables</CardTitle></CardHeader><CardContent><div className="text-2xl font-bold">{entregables.length}</div></CardContent></Card>
       </div>
+
+      <ChartDetailDialog
+        open={detail.open}
+        onOpenChange={(o) => setDetail((d) => ({ ...d, open: o }))}
+        title={detail.title}
+        type={detail.type}
+        acuerdos={detail.acuerdos}
+        pagos={detail.pagos}
+        entregables={detail.entregables}
+      />
     </div>
   );
 }

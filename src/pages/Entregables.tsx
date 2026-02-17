@@ -101,7 +101,7 @@ export default function EntregablesPage() {
       </div>
 
       {view === "kanban" && (
-        <KanbanBoard items={filtered} columns={kanbanColumns} getId={(e) => e.id} getStatus={(e) => e.estado} getValue={() => 1} renderCard={renderCard} onStatusChange={handleStatusChange} valuePrefix="" />
+        <KanbanBoard items={filtered} columns={kanbanColumns} getId={(e) => e.id} getStatus={(e) => e.estado} getValue={() => 1} renderCard={renderCard} onStatusChange={handleStatusChange} onCardClick={(e) => handleOpen(e)} valuePrefix="" />
       )}
 
       {view === "forecast" && (

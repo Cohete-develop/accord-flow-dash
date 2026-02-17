@@ -18,6 +18,7 @@ interface KanbanBoardProps<T> {
   getValue: (item: T) => number;
   renderCard: (item: T) => React.ReactNode;
   onStatusChange: (item: T, newStatus: string) => void;
+  onCardClick?: (item: T) => void;
   valuePrefix?: string;
 }
 
@@ -29,6 +30,7 @@ export default function KanbanBoard<T>({
   getValue,
   renderCard,
   onStatusChange,
+  onCardClick,
   valuePrefix = "$",
 }: KanbanBoardProps<T>) {
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -87,8 +89,9 @@ export default function KanbanBoard<T>({
                     draggable
                     onDragStart={() => handleDragStart(item)}
                     className="cursor-grab active:cursor-grabbing"
+                    onClick={() => onCardClick?.(item)}
                   >
-                    <Card className="shadow-sm hover:shadow-md transition-shadow">
+                    <Card className="shadow-sm hover:shadow-md transition-shadow hover:ring-2 hover:ring-primary/30">
                       <CardContent className="p-3 text-sm">
                         {renderCard(item)}
                       </CardContent>
