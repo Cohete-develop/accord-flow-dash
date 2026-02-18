@@ -181,7 +181,27 @@ export default function KPIsPage() {
               </Select>
             </div>
             <div className="space-y-2"><Label>Estado</Label><Select value={form.estado} onValueChange={(v) => update("estado", v)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="Pendiente">Pendiente</SelectItem><SelectItem value="Medido">Medido</SelectItem><SelectItem value="Revisado">Revisado</SelectItem><SelectItem value="Aprobado">Aprobado</SelectItem></SelectContent></Select></div>
-            <div className="space-y-2"><Label>Periodo</Label><Input value={form.periodo} onChange={(e) => update("periodo", e.target.value)} placeholder="Ej: Enero 2025" /></div>
+            <div className="space-y-2">
+              <Label>Periodo</Label>
+              <div className="flex gap-2">
+                <Select value={form.periodo.split(" ")[0] || ""} onValueChange={(m) => update("periodo", `${m} ${form.periodo.split(" ")[1] || new Date().getFullYear()}`)}>
+                  <SelectTrigger><SelectValue placeholder="Mes" /></SelectTrigger>
+                  <SelectContent>
+                    {["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"].map((m) => (
+                      <SelectItem key={m} value={m}>{m}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Select value={form.periodo.split(" ")[1] || ""} onValueChange={(y) => update("periodo", `${form.periodo.split(" ")[0] || "Enero"} ${y}`)}>
+                  <SelectTrigger className="w-[100px]"><SelectValue placeholder="Año" /></SelectTrigger>
+                  <SelectContent>
+                    {Array.from({ length: 7 }, (_, i) => String(new Date().getFullYear() - 1 + i)).map((y) => (
+                      <SelectItem key={y} value={y}>{y}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
             <div className="space-y-2"><Label>Alcance</Label><Input type="number" value={form.alcance} onChange={(e) => update("alcance", +e.target.value)} /></div>
             <div className="space-y-2"><Label>Impresiones</Label><Input type="number" value={form.impresiones} onChange={(e) => update("impresiones", +e.target.value)} /></div>
             <div className="space-y-2"><Label>Interacciones</Label><Input type="number" value={form.interacciones} onChange={(e) => update("interacciones", +e.target.value)} /></div>
