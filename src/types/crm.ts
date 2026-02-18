@@ -13,7 +13,7 @@ export interface Acuerdo {
   valorMensual: number;
   valorTotal: number;
   moneda: string;
-  estado: "Activo" | "Pausado" | "Finalizado" | "Cancelado";
+  estado: "En Negociación" | "Activo" | "Pausado" | "Finalizado" | "Cancelado";
   contacto: string;
   familiaProducto: string[];
   notas: string;

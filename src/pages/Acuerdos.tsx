@@ -27,6 +27,7 @@ const emptyAcuerdo = (): Omit<Acuerdo, "id" | "createdAt"> => ({
 });
 
 const estadoColors: Record<string, string> = {
+  "En Negociación": "bg-blue-100 text-blue-800",
   Activo: "bg-emerald-100 text-emerald-800",
   Pausado: "bg-amber-100 text-amber-800",
   Finalizado: "bg-slate-100 text-slate-600",
@@ -34,6 +35,7 @@ const estadoColors: Record<string, string> = {
 };
 
 const kanbanColumns: KanbanColumn[] = [
+  { key: "En Negociación", label: "En Negociación", colorClass: "bg-blue-100 text-blue-800" },
   { key: "Activo", label: "Activo", colorClass: "bg-emerald-100 text-emerald-800" },
   { key: "Pausado", label: "Pausado", colorClass: "bg-amber-100 text-amber-800" },
   { key: "Finalizado", label: "Finalizado", colorClass: "bg-slate-100 text-slate-700" },
@@ -283,7 +285,7 @@ export default function AcuerdosPage() {
               <Input type="number" value={form.valorTotal} disabled className="bg-muted" />
             </div>
             <div className="space-y-2"><FieldLabel field="moneda">Moneda</FieldLabel><Select value={form.moneda} onValueChange={(v) => update("moneda", v)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="COP">COP</SelectItem><SelectItem value="USD">USD</SelectItem></SelectContent></Select></div>
-            <div className="space-y-2"><FieldLabel field="estado">Estado</FieldLabel><Select value={form.estado} onValueChange={(v) => update("estado", v)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="Activo">Activo</SelectItem><SelectItem value="Pausado">Pausado</SelectItem><SelectItem value="Finalizado">Finalizado</SelectItem><SelectItem value="Cancelado">Cancelado</SelectItem></SelectContent></Select></div>
+            <div className="space-y-2"><FieldLabel field="estado">Estado</FieldLabel><Select value={form.estado} onValueChange={(v) => update("estado", v)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="En Negociación">En Negociación</SelectItem><SelectItem value="Activo">Activo</SelectItem><SelectItem value="Pausado">Pausado</SelectItem><SelectItem value="Finalizado">Finalizado</SelectItem><SelectItem value="Cancelado">Cancelado</SelectItem></SelectContent></Select></div>
             <div className="space-y-2"><FieldLabel field="contacto">Contacto</FieldLabel><Input value={form.contacto} onChange={(e) => update("contacto", e.target.value)} /></div>
             <div className="space-y-2">
               <Label>Familias de productos</Label>
