@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
+import logo from "@/assets/logo.png";
 
 export default function AuthPage() {
   const [isLogin, setIsLogin] = useState(true);
@@ -47,6 +48,7 @@ export default function AuthPage() {
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
+          <img src={logo} alt="InfluXpert by Cohete" className="h-16 mx-auto mb-2" />
           <CardTitle className="text-2xl">CRM Influencers</CardTitle>
           <CardDescription>{isLogin ? "Inicia sesión en tu cuenta" : "Crea una cuenta nueva"}</CardDescription>
         </CardHeader>
