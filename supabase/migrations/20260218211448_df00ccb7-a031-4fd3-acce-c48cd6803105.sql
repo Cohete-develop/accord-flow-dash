@@ -1,0 +1,1 @@
+ALTER TABLE public.acuerdos ADD COLUMN familia_producto text NOT NULL DEFAULT '';

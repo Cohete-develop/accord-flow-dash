@@ -23,6 +23,7 @@ function dbToAcuerdo(row: any): Acuerdo {
     moneda: row.moneda,
     estado: row.estado,
     contacto: row.contacto,
+    familiaProducto: row.familia_producto || "",
     notas: row.notas,
     createdAt: row.created_at,
   };
@@ -46,6 +47,7 @@ function acuerdoToDb(a: Omit<Acuerdo, "id" | "createdAt">, userId: string) {
     moneda: a.moneda,
     estado: a.estado,
     contacto: a.contacto,
+    familia_producto: a.familiaProducto,
     notas: a.notas,
   };
 }

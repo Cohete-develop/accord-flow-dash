@@ -18,11 +18,12 @@ import ForecastBoard from "@/components/ForecastBoard";
 
 const REDES_SOCIALES = ["Instagram", "TikTok", "YouTube", "Twitter", "Facebook"];
 const TIPOS_CONTENIDO = ["Reel", "Story", "Collab", "UGC"];
+const FAMILIAS_PRODUCTO = ["Lubricantes", "Llantas", "Transmisión", "Frenos", "Luces/Iluminación", "Baterías"];
 
 const emptyAcuerdo = (): Omit<Acuerdo, "id" | "createdAt"> => ({
   influencer: "", redSocial: [], seguidores: 0, plataforma: "", tipoContenido: [],
   reelsPactados: 0, storiesPactadas: 0, fechaInicio: "", fechaFin: "",
-  duracionMeses: 0, valorMensual: 0, valorTotal: 0, moneda: "COP", estado: "Activo", contacto: "", notas: "",
+  duracionMeses: 0, valorMensual: 0, valorTotal: 0, moneda: "COP", estado: "Activo", contacto: "", familiaProducto: "", notas: "",
 });
 
 const estadoColors: Record<string, string> = {
@@ -277,6 +278,13 @@ export default function AcuerdosPage() {
             <div className="space-y-2"><FieldLabel field="moneda">Moneda</FieldLabel><Select value={form.moneda} onValueChange={(v) => update("moneda", v)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="COP">COP</SelectItem><SelectItem value="USD">USD</SelectItem></SelectContent></Select></div>
             <div className="space-y-2"><FieldLabel field="estado">Estado</FieldLabel><Select value={form.estado} onValueChange={(v) => update("estado", v)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="Activo">Activo</SelectItem><SelectItem value="Pausado">Pausado</SelectItem><SelectItem value="Finalizado">Finalizado</SelectItem><SelectItem value="Cancelado">Cancelado</SelectItem></SelectContent></Select></div>
             <div className="space-y-2"><FieldLabel field="contacto">Contacto</FieldLabel><Input value={form.contacto} onChange={(e) => update("contacto", e.target.value)} /></div>
+            <div className="space-y-2">
+              <Label>Familias de productos</Label>
+              <Select value={form.familiaProducto} onValueChange={(v) => update("familiaProducto", v)}>
+                <SelectTrigger><SelectValue placeholder="Seleccionar familia" /></SelectTrigger>
+                <SelectContent>{FAMILIAS_PRODUCTO.map((f) => <SelectItem key={f} value={f}>{f}</SelectItem>)}</SelectContent>
+              </Select>
+            </div>
             <div className="col-span-2 space-y-2"><FieldLabel field="notas">Notas</FieldLabel><Textarea value={form.notas} onChange={(e) => update("notas", e.target.value)} /></div>
           </div>
           <DialogFooter>
