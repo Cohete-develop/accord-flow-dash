@@ -15,6 +15,7 @@ export interface Acuerdo {
   moneda: string;
   estado: "Activo" | "Pausado" | "Finalizado" | "Cancelado";
   contacto: string;
+  familiaProducto: string;
   notas: string;
   createdAt: string;
 }
@@ -28,7 +29,7 @@ export interface Pago {
   moneda: string;
   fechaPago: string;
   fechaVencimiento: string;
-  estado: "Pendiente" | "Pagado" | "Vencido" | "Cancelado";
+  estado: "Pendiente" | "Pagado" | "Vencido" | "Cancelado" | "Programado";
   metodoPago: string;
   comprobante: string;
   notas: string;

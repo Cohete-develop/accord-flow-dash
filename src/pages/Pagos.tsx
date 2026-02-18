@@ -17,6 +17,7 @@ import ForecastBoard from "@/components/ForecastBoard";
 
 const estadoColors: Record<string, string> = {
   Pendiente: "bg-amber-100 text-amber-800",
+  Programado: "bg-blue-100 text-blue-800",
   Pagado: "bg-emerald-100 text-emerald-800",
   Vencido: "bg-red-100 text-red-800",
   Cancelado: "bg-slate-100 text-slate-600",
@@ -24,6 +25,7 @@ const estadoColors: Record<string, string> = {
 
 const kanbanColumns: KanbanColumn[] = [
   { key: "Pendiente", label: "Pendiente", colorClass: "bg-amber-100 text-amber-800" },
+  { key: "Programado", label: "Programado", colorClass: "bg-blue-100 text-blue-800" },
   { key: "Pagado", label: "Pagado", colorClass: "bg-emerald-100 text-emerald-800" },
   { key: "Vencido", label: "Vencido", colorClass: "bg-red-100 text-red-800" },
   { key: "Cancelado", label: "Cancelado", colorClass: "bg-slate-100 text-slate-700" },
@@ -175,7 +177,7 @@ export default function PagosPage() {
             <div className="space-y-2"><Label>Fecha Pago</Label><Input type="date" value={form.fechaPago} onChange={(e) => update("fechaPago", e.target.value)} /></div>
             <div className="space-y-2"><Label>Fecha Vencimiento</Label><Input type="date" value={form.fechaVencimiento} onChange={(e) => update("fechaVencimiento", e.target.value)} /></div>
             <div className="space-y-2"><Label>Método de Pago</Label><Select value={form.metodoPago} onValueChange={(v) => update("metodoPago", v)}><SelectTrigger><SelectValue placeholder="Seleccionar" /></SelectTrigger><SelectContent><SelectItem value="Transferencia">Transferencia</SelectItem><SelectItem value="Efectivo">Efectivo</SelectItem><SelectItem value="PayPal">PayPal</SelectItem><SelectItem value="Otro">Otro</SelectItem></SelectContent></Select></div>
-            <div className="space-y-2"><Label>Estado</Label><Select value={form.estado} onValueChange={(v) => update("estado", v)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="Pendiente">Pendiente</SelectItem><SelectItem value="Pagado">Pagado</SelectItem><SelectItem value="Vencido">Vencido</SelectItem><SelectItem value="Cancelado">Cancelado</SelectItem></SelectContent></Select></div>
+            <div className="space-y-2"><Label>Estado</Label><Select value={form.estado} onValueChange={(v) => update("estado", v)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="Pendiente">Pendiente</SelectItem><SelectItem value="Programado">Programado</SelectItem><SelectItem value="Pagado">Pagado</SelectItem><SelectItem value="Vencido">Vencido</SelectItem><SelectItem value="Cancelado">Cancelado</SelectItem></SelectContent></Select></div>
             <div className="col-span-2 space-y-2"><Label>Comprobante</Label><Input value={form.comprobante} onChange={(e) => update("comprobante", e.target.value)} placeholder="Referencia o número de comprobante" /></div>
             <div className="col-span-2 space-y-2"><Label>Notas</Label><Textarea value={form.notas} onChange={(e) => update("notas", e.target.value)} /></div>
           </div>
