@@ -128,7 +128,12 @@ export default function KPIsPage() {
       )}
 
       {view === "forecast" && (
-        <ForecastBoard items={filtered} getDate={() => ""} getValue={(k) => k.alcance} renderCard={renderCard} getId={(k) => k.id} valuePrefix="" emptyLabel="Los KPIs se agrupan por periodo. Usa la vista Kanban o Lista." />
+        <ForecastBoard items={filtered} getDate={(k) => {
+          const meses: Record<string, string> = { Enero: "01", Febrero: "02", Marzo: "03", Abril: "04", Mayo: "05", Junio: "06", Julio: "07", Agosto: "08", Septiembre: "09", Octubre: "10", Noviembre: "11", Diciembre: "12" };
+          const parts = k.periodo.split(" ");
+          if (parts.length === 2 && meses[parts[0]]) return `${parts[1]}-${meses[parts[0]]}-01`;
+          return "";
+        }} getValue={(k) => k.alcance} renderCard={renderCard} getId={(k) => k.id} valuePrefix="" emptyLabel="No hay KPIs con periodo asignado." />
       )}
 
       {view === "list" && (
