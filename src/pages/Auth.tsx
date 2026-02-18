@@ -49,7 +49,7 @@ export default function AuthPage() {
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <img src={logo} alt="InfluXpert by Cohete" className="h-16 mx-auto mb-2" />
-          <CardTitle className="text-2xl">CRM Influencers</CardTitle>
+          
           <CardDescription>{isLogin ? "Inicia sesión en tu cuenta" : "Crea una cuenta nueva"}</CardDescription>
         </CardHeader>
         <CardContent>
