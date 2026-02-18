@@ -219,7 +219,9 @@ export default function DashboardPage() {
                 <XAxis dataKey="name" fontSize={12} />
                 <YAxis fontSize={12} tickFormatter={fmtCurrency} />
                 <Tooltip formatter={(v: number) => fmtTooltip(v)} />
-                <Bar dataKey="value" fill="hsl(250, 60%, 52%)" name="Valor" radius={[4, 4, 0, 0]} className="cursor-pointer" />
+              <Bar dataKey="value" name="Valor" radius={[4, 4, 0, 0]} className="cursor-pointer">
+                {moneyBarData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
+              </Bar>
               </BarChart>
             </ResponsiveContainer>
           )}
@@ -239,7 +241,9 @@ export default function DashboardPage() {
                   <XAxis dataKey="name" fontSize={12} />
                   <YAxis fontSize={12} tickFormatter={fmtCurrency} />
                   <Tooltip formatter={(v: number) => fmtTooltip(v)} />
-                  <Bar dataKey="value" fill="hsl(38, 92%, 50%)" name="Inversión" radius={[4, 4, 0, 0]} className="cursor-pointer" />
+                  <Bar dataKey="value" name="Inversión" radius={[4, 4, 0, 0]} className="cursor-pointer">
+                    {moneyByTipoData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
+                  </Bar>
                 </BarChart>
               </ResponsiveContainer>
             )}
@@ -257,7 +261,9 @@ export default function DashboardPage() {
                   <XAxis dataKey="name" fontSize={12} />
                   <YAxis fontSize={12} tickFormatter={fmtCurrency} />
                   <Tooltip formatter={(v: number) => fmtTooltip(v)} />
-                  <Bar dataKey="value" fill="hsl(220, 60%, 50%)" name="Inversión" radius={[4, 4, 0, 0]} className="cursor-pointer" />
+                  <Bar dataKey="value" name="Inversión" radius={[4, 4, 0, 0]} className="cursor-pointer">
+                    {moneyByRedData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
+                  </Bar>
                 </BarChart>
               </ResponsiveContainer>
             )}
@@ -267,7 +273,7 @@ export default function DashboardPage() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Card>
-          <CardHeader><CardTitle className="text-base">Forecast Pagos por Mes</CardTitle></CardHeader>
+          <CardHeader><CardTitle className="text-base">Pagos realizados y futuros</CardTitle></CardHeader>
           <CardContent>
             {forecastData.length === 0 ? (
               <p className="text-sm text-muted-foreground text-center py-8">Sin datos</p>
@@ -285,7 +291,7 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
         <Card>
-          <CardHeader><CardTitle className="text-base">Forecast Acuerdos por Mes (Fin)</CardTitle></CardHeader>
+          <CardHeader><CardTitle className="text-base">Fecha de finalización x monto</CardTitle></CardHeader>
           <CardContent>
             {acuerdoForecast.length === 0 ? (
               <p className="text-sm text-muted-foreground text-center py-8">Sin datos</p>
