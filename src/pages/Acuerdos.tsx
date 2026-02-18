@@ -23,7 +23,7 @@ const FAMILIAS_PRODUCTO = ["Lubricantes", "Llantas", "Transmisión", "Frenos", "
 const emptyAcuerdo = (): Omit<Acuerdo, "id" | "createdAt"> => ({
   influencer: "", redSocial: [], seguidores: 0, plataforma: "", tipoContenido: [],
   reelsPactados: 0, storiesPactadas: 0, fechaInicio: "", fechaFin: "",
-  duracionMeses: 0, valorMensual: 0, valorTotal: 0, moneda: "COP", estado: "Activo", contacto: "", familiaProducto: "", notas: "",
+  duracionMeses: 0, valorMensual: 0, valorTotal: 0, moneda: "COP", estado: "Activo", contacto: "", familiaProducto: [], notas: "",
 });
 
 const estadoColors: Record<string, string> = {
@@ -145,6 +145,13 @@ export default function AcuerdosPage() {
     setForm((p) => ({
       ...p,
       tipoContenido: p.tipoContenido.includes(tipo) ? p.tipoContenido.filter((t) => t !== tipo) : [...p.tipoContenido, tipo],
+    }));
+  };
+
+  const toggleFamiliaProducto = (familia: string) => {
+    setForm((p) => ({
+      ...p,
+      familiaProducto: (p.familiaProducto || []).includes(familia) ? p.familiaProducto.filter((f) => f !== familia) : [...(p.familiaProducto || []), familia],
     }));
   };
 
@@ -280,10 +287,14 @@ export default function AcuerdosPage() {
             <div className="space-y-2"><FieldLabel field="contacto">Contacto</FieldLabel><Input value={form.contacto} onChange={(e) => update("contacto", e.target.value)} /></div>
             <div className="space-y-2">
               <Label>Familias de productos</Label>
-              <Select value={form.familiaProducto} onValueChange={(v) => update("familiaProducto", v)}>
-                <SelectTrigger><SelectValue placeholder="Seleccionar familia" /></SelectTrigger>
-                <SelectContent>{FAMILIAS_PRODUCTO.map((f) => <SelectItem key={f} value={f}>{f}</SelectItem>)}</SelectContent>
-              </Select>
+              <div className="flex flex-wrap gap-3 pt-1">
+                {FAMILIAS_PRODUCTO.map((f) => (
+                  <label key={f} className="flex items-center gap-1.5 text-sm cursor-pointer">
+                    <Checkbox checked={(form.familiaProducto || []).includes(f)} onCheckedChange={() => toggleFamiliaProducto(f)} />
+                    {f}
+                  </label>
+                ))}
+              </div>
             </div>
             <div className="col-span-2 space-y-2"><FieldLabel field="notas">Notas</FieldLabel><Textarea value={form.notas} onChange={(e) => update("notas", e.target.value)} /></div>
           </div>
