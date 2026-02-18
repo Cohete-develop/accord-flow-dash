@@ -20,7 +20,7 @@ export type Database = {
           created_at: string
           duracion_meses: number
           estado: string
-          familia_producto: string
+          familia_producto: string[]
           fecha_fin: string | null
           fecha_inicio: string | null
           id: string
@@ -42,7 +42,7 @@ export type Database = {
           created_at?: string
           duracion_meses?: number
           estado?: string
-          familia_producto?: string
+          familia_producto?: string[]
           fecha_fin?: string | null
           fecha_inicio?: string | null
           id?: string
@@ -64,7 +64,7 @@ export type Database = {
           created_at?: string
           duracion_meses?: number
           estado?: string
-          familia_producto?: string
+          familia_producto?: string[]
           fecha_fin?: string | null
           fecha_inicio?: string | null
           id?: string

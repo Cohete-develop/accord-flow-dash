@@ -15,7 +15,7 @@ export interface Acuerdo {
   moneda: string;
   estado: "Activo" | "Pausado" | "Finalizado" | "Cancelado";
   contacto: string;
-  familiaProducto: string;
+  familiaProducto: string[];
   notas: string;
   createdAt: string;
 }

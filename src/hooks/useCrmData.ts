@@ -23,7 +23,7 @@ function dbToAcuerdo(row: any): Acuerdo {
     moneda: row.moneda,
     estado: row.estado,
     contacto: row.contacto,
-    familiaProducto: row.familia_producto || "",
+    familiaProducto: row.familia_producto || [],
     notas: row.notas,
     createdAt: row.created_at,
   };
