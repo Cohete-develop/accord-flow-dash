@@ -16,6 +16,7 @@ import KanbanBoard, { KanbanColumn } from "@/components/KanbanBoard";
 import ForecastBoard from "@/components/ForecastBoard";
 import SortableTableHead, { SortDirection, useSort } from "@/components/SortableTableHead";
 import { useColumnOrder, ColumnDef } from "@/hooks/useColumnOrder";
+import { useResizableColumns } from "@/hooks/useResizableColumns";
 
 const estadoColors: Record<string, string> = {
   Pendiente: "bg-amber-100 text-amber-800",
@@ -79,6 +80,7 @@ export default function EntregablesPage() {
   ];
 
   const { orderedColumns, draggedColumn, handleDragStart, handleDragOver, handleDrop, handleDragEnd } = useColumnOrder(entregableColumns);
+  const { columnWidths, handleResizeStart } = useResizableColumns(orderedColumns.map(c => c.key), 120);
 
   const byAcuerdo = filterAcuerdo === "all" ? entregables : entregables.filter((e) => e.acuerdoId === filterAcuerdo);
   const byDate = filterByDateRange(byAcuerdo, dateRange, (e) => [e.fechaProgramada, e.fechaEntrega]);
@@ -153,36 +155,26 @@ export default function EntregablesPage() {
       {view === "list" && (
         <Card>
           <CardContent className="p-0">
-            <Table>
+            <Table className="table-fixed">
               <TableHeader>
                 <TableRow>
                   {orderedColumns.map((col) => (
-                    col.sortKey ? (
-                      <SortableTableHead
-                        key={col.key}
-                        label={col.label}
-                        sortKey={col.sortKey}
-                        currentSortKey={sortKey}
-                        currentDirection={sortDirection}
-                        onSort={handleSort}
-                        draggable
-                        onDragStart={(e) => handleDragStart(e as any, col.key)}
-                        onDragOver={(e) => handleDragOver(e as any, col.key)}
-                        onDrop={(e) => handleDrop(e as any, col.key)}
-                        onDragEnd={handleDragEnd}
-                        className={draggedColumn === col.key ? "opacity-50" : ""}
-                      />
-                    ) : (
-                      <TableHead
-                        key={col.key}
-                        draggable
-                        onDragStart={(e) => handleDragStart(e as any, col.key)}
-                        onDragOver={(e) => handleDragOver(e as any, col.key)}
-                        onDrop={(e) => handleDrop(e as any, col.key)}
-                        onDragEnd={handleDragEnd}
-                        className={draggedColumn === col.key ? "opacity-50 cursor-grab" : "cursor-grab"}
-                      >{col.label}</TableHead>
-                    )
+                    <SortableTableHead
+                      key={col.key}
+                      label={col.label}
+                      sortKey={col.sortKey || col.key}
+                      currentSortKey={sortKey}
+                      currentDirection={sortDirection}
+                      onSort={handleSort}
+                      draggable
+                      onDragStart={(e) => handleDragStart(e as any, col.key)}
+                      onDragOver={(e) => handleDragOver(e as any, col.key)}
+                      onDrop={(e) => handleDrop(e as any, col.key)}
+                      onDragEnd={handleDragEnd}
+                      className={draggedColumn === col.key ? "opacity-50" : ""}
+                      width={columnWidths[col.key]}
+                      onResizeStart={(e) => handleResizeStart(e, col.key)}
+                    />
                   ))}
                   <TableHead className="text-right">Acciones</TableHead>
                 </TableRow>
@@ -193,7 +185,7 @@ export default function EntregablesPage() {
                 ) : filtered.map((e) => (
                   <TableRow key={e.id}>
                     {orderedColumns.map((col) => (
-                      <TableCell key={col.key}>{col.render(e)}</TableCell>
+                      <TableCell key={col.key} className="truncate overflow-hidden" style={{ width: `${columnWidths[col.key]}px`, minWidth: `${columnWidths[col.key]}px`, maxWidth: `${columnWidths[col.key]}px` }}>{col.render(e)}</TableCell>
                     ))}
                     <TableCell className="text-right">
                       <Button variant="ghost" size="icon" onClick={() => handleOpen(e)}><Pencil className="h-4 w-4" /></Button>

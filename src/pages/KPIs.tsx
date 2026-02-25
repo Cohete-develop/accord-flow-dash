@@ -16,6 +16,7 @@ import KanbanBoard, { KanbanColumn } from "@/components/KanbanBoard";
 import ForecastBoard from "@/components/ForecastBoard";
 import SortableTableHead, { SortDirection, useSort } from "@/components/SortableTableHead";
 import { useColumnOrder, ColumnDef } from "@/hooks/useColumnOrder";
+import { useResizableColumns } from "@/hooks/useResizableColumns";
 
 const kanbanColumns: KanbanColumn[] = [
   { key: "Pendiente", label: "Pendiente", colorClass: "bg-amber-100 text-amber-800" },
@@ -81,6 +82,7 @@ export default function KPIsPage() {
   ];
 
   const { orderedColumns, draggedColumn, handleDragStart, handleDragOver, handleDrop, handleDragEnd } = useColumnOrder(kpiColumns);
+  const { columnWidths, handleResizeStart } = useResizableColumns(orderedColumns.map(c => c.key), 110);
 
   const influencersWithKpis = new Set(kpis.map(k => k.acuerdoId));
   const placeholderKpis: KPI[] = acuerdos
@@ -200,7 +202,7 @@ export default function KPIsPage() {
       {view === "list" && (
         <Card>
           <CardContent className="p-0">
-            <Table>
+            <Table className="table-fixed">
               <TableHeader>
                 <TableRow>
                   {orderedColumns.map((col) => (
@@ -217,6 +219,8 @@ export default function KPIsPage() {
                       onDrop={(e) => handleDrop(e as any, col.key)}
                       onDragEnd={handleDragEnd}
                       className={draggedColumn === col.key ? "opacity-50" : ""}
+                      width={columnWidths[col.key]}
+                      onResizeStart={(e) => handleResizeStart(e, col.key)}
                     />
                   ))}
                   <TableHead className="text-right">Acciones</TableHead>
@@ -230,7 +234,7 @@ export default function KPIsPage() {
                   return (
                     <TableRow key={k.id} className={isPlaceholder ? "opacity-60 bg-muted/30" : ""}>
                       {orderedColumns.map((col) => (
-                        <TableCell key={col.key}>{col.render(k)}</TableCell>
+                        <TableCell key={col.key} className="truncate overflow-hidden" style={{ width: `${columnWidths[col.key]}px`, minWidth: `${columnWidths[col.key]}px`, maxWidth: `${columnWidths[col.key]}px` }}>{col.render(k)}</TableCell>
                       ))}
                       <TableCell className="text-right">
                         {isPlaceholder ? (
