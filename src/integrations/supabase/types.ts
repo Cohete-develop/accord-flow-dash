@@ -16,6 +16,7 @@ export type Database = {
     Tables: {
       acuerdos: {
         Row: {
+          company_id: string | null
           contacto: string
           created_at: string
           duracion_meses: number
@@ -38,6 +39,7 @@ export type Database = {
           valor_total: number
         }
         Insert: {
+          company_id?: string | null
           contacto?: string
           created_at?: string
           duracion_meses?: number
@@ -60,6 +62,7 @@ export type Database = {
           valor_total?: number
         }
         Update: {
+          company_id?: string | null
           contacto?: string
           created_at?: string
           duracion_meses?: number
@@ -81,11 +84,80 @@ export type Database = {
           valor_mensual?: number
           valor_total?: number
         }
+        Relationships: [
+          {
+            foreignKeyName: "acuerdos_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      audit_log: {
+        Row: {
+          action: string
+          created_at: string
+          details: Json | null
+          id: string
+          module: string
+          user_id: string | null
+          user_name: string
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          details?: Json | null
+          id?: string
+          module?: string
+          user_id?: string | null
+          user_name?: string
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          details?: Json | null
+          id?: string
+          module?: string
+          user_id?: string | null
+          user_name?: string
+        }
+        Relationships: []
+      }
+      companies: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          logo_url: string | null
+          name: string
+          slug: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          logo_url?: string | null
+          name: string
+          slug: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          logo_url?: string | null
+          name?: string
+          slug?: string
+          updated_at?: string
+        }
         Relationships: []
       }
       entregables: {
         Row: {
           acuerdo_id: string | null
+          company_id: string | null
           created_at: string
           descripcion: string
           estado: string
@@ -100,6 +172,7 @@ export type Database = {
         }
         Insert: {
           acuerdo_id?: string | null
+          company_id?: string | null
           created_at?: string
           descripcion?: string
           estado?: string
@@ -114,6 +187,7 @@ export type Database = {
         }
         Update: {
           acuerdo_id?: string | null
+          company_id?: string | null
           created_at?: string
           descripcion?: string
           estado?: string
@@ -134,6 +208,13 @@ export type Database = {
             referencedRelation: "acuerdos"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "entregables_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
         ]
       }
       kpis: {
@@ -141,6 +222,7 @@ export type Database = {
           acuerdo_id: string | null
           alcance: number
           clicks: number
+          company_id: string | null
           cpc: number
           cpr: number
           created_at: string
@@ -159,6 +241,7 @@ export type Database = {
           acuerdo_id?: string | null
           alcance?: number
           clicks?: number
+          company_id?: string | null
           cpc?: number
           cpr?: number
           created_at?: string
@@ -177,6 +260,7 @@ export type Database = {
           acuerdo_id?: string | null
           alcance?: number
           clicks?: number
+          company_id?: string | null
           cpc?: number
           cpr?: number
           created_at?: string
@@ -200,6 +284,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "kpis_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "kpis_entregable_id_fkey"
             columns: ["entregable_id"]
             isOneToOne: false
@@ -208,9 +299,43 @@ export type Database = {
           },
         ]
       }
+      module_permissions: {
+        Row: {
+          can_create: boolean
+          can_delete: boolean
+          can_edit: boolean
+          can_view: boolean
+          created_at: string
+          id: string
+          module: string
+          role: Database["public"]["Enums"]["app_role"]
+        }
+        Insert: {
+          can_create?: boolean
+          can_delete?: boolean
+          can_edit?: boolean
+          can_view?: boolean
+          created_at?: string
+          id?: string
+          module: string
+          role: Database["public"]["Enums"]["app_role"]
+        }
+        Update: {
+          can_create?: boolean
+          can_delete?: boolean
+          can_edit?: boolean
+          can_view?: boolean
+          created_at?: string
+          id?: string
+          module?: string
+          role?: Database["public"]["Enums"]["app_role"]
+        }
+        Relationships: []
+      }
       pagos: {
         Row: {
           acuerdo_id: string | null
+          company_id: string | null
           comprobante: string
           concepto: string
           created_at: string
@@ -227,6 +352,7 @@ export type Database = {
         }
         Insert: {
           acuerdo_id?: string | null
+          company_id?: string | null
           comprobante?: string
           concepto?: string
           created_at?: string
@@ -243,6 +369,7 @@ export type Database = {
         }
         Update: {
           acuerdo_id?: string | null
+          company_id?: string | null
           comprobante?: string
           concepto?: string
           created_at?: string
@@ -265,17 +392,99 @@ export type Database = {
             referencedRelation: "acuerdos"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "pagos_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
         ]
+      }
+      profiles: {
+        Row: {
+          company_id: string | null
+          created_at: string
+          email: string
+          first_name: string
+          full_name: string
+          id: string
+          is_active: boolean
+          last_name: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          company_id?: string | null
+          created_at?: string
+          email?: string
+          first_name?: string
+          full_name?: string
+          id?: string
+          is_active?: boolean
+          last_name?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          company_id?: string | null
+          created_at?: string
+          email?: string
+          first_name?: string
+          full_name?: string
+          id?: string
+          is_active?: boolean
+          last_name?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profiles_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
       }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_user_company_id: { Args: { _user_id: string }; Returns: string }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "gerencia" | "coordinador_mercadeo" | "admin_contabilidad"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -402,6 +611,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["gerencia", "coordinador_mercadeo", "admin_contabilidad"],
+    },
   },
 } as const
