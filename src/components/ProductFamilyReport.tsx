@@ -52,10 +52,12 @@ export default function ProductFamilyReport({ acuerdos }: Props) {
   useEffect(() => { savePinnedViews(pinnedViews); }, [pinnedViews]);
 
   // Extract unique values
+  const ALL_FAMILIAS = ["Lubricantes", "Llantas", "Transmisión", "Frenos", "Luces/Iluminación", "Baterías"];
   const allFamilias = useMemo(() => {
-    const set = new Set<string>();
-    acuerdos.forEach(a => (a.familiaProducto || []).forEach(f => set.add(f)));
-    return Array.from(set).sort();
+    const fromData = new Set<string>();
+    acuerdos.forEach(a => (a.familiaProducto || []).forEach(f => fromData.add(f)));
+    const merged = new Set([...ALL_FAMILIAS, ...fromData]);
+    return Array.from(merged).sort();
   }, [acuerdos]);
 
   const allInfluencers = useMemo(() => {
