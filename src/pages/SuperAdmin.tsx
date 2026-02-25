@@ -29,6 +29,8 @@ interface CompanyUser {
   user_id: string;
   email: string;
   full_name: string;
+  first_name: string;
+  last_name: string;
   is_active: boolean;
   roles: string[];
   company_name?: string;
@@ -47,6 +49,7 @@ const ROLES = [
   { value: 'gerencia', label: 'Gerencia' },
   { value: 'coordinador_mercadeo', label: 'Coordinador de Mercadeo' },
   { value: 'admin_contabilidad', label: 'Administración / Contabilidad' },
+  { value: 'analista', label: 'Analista' },
 ];
 
 export default function SuperAdminPage() {
@@ -90,6 +93,20 @@ export default function SuperAdminPage() {
   const [deleteCompanyTarget, setDeleteCompanyTarget] = useState<Company | null>(null);
   const [deletingCompany, setDeletingCompany] = useState(false);
 
+  // Edit user
+  const [showEditUser, setShowEditUser] = useState(false);
+  const [editUser, setEditUser] = useState<CompanyUser | null>(null);
+  const [editFirstName, setEditFirstName] = useState('');
+  const [editLastName, setEditLastName] = useState('');
+  const [editEmail, setEditEmail] = useState('');
+  const [editRole, setEditRole] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  // Delete user
+  const [showDeleteUser, setShowDeleteUser] = useState(false);
+  const [deleteUserTarget, setDeleteUserTarget] = useState<CompanyUser | null>(null);
+  const [deletingUser, setDeletingUser] = useState(false);
+
   useEffect(() => {
     if (!user) return;
     // super_admin must also NOT belong to any company (platform owner only)
@@ -120,7 +137,7 @@ export default function SuperAdminPage() {
   const fetchAllUsers = useCallback(async () => {
     setLoadingAllUsers(true);
     const [profRes, rolesRes, companiesRes] = await Promise.all([
-      supabase.from('profiles').select('user_id, full_name, email, is_active, company_id'),
+      supabase.from('profiles').select('user_id, full_name, first_name, last_name, email, is_active, company_id'),
       supabase.from('user_roles').select('user_id, role'),
       supabase.from('companies').select('id, name'),
     ]);
@@ -136,6 +153,8 @@ export default function SuperAdminPage() {
       user_id: p.user_id,
       email: p.email || '',
       full_name: p.full_name || '',
+      first_name: p.first_name || '',
+      last_name: p.last_name || '',
       is_active: p.is_active ?? true,
       roles: rolesMap[p.user_id] || [],
       company_name: p.company_id ? companyMap[p.company_id] || 'Sin empresa' : 'Sin empresa',
@@ -161,7 +180,7 @@ export default function SuperAdminPage() {
     setSelectedCompany(company);
     setLoadingCompanyUsers(true);
     const [profRes, rolesRes] = await Promise.all([
-      supabase.from('profiles').select('user_id, full_name, email, is_active').eq('company_id', company.id),
+      supabase.from('profiles').select('user_id, full_name, first_name, last_name, email, is_active').eq('company_id', company.id),
       supabase.from('user_roles').select('user_id, role'),
     ]);
     const rolesMap: Record<string, string[]> = {};
@@ -173,6 +192,8 @@ export default function SuperAdminPage() {
       user_id: p.user_id,
       email: p.email || '',
       full_name: p.full_name || '',
+      first_name: p.first_name || '',
+      last_name: p.last_name || '',
       is_active: p.is_active ?? true,
       roles: rolesMap[p.user_id] || [],
     })));
@@ -260,6 +281,67 @@ export default function SuperAdminPage() {
     fetchAllUsers();
     fetchAudit();
   }
+  function openEditUser(u: CompanyUser) {
+    setEditUser(u);
+    setEditFirstName(u.first_name);
+    setEditLastName(u.last_name);
+    setEditEmail(u.email);
+    setEditEmail(u.email);
+    setEditRole(u.roles[0] || 'analista');
+    setShowEditUser(true);
+  }
+
+  async function handleEditUser() {
+    if (!editUser) return;
+    setSaving(true);
+    const { data, error } = await supabase.functions.invoke('admin-edit-user', {
+      body: { user_id: editUser.user_id, email: editEmail.trim(), first_name: editFirstName.trim(), last_name: editLastName.trim(), role: editRole },
+    });
+    if (error || data?.error) { toast.error(data?.error || error?.message || 'Error al editar'); setSaving(false); return; }
+    toast.success('Usuario actualizado');
+    setShowEditUser(false);
+    setSaving(false);
+    if (selectedCompany) fetchCompanyUsers(selectedCompany);
+    fetchAllUsers();
+  }
+
+  async function handleToggleUserActive(u: CompanyUser) {
+    const newActive = !u.is_active;
+    const { error } = await supabase.from('profiles').update({ is_active: newActive }).eq('user_id', u.user_id);
+    if (error) { toast.error('Error al cambiar estado'); return; }
+    toast.success(newActive ? 'Usuario activado' : 'Usuario desactivado');
+    await supabase.from('audit_log').insert({
+      user_id: session?.user?.id,
+      user_name: session?.user?.user_metadata?.full_name || session?.user?.email || '',
+      action: newActive ? 'activate_user' : 'deactivate_user',
+      module: 'super_admin',
+      details: { target_user: u.email },
+    });
+    if (selectedCompany) fetchCompanyUsers(selectedCompany);
+    fetchAllUsers();
+  }
+
+  function confirmDeleteUser(u: CompanyUser) {
+    setDeleteUserTarget(u);
+    setShowDeleteUser(true);
+  }
+
+  async function handleDeleteUser() {
+    if (!deleteUserTarget) return;
+    setDeletingUser(true);
+    const { data, error } = await supabase.functions.invoke('admin-delete-user', {
+      body: { user_id: deleteUserTarget.user_id },
+    });
+    if (error || data?.error) { toast.error(data?.error || error?.message || 'Error al eliminar'); setDeletingUser(false); return; }
+    toast.success('Usuario eliminado');
+    setShowDeleteUser(false);
+    setDeleteUserTarget(null);
+    setDeletingUser(false);
+    if (selectedCompany) fetchCompanyUsers(selectedCompany);
+    fetchCompanies();
+    fetchAllUsers();
+  }
+
 
   return (
     <div className="space-y-6">
@@ -345,13 +427,14 @@ export default function SuperAdminPage() {
                       <TableHead>Email</TableHead>
                       <TableHead>Rol</TableHead>
                       <TableHead>Estado</TableHead>
+                      <TableHead className="text-right">Acciones</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {loadingCompanyUsers ? (
-                      <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground">Cargando...</TableCell></TableRow>
+                      <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground">Cargando...</TableCell></TableRow>
                     ) : companyUsers.length === 0 ? (
-                      <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground">Sin usuarios</TableCell></TableRow>
+                      <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground">Sin usuarios</TableCell></TableRow>
                     ) : companyUsers.map(u => (
                       <TableRow key={u.user_id}>
                         <TableCell className="font-medium">{u.full_name || '—'}</TableCell>
@@ -365,6 +448,15 @@ export default function SuperAdminPage() {
                           <Badge className={u.is_active ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800'}>
                             {u.is_active ? 'Activo' : 'Inactivo'}
                           </Badge>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex gap-1 justify-end">
+                            <Button variant="ghost" size="sm" onClick={() => openEditUser(u)} title="Editar"><Pencil className="w-3.5 h-3.5" /></Button>
+                            <Button variant="ghost" size="sm" onClick={() => handleToggleUserActive(u)} title={u.is_active ? 'Desactivar' : 'Activar'}>
+                              {u.is_active ? '🔒' : '🔓'}
+                            </Button>
+                            <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={() => confirmDeleteUser(u)} title="Eliminar"><Trash2 className="w-3.5 h-3.5" /></Button>
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -386,13 +478,14 @@ export default function SuperAdminPage() {
                   <TableHead>Empresa</TableHead>
                   <TableHead>Rol</TableHead>
                   <TableHead>Estado</TableHead>
+                  <TableHead className="text-right">Acciones</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {loadingAllUsers ? (
-                  <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground">Cargando...</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground">Cargando...</TableCell></TableRow>
                 ) : allUsers.length === 0 ? (
-                  <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground">Sin usuarios</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground">Sin usuarios</TableCell></TableRow>
                 ) : allUsers.map(u => (
                   <TableRow key={u.user_id}>
                     <TableCell className="font-medium">{u.full_name || '—'}</TableCell>
@@ -407,6 +500,15 @@ export default function SuperAdminPage() {
                       <Badge className={u.is_active ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800'}>
                         {u.is_active ? 'Activo' : 'Inactivo'}
                       </Badge>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex gap-1 justify-end">
+                        <Button variant="ghost" size="sm" onClick={() => openEditUser(u)} title="Editar"><Pencil className="w-3.5 h-3.5" /></Button>
+                        <Button variant="ghost" size="sm" onClick={() => handleToggleUserActive(u)} title={u.is_active ? 'Desactivar' : 'Activar'}>
+                          {u.is_active ? '🔒' : '🔓'}
+                        </Button>
+                        <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={() => confirmDeleteUser(u)} title="Eliminar"><Trash2 className="w-3.5 h-3.5" /></Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -521,6 +623,56 @@ export default function SuperAdminPage() {
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               {deletingCompany ? 'Eliminando...' : 'Sí, eliminar todo'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* EDIT USER DIALOG */}
+      <Dialog open={showEditUser} onOpenChange={setShowEditUser}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Editar Usuario</DialogTitle>
+            <DialogDescription>Modifica los datos del usuario {editUser?.email}</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2"><Label>Nombre</Label><Input value={editFirstName} onChange={e => setEditFirstName(e.target.value)} /></div>
+              <div className="space-y-2"><Label>Apellido</Label><Input value={editLastName} onChange={e => setEditLastName(e.target.value)} /></div>
+            </div>
+            <div className="space-y-2"><Label>Email</Label><Input type="email" value={editEmail} onChange={e => setEditEmail(e.target.value)} /></div>
+            <div className="space-y-2">
+              <Label>Rol</Label>
+              <Select value={editRole} onValueChange={setEditRole}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>{ROLES.map(r => <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>)}</SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowEditUser(false)}>Cancelar</Button>
+            <Button variant="gradient" onClick={handleEditUser} disabled={saving}>{saving ? 'Guardando...' : 'Guardar Cambios'}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* DELETE USER CONFIRMATION */}
+      <AlertDialog open={showDeleteUser} onOpenChange={setShowDeleteUser}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Eliminar usuario "{deleteUserTarget?.full_name || deleteUserTarget?.email}"?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta acción eliminará permanentemente la cuenta del usuario, su perfil y todos sus roles. Los datos de negocio asociados se mantendrán.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deletingUser}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteUser}
+              disabled={deletingUser}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deletingUser ? 'Eliminando...' : 'Sí, eliminar usuario'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
