@@ -53,6 +53,15 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Prevent super_admin from deleting their own company
+    const { data: callerProfile } = await adminClient
+      .from("profiles").select("company_id").eq("user_id", caller.id).maybeSingle();
+    if (callerProfile?.company_id === company_id) {
+      return new Response(JSON.stringify({ error: "No puedes eliminar tu propia empresa. Mueve tu cuenta a otra empresa primero." }), {
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     // Get company info for audit
     const { data: company } = await adminClient.from("companies").select("name").eq("id", company_id).maybeSingle();
     if (!company) {
@@ -82,6 +91,15 @@ Deno.serve(async (req) => {
       await adminClient.from("user_roles").delete().in("user_id", userIds);
     }
 
+    // Audit log BEFORE deleting users (to avoid FK violation)
+    await adminClient.from("audit_log").insert({
+      user_id: caller.id,
+      user_name: `${caller.user_metadata?.first_name || ""} ${caller.user_metadata?.last_name || ""}`.trim(),
+      action: "delete_company",
+      module: "super_admin",
+      details: { company_name: company.name, deleted_users: userIds.length },
+    });
+
     // Delete profiles
     await adminClient.from("profiles").delete().eq("company_id", company_id);
 
@@ -92,15 +110,6 @@ Deno.serve(async (req) => {
 
     // Delete the company itself
     await adminClient.from("companies").delete().eq("id", company_id);
-
-    // Audit log
-    await adminClient.from("audit_log").insert({
-      user_id: caller.id,
-      user_name: `${caller.user_metadata?.first_name || ""} ${caller.user_metadata?.last_name || ""}`.trim(),
-      action: "delete_company",
-      module: "super_admin",
-      details: { company_name: company.name, deleted_users: userIds.length },
-    });
 
     return new Response(JSON.stringify({ success: true, deleted_users: userIds.length }), {
       status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
