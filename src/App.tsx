@@ -13,6 +13,7 @@ import KPIsPage from "./pages/KPIs";
 import AdminPage from "./pages/Admin";
 import SuperAdminPage from "./pages/SuperAdmin";
 import AuthPage from "./pages/Auth";
+import ResetPasswordPage from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -26,6 +27,7 @@ const App = () => (
         <AuthProvider>
           <Routes>
             <Route path="/auth" element={<AuthPage />} />
+            <Route path="/reset-password" element={<ResetPasswordPage />} />
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
             <Route path="/dashboard" element={<Layout><DashboardPage /></Layout>} />
             <Route path="/acuerdos" element={<Layout><AcuerdosPage /></Layout>} />
