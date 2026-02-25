@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { Pago } from "@/types/crm";
+import { useState, useEffect, useMemo } from "react";
+import { Pago, Acuerdo } from "@/types/crm";
 import { useAcuerdos, usePagos } from "@/hooks/useCrmData";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,15 +10,16 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus, Pencil, Trash2 } from "lucide-react";
+import { Plus, Pencil, Trash2, AlertTriangle, RefreshCw } from "lucide-react";
 import ViewToolbar, { ViewMode, DateRange } from "@/components/ViewToolbar";
 import KanbanBoard, { KanbanColumn } from "@/components/KanbanBoard";
 import ForecastBoard from "@/components/ForecastBoard";
 import SortableTableHead, { SortDirection, useSort } from "@/components/SortableTableHead";
 import { useColumnOrder, ColumnDef } from "@/hooks/useColumnOrder";
 import { useResizableColumns } from "@/hooks/useResizableColumns";
-import { exportToFile, ExportFormat } from "@/lib/export-utils";
+import { exportToFile } from "@/lib/export-utils";
 import { useColumnVisibility } from "@/hooks/useColumnVisibility";
+import { toast } from "sonner";
 
 const estadoColors: Record<string, string> = {
   Pendiente: "bg-amber-100 text-amber-800",
@@ -38,7 +39,7 @@ const kanbanColumns: KanbanColumn[] = [
 
 const emptyPago = (): Omit<Pago, "id" | "createdAt"> => ({
   acuerdoId: "", influencer: "", concepto: "", monto: 0, moneda: "COP",
-  fechaPago: "", fechaVencimiento: "", estado: "Pendiente", metodoPago: "", comprobante: "", notas: "",
+  fechaPago: "", estado: "Pendiente", metodoPago: "Transferencia", comprobante: "", notas: "",
 });
 
 function NumericInput({ value, onChange, ...props }: { value: number; onChange: (v: number) => void } & Omit<React.ComponentProps<typeof Input>, "value" | "onChange">) {
@@ -72,6 +73,43 @@ function filterByDateRange<T>(items: T[], dateRange: DateRange, getDateFields: (
   });
 }
 
+/** Get last business day of a given month (year, month 0-indexed) */
+function getLastBusinessDay(year: number, month: number): string {
+  const lastDay = new Date(year, month + 1, 0); // last day of month
+  let day = lastDay.getDay();
+  // 0=Sun, 6=Sat
+  if (day === 0) lastDay.setDate(lastDay.getDate() - 2);
+  else if (day === 6) lastDay.setDate(lastDay.getDate() - 1);
+  return lastDay.toISOString().split("T")[0];
+}
+
+/** Generate expected monthly payments for an agreement */
+function generatePaymentsForAcuerdo(acuerdo: Acuerdo): Omit<Pago, "id" | "createdAt">[] {
+  if (!acuerdo.fechaInicio || !acuerdo.fechaFin) return [];
+  const start = new Date(acuerdo.fechaInicio);
+  const end = new Date(acuerdo.fechaFin);
+  const payments: Omit<Pago, "id" | "createdAt">[] = [];
+  
+  let current = new Date(start.getFullYear(), start.getMonth(), 1);
+  while (current <= end) {
+    const fechaPago = getLastBusinessDay(current.getFullYear(), current.getMonth());
+    payments.push({
+      acuerdoId: acuerdo.id,
+      influencer: acuerdo.influencer,
+      concepto: "",
+      monto: acuerdo.valorMensual,
+      moneda: acuerdo.moneda,
+      fechaPago,
+      estado: "Pendiente",
+      metodoPago: "Transferencia",
+      comprobante: "",
+      notas: "",
+    });
+    current.setMonth(current.getMonth() + 1);
+  }
+  return payments;
+}
+
 export default function PagosPage() {
   const { acuerdos } = useAcuerdos();
   const { pagos, isLoading, save, remove } = usePagos();
@@ -84,13 +122,29 @@ export default function PagosPage() {
   const [sortKey, setSortKey] = useState<string | null>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>(null);
   const { sortItems, toggleSort } = useSort<Pago>();
+  const [generating, setGenerating] = useState(false);
+  const [alertShown, setAlertShown] = useState(false);
+
+  // Alert for payments missing concepto
+  useEffect(() => {
+    if (!isLoading && pagos.length > 0 && !alertShown) {
+      const sinConcepto = pagos.filter((p) => !p.concepto || p.concepto.trim() === "");
+      if (sinConcepto.length > 0) {
+        toast.warning(`Hay ${sinConcepto.length} pago(s) sin concepto registrado`, {
+          description: "Ingresa a cada pago para completar el campo de concepto.",
+          duration: 8000,
+          icon: <AlertTriangle className="h-4 w-4" />,
+        });
+        setAlertShown(true);
+      }
+    }
+  }, [isLoading, pagos, alertShown]);
 
   const pagoColumns: ColumnDef<Pago>[] = [
     { key: "influencer", label: "Influencer", sortKey: "influencer", render: (p) => <span className="font-medium">{p.influencer}</span> },
-    { key: "concepto", label: "Concepto", sortKey: "concepto", render: (p) => p.concepto },
+    { key: "concepto", label: "Concepto", sortKey: "concepto", render: (p) => p.concepto || <span className="text-amber-500 italic text-xs">Sin concepto</span> },
     { key: "monto", label: "Monto", sortKey: "monto", render: (p) => `$${p.monto.toLocaleString()}` },
     { key: "fechaPago", label: "Fecha Pago", sortKey: "fechaPago", render: (p) => p.fechaPago },
-    { key: "fechaVencimiento", label: "Vencimiento", sortKey: "fechaVencimiento", render: (p) => p.fechaVencimiento },
     { key: "metodoPago", label: "Método", sortKey: "metodoPago", render: (p) => p.metodoPago },
     { key: "estado", label: "Estado", sortKey: "estado", render: (p) => <Badge variant="secondary" className={estadoColors[p.estado]}>{p.estado}</Badge> },
   ];
@@ -100,7 +154,7 @@ export default function PagosPage() {
   const { isVisible, toggleColumn, showAll } = useColumnVisibility(orderedColumns.map(c => c.key));
   const visibleColumns = orderedColumns.filter(c => isVisible(c.key));
   const byAcuerdo = filterAcuerdo === "all" ? pagos : pagos.filter((p) => p.acuerdoId === filterAcuerdo);
-  const byDate = filterByDateRange(byAcuerdo, dateRange, (p) => [p.fechaPago, p.fechaVencimiento]);
+  const byDate = filterByDateRange(byAcuerdo, dateRange, (p) => [p.fechaPago]);
   const filtered = sortItems(byDate, sortKey, sortDirection);
 
   const handleSort = (key: string) => {
@@ -129,15 +183,51 @@ export default function PagosPage() {
     await save({ data: { ...data, estado: newStatus as Pago["estado"] }, id });
   };
 
+  // Auto-generate payments from active agreements
+  const handleGeneratePayments = async () => {
+    const activeAcuerdos = acuerdos.filter((a) => a.estado === "Activo" || a.estado === "En Negociación");
+    if (activeAcuerdos.length === 0) {
+      toast.info("No hay acuerdos activos para generar pagos");
+      return;
+    }
+
+    setGenerating(true);
+    let created = 0;
+    try {
+      for (const acuerdo of activeAcuerdos) {
+        // Check which months already have payments for this agreement
+        const existingMonths = new Set(
+          pagos.filter((p) => p.acuerdoId === acuerdo.id).map((p) => p.fechaPago?.slice(0, 7))
+        );
+        const newPayments = generatePaymentsForAcuerdo(acuerdo).filter(
+          (p) => !existingMonths.has(p.fechaPago?.slice(0, 7))
+        );
+        for (const payment of newPayments) {
+          await save({ data: payment });
+          created++;
+        }
+      }
+      if (created > 0) {
+        toast.success(`Se generaron ${created} pago(s) automáticamente`);
+      } else {
+        toast.info("Todos los pagos ya están generados para los acuerdos activos");
+      }
+    } catch (e: any) {
+      toast.error("Error al generar pagos: " + (e?.message || "Error desconocido"));
+    } finally {
+      setGenerating(false);
+    }
+  };
+
   const totalPagado = filtered.filter((p) => p.estado === "Pagado").reduce((s, p) => s + p.monto, 0);
   const totalPendiente = filtered.filter((p) => p.estado === "Pendiente").reduce((s, p) => s + p.monto, 0);
 
   const renderCard = (p: Pago) => (
     <div>
       <div className="font-semibold">{p.influencer}</div>
-      <div className="text-muted-foreground text-xs">{p.concepto}</div>
+      <div className="text-muted-foreground text-xs">{p.concepto || <span className="text-amber-500 italic">Sin concepto</span>}</div>
       <div className="font-bold mt-1">${p.monto.toLocaleString()} {p.moneda}</div>
-      <div className="text-xs text-muted-foreground">{p.metodoPago} · Vence: {p.fechaVencimiento || "—"}</div>
+      <div className="text-xs text-muted-foreground">{p.metodoPago} · {p.fechaPago || "—"}</div>
     </div>
   );
 
@@ -150,7 +240,12 @@ export default function PagosPage() {
           <h1 className="text-2xl font-bold tracking-tight">Pagos</h1>
           <p className="text-muted-foreground text-sm">Control de pagos vinculados a acuerdos</p>
         </div>
-        <Button variant="gradient" onClick={() => handleOpen()} disabled={acuerdos.length === 0}><Plus className="h-4 w-4 mr-2" /> Nuevo Pago</Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={handleGeneratePayments} disabled={acuerdos.length === 0 || generating}>
+            <RefreshCw className={`h-4 w-4 mr-2 ${generating ? "animate-spin" : ""}`} /> Generar desde Acuerdos
+          </Button>
+          <Button variant="gradient" onClick={() => handleOpen()} disabled={acuerdos.length === 0}><Plus className="h-4 w-4 mr-2" /> Nuevo Pago</Button>
+        </div>
       </div>
 
       <ViewToolbar view={view} onViewChange={setView} acuerdos={acuerdos} selectedAcuerdo={filterAcuerdo} onAcuerdoChange={setFilterAcuerdo} dateRange={dateRange} onDateRangeChange={setDateRange} onExport={(fmt) => exportToFile(filtered, visibleColumns.map(c => ({ key: c.key, label: c.label })), fmt, "pagos")} columns={orderedColumns.map(c => ({ key: c.key, label: c.label }))} isColumnVisible={isVisible} onToggleColumn={toggleColumn} onShowAllColumns={showAll} />
@@ -170,7 +265,7 @@ export default function PagosPage() {
       )}
 
       {view === "forecast" && (
-        <ForecastBoard items={filtered} getDate={(p) => p.fechaVencimiento} getValue={(p) => p.monto} renderCard={renderCard} getId={(p) => p.id} />
+        <ForecastBoard items={filtered} getDate={(p) => p.fechaPago} getValue={(p) => p.monto} renderCard={renderCard} getId={(p) => p.id} />
       )}
 
       {view === "list" && (
@@ -231,11 +326,10 @@ export default function PagosPage() {
                 <SelectContent>{acuerdos.map((a) => <SelectItem key={a.id} value={a.id}>{a.influencer} — {(Array.isArray(a.redSocial) ? a.redSocial : [a.redSocial]).join(", ")}</SelectItem>)}</SelectContent>
               </Select>
             </div>
-            <div className="space-y-2"><Label>Concepto</Label><Input value={form.concepto} onChange={(e) => update("concepto", e.target.value)} /></div>
+            <div className="space-y-2"><Label>Concepto</Label><Input value={form.concepto} onChange={(e) => update("concepto", e.target.value)} placeholder="Descripción del pago" /></div>
             <div className="space-y-2"><Label>Monto</Label><NumericInput value={form.monto} onChange={(v) => update("monto", v)} /></div>
             <div className="space-y-2"><Label>Moneda</Label><Select value={form.moneda} onValueChange={(v) => update("moneda", v)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="COP">COP</SelectItem><SelectItem value="USD">USD</SelectItem></SelectContent></Select></div>
             <div className="space-y-2"><Label>Fecha Pago</Label><Input type="date" value={form.fechaPago} onChange={(e) => update("fechaPago", e.target.value)} /></div>
-            <div className="space-y-2"><Label>Fecha Vencimiento</Label><Input type="date" value={form.fechaVencimiento} onChange={(e) => update("fechaVencimiento", e.target.value)} /></div>
             <div className="space-y-2"><Label>Método de Pago</Label><Select value={form.metodoPago} onValueChange={(v) => update("metodoPago", v)}><SelectTrigger><SelectValue placeholder="Seleccionar" /></SelectTrigger><SelectContent><SelectItem value="Transferencia">Transferencia</SelectItem><SelectItem value="Efectivo">Efectivo</SelectItem><SelectItem value="PayPal">PayPal</SelectItem><SelectItem value="Otro">Otro</SelectItem></SelectContent></Select></div>
             <div className="space-y-2"><Label>Estado</Label><Select value={form.estado} onValueChange={(v) => update("estado", v)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="Pendiente">Pendiente</SelectItem><SelectItem value="Programado">Programado</SelectItem><SelectItem value="Pagado">Pagado</SelectItem><SelectItem value="Vencido">Vencido</SelectItem><SelectItem value="Cancelado">Cancelado</SelectItem></SelectContent></Select></div>
             <div className="col-span-2 space-y-2"><Label>Comprobante</Label><Input value={form.comprobante} onChange={(e) => update("comprobante", e.target.value)} placeholder="Referencia o número de comprobante" /></div>

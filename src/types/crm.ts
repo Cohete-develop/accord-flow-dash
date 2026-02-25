@@ -28,7 +28,6 @@ export interface Pago {
   monto: number;
   moneda: string;
   fechaPago: string;
-  fechaVencimiento: string;
   estado: "Pendiente" | "Pagado" | "Vencido" | "Cancelado" | "Programado";
   metodoPago: string;
   comprobante: string;

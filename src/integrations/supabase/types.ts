@@ -341,7 +341,6 @@ export type Database = {
           created_at: string
           estado: string
           fecha_pago: string | null
-          fecha_vencimiento: string | null
           id: string
           influencer: string
           metodo_pago: string
@@ -358,7 +357,6 @@ export type Database = {
           created_at?: string
           estado?: string
           fecha_pago?: string | null
-          fecha_vencimiento?: string | null
           id?: string
           influencer?: string
           metodo_pago?: string
@@ -375,7 +373,6 @@ export type Database = {
           created_at?: string
           estado?: string
           fecha_pago?: string | null
-          fecha_vencimiento?: string | null
           id?: string
           influencer?: string
           metodo_pago?: string
