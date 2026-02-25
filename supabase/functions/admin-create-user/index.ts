@@ -34,12 +34,14 @@ Deno.serve(async (req) => {
     }
 
     const adminClient = createClient(supabaseUrl, supabaseServiceKey);
+    // Check for gerencia OR super_admin role
     const { data: roleData } = await adminClient
       .from("user_roles").select("role")
-      .eq("user_id", caller.id).eq("role", "gerencia").maybeSingle();
+      .eq("user_id", caller.id)
+      .in("role", ["gerencia", "super_admin"]);
 
-    if (!roleData) {
-      return new Response(JSON.stringify({ error: "No tienes permisos de gerencia" }), {
+    if (!roleData || roleData.length === 0) {
+      return new Response(JSON.stringify({ error: "No tienes permisos de gerencia o super admin" }), {
         status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
