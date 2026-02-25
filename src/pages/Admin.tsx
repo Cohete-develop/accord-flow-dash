@@ -444,7 +444,7 @@ export default function AdminPage() {
 
         {/* DATA MANAGEMENT TAB */}
         <TabsContent value="data" className="space-y-4">
-          <AdminDataManagement />
+          <AdminDataManagement canDelete={callerIsSuperAdmin || callerIsGerencia} />
         </TabsContent>
       </Tabs>
 

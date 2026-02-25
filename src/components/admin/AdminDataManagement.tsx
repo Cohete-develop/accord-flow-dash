@@ -54,7 +54,7 @@ const TABLE_COLUMNS: Record<string, { key: string; label: string }[]> = {
   ],
 };
 
-export default function AdminDataManagement() {
+export default function AdminDataManagement({ canDelete = false }: { canDelete?: boolean }) {
   const { session } = useAuth();
   const [selectedModule, setSelectedModule] = useState(DATA_MODULES[0].value);
   const [records, setRecords] = useState<any[]>([]);
@@ -193,9 +193,11 @@ export default function AdminDataManagement() {
           <Button variant="outline" size="sm" className="gap-1.5" onClick={handleExport}>
             <Download className="w-3.5 h-3.5" /> Exportar seleccionados
           </Button>
-          <Button variant="outline" size="sm" className="gap-1.5 text-destructive hover:text-destructive" onClick={() => setShowDeleteConfirm(true)}>
-            <Trash2 className="w-3.5 h-3.5" /> Eliminar seleccionados
-          </Button>
+          {canDelete && (
+            <Button variant="outline" size="sm" className="gap-1.5 text-destructive hover:text-destructive" onClick={() => setShowDeleteConfirm(true)}>
+              <Trash2 className="w-3.5 h-3.5" /> Eliminar seleccionados
+            </Button>
+          )}
         </div>
       )}
 
@@ -215,25 +217,27 @@ export default function AdminDataManagement() {
                 <Checkbox checked={filteredRecords.length > 0 && selectedIds.size === filteredRecords.length} onCheckedChange={toggleSelectAll} />
               </TableHead>
               {columns.map(col => <TableHead key={col.key}>{col.label}</TableHead>)}
-              <TableHead className="w-10">Acciones</TableHead>
+              {canDelete && <TableHead className="w-10">Acciones</TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
             {loading ? (
-              <TableRow><TableCell colSpan={columns.length + 2} className="text-center text-muted-foreground">Cargando...</TableCell></TableRow>
+              <TableRow><TableCell colSpan={columns.length + 1 + (canDelete ? 1 : 0)} className="text-center text-muted-foreground">Cargando...</TableCell></TableRow>
             ) : filteredRecords.length === 0 ? (
-              <TableRow><TableCell colSpan={columns.length + 2} className="text-center text-muted-foreground">{searchQuery ? 'Sin resultados' : 'No hay registros'}</TableCell></TableRow>
+              <TableRow><TableCell colSpan={columns.length + 1 + (canDelete ? 1 : 0)} className="text-center text-muted-foreground">{searchQuery ? 'Sin resultados' : 'No hay registros'}</TableCell></TableRow>
             ) : filteredRecords.map(record => (
               <TableRow key={record.id} className={selectedIds.has(record.id) ? 'bg-muted/30' : ''}>
                 <TableCell><Checkbox checked={selectedIds.has(record.id)} onCheckedChange={() => toggleSelect(record.id)} /></TableCell>
                 {columns.map(col => (
                   <TableCell key={col.key} className="text-sm max-w-[200px] truncate">{formatCellValue(record[col.key], col.key)}</TableCell>
                 ))}
-                <TableCell>
-                  <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={() => { setSelectedIds(new Set([record.id])); setShowDeleteConfirm(true); }}>
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </Button>
-                </TableCell>
+                {canDelete && (
+                  <TableCell>
+                    <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={() => { setSelectedIds(new Set([record.id])); setShowDeleteConfirm(true); }}>
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </Button>
+                  </TableCell>
+                )}
               </TableRow>
             ))}
           </TableBody>
