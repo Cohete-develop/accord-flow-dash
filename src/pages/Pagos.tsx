@@ -18,6 +18,7 @@ import SortableTableHead, { SortDirection, useSort } from "@/components/Sortable
 import { useColumnOrder, ColumnDef } from "@/hooks/useColumnOrder";
 import { useResizableColumns } from "@/hooks/useResizableColumns";
 import { exportToFile, ExportFormat } from "@/lib/export-utils";
+import { useColumnVisibility } from "@/hooks/useColumnVisibility";
 
 const estadoColors: Record<string, string> = {
   Pendiente: "bg-amber-100 text-amber-800",
@@ -96,7 +97,8 @@ export default function PagosPage() {
 
   const { orderedColumns, draggedColumn, handleDragStart, handleDragOver, handleDrop, handleDragEnd } = useColumnOrder(pagoColumns);
   const { columnWidths, handleResizeStart } = useResizableColumns(orderedColumns.map(c => c.key), 120);
-
+  const { isVisible, toggleColumn, showAll } = useColumnVisibility(orderedColumns.map(c => c.key));
+  const visibleColumns = orderedColumns.filter(c => isVisible(c.key));
   const byAcuerdo = filterAcuerdo === "all" ? pagos : pagos.filter((p) => p.acuerdoId === filterAcuerdo);
   const byDate = filterByDateRange(byAcuerdo, dateRange, (p) => [p.fechaPago, p.fechaVencimiento]);
   const filtered = sortItems(byDate, sortKey, sortDirection);
@@ -151,7 +153,7 @@ export default function PagosPage() {
         <Button variant="gradient" onClick={() => handleOpen()} disabled={acuerdos.length === 0}><Plus className="h-4 w-4 mr-2" /> Nuevo Pago</Button>
       </div>
 
-      <ViewToolbar view={view} onViewChange={setView} acuerdos={acuerdos} selectedAcuerdo={filterAcuerdo} onAcuerdoChange={setFilterAcuerdo} dateRange={dateRange} onDateRangeChange={setDateRange} onExport={(fmt) => exportToFile(filtered, orderedColumns.map(c => ({ key: c.key, label: c.label })), fmt, "pagos")} />
+      <ViewToolbar view={view} onViewChange={setView} acuerdos={acuerdos} selectedAcuerdo={filterAcuerdo} onAcuerdoChange={setFilterAcuerdo} dateRange={dateRange} onDateRangeChange={setDateRange} onExport={(fmt) => exportToFile(filtered, visibleColumns.map(c => ({ key: c.key, label: c.label })), fmt, "pagos")} columns={orderedColumns.map(c => ({ key: c.key, label: c.label }))} isColumnVisible={isVisible} onToggleColumn={toggleColumn} onShowAllColumns={showAll} />
 
       {acuerdos.length === 0 && (
         <Card><CardContent className="py-8 text-center text-muted-foreground">Primero debes crear un acuerdo en el módulo de Acuerdos antes de registrar pagos.</CardContent></Card>
@@ -177,7 +179,7 @@ export default function PagosPage() {
             <Table className="table-fixed">
               <TableHeader>
                 <TableRow>
-                  {orderedColumns.map((col) => (
+                  {visibleColumns.map((col) => (
                     <SortableTableHead
                       key={col.key}
                       label={col.label}
@@ -200,10 +202,10 @@ export default function PagosPage() {
               </TableHeader>
               <TableBody>
                 {filtered.length === 0 ? (
-                  <TableRow><TableCell colSpan={orderedColumns.length + 1} className="text-center py-8 text-muted-foreground">No hay pagos registrados.</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={visibleColumns.length + 1} className="text-center py-8 text-muted-foreground">No hay pagos registrados.</TableCell></TableRow>
                 ) : filtered.map((p) => (
                   <TableRow key={p.id}>
-                    {orderedColumns.map((col) => (
+                    {visibleColumns.map((col) => (
                       <TableCell key={col.key} className="truncate overflow-hidden" style={{ width: `${columnWidths[col.key]}px`, minWidth: `${columnWidths[col.key]}px`, maxWidth: `${columnWidths[col.key]}px` }}>{col.render(p)}</TableCell>
                     ))}
                     <TableCell className="text-right">

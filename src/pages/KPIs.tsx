@@ -18,6 +18,7 @@ import SortableTableHead, { SortDirection, useSort } from "@/components/Sortable
 import { useColumnOrder, ColumnDef } from "@/hooks/useColumnOrder";
 import { useResizableColumns } from "@/hooks/useResizableColumns";
 import { exportToFile, ExportFormat } from "@/lib/export-utils";
+import { useColumnVisibility } from "@/hooks/useColumnVisibility";
 
 const kanbanColumns: KanbanColumn[] = [
   { key: "Pendiente", label: "Pendiente", colorClass: "bg-amber-100 text-amber-800" },
@@ -84,7 +85,8 @@ export default function KPIsPage() {
 
   const { orderedColumns, draggedColumn, handleDragStart, handleDragOver, handleDrop, handleDragEnd } = useColumnOrder(kpiColumns);
   const { columnWidths, handleResizeStart } = useResizableColumns(orderedColumns.map(c => c.key), 110);
-
+  const { isVisible, toggleColumn, showAll } = useColumnVisibility(orderedColumns.map(c => c.key));
+  const visibleColumns = orderedColumns.filter(c => isVisible(c.key));
   const influencersWithKpis = new Set(kpis.map(k => k.acuerdoId));
   const placeholderKpis: KPI[] = acuerdos
     .filter(a => !influencersWithKpis.has(a.id) && a.estado !== 'Cancelado')
@@ -165,7 +167,7 @@ export default function KPIsPage() {
         <Button variant="gradient" onClick={() => handleOpen()} disabled={acuerdos.length === 0}><Plus className="h-4 w-4 mr-2" /> Nuevo KPI</Button>
       </div>
 
-      <ViewToolbar view={view} onViewChange={setView} acuerdos={acuerdos} selectedAcuerdo={filterAcuerdo} onAcuerdoChange={setFilterAcuerdo} dateRange={dateRange} onDateRangeChange={setDateRange} onExport={(fmt) => exportToFile(filtered, orderedColumns.map(c => ({ key: c.key, label: c.label })), fmt, "kpis")} />
+      <ViewToolbar view={view} onViewChange={setView} acuerdos={acuerdos} selectedAcuerdo={filterAcuerdo} onAcuerdoChange={setFilterAcuerdo} dateRange={dateRange} onDateRangeChange={setDateRange} onExport={(fmt) => exportToFile(filtered, visibleColumns.map(c => ({ key: c.key, label: c.label })), fmt, "kpis")} columns={orderedColumns.map(c => ({ key: c.key, label: c.label }))} isColumnVisible={isVisible} onToggleColumn={toggleColumn} onShowAllColumns={showAll} />
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Registros</CardTitle></CardHeader><CardContent><div className="text-2xl font-bold">{filtered.length}</div></CardContent></Card>
@@ -206,7 +208,7 @@ export default function KPIsPage() {
             <Table className="table-fixed">
               <TableHeader>
                 <TableRow>
-                  {orderedColumns.map((col) => (
+                  {visibleColumns.map((col) => (
                     <SortableTableHead
                       key={col.key}
                       label={col.label}
@@ -229,12 +231,12 @@ export default function KPIsPage() {
               </TableHeader>
               <TableBody>
                 {filtered.length === 0 ? (
-                  <TableRow><TableCell colSpan={orderedColumns.length + 1} className="text-center py-8 text-muted-foreground">No hay KPIs registrados.</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={visibleColumns.length + 1} className="text-center py-8 text-muted-foreground">No hay KPIs registrados.</TableCell></TableRow>
                 ) : filtered.map((k) => {
                   const isPlaceholder = k.id.startsWith("placeholder-");
                   return (
                     <TableRow key={k.id} className={isPlaceholder ? "opacity-60 bg-muted/30" : ""}>
-                      {orderedColumns.map((col) => (
+                      {visibleColumns.map((col) => (
                         <TableCell key={col.key} className="truncate overflow-hidden" style={{ width: `${columnWidths[col.key]}px`, minWidth: `${columnWidths[col.key]}px`, maxWidth: `${columnWidths[col.key]}px` }}>{col.render(k)}</TableCell>
                       ))}
                       <TableCell className="text-right">

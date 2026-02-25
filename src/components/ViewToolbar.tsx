@@ -3,7 +3,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { List, Kanban, TrendingUp, CalendarIcon, X, Download } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { List, Kanban, TrendingUp, CalendarIcon, X, Download, SlidersHorizontal } from "lucide-react";
 import { Acuerdo } from "@/types/crm";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
@@ -16,6 +17,11 @@ export interface DateRange {
   to?: Date;
 }
 
+export interface ColumnOption {
+  key: string;
+  label: string;
+}
+
 interface ViewToolbarProps {
   view: ViewMode;
   onViewChange: (v: ViewMode) => void;
@@ -26,6 +32,10 @@ interface ViewToolbarProps {
   dateRange?: DateRange;
   onDateRangeChange?: (range: DateRange) => void;
   onExport?: (format: "xlsx" | "csv") => void;
+  columns?: ColumnOption[];
+  isColumnVisible?: (key: string) => boolean;
+  onToggleColumn?: (key: string) => void;
+  onShowAllColumns?: () => void;
 }
 
 export default function ViewToolbar({
@@ -38,6 +48,10 @@ export default function ViewToolbar({
   dateRange,
   onDateRangeChange,
   onExport,
+  columns,
+  isColumnVisible,
+  onToggleColumn,
+  onShowAllColumns,
 }: ViewToolbarProps) {
   const hasDateFilter = dateRange?.from || dateRange?.to;
 
@@ -102,23 +116,56 @@ export default function ViewToolbar({
         </div>
       )}
 
-      {view === "list" && onExport && (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="sm" className="h-9 px-3 text-sm">
-              <Download className="h-4 w-4 mr-2" /> Exportar
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={() => onExport("xlsx")}>
-              Exportar a Excel (.xlsx)
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => onExport("csv")}>
-              Exportar a CSV (.csv)
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      )}
+      <div className="ml-auto flex items-center gap-2">
+        {view === "list" && columns && isColumnVisible && onToggleColumn && (
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="sm" className="h-9 px-3 text-sm">
+                <SlidersHorizontal className="h-4 w-4 mr-2" /> Columnas
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-56 p-3" align="end">
+              <div className="space-y-1">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium">Columnas visibles</span>
+                  {onShowAllColumns && (
+                    <Button variant="ghost" size="sm" className="h-7 text-xs px-2" onClick={onShowAllColumns}>
+                      Mostrar todas
+                    </Button>
+                  )}
+                </div>
+                {columns.map((col) => (
+                  <label key={col.key} className="flex items-center gap-2 text-sm cursor-pointer py-1 px-1 rounded hover:bg-muted/50">
+                    <Checkbox
+                      checked={isColumnVisible(col.key)}
+                      onCheckedChange={() => onToggleColumn(col.key)}
+                    />
+                    {col.label}
+                  </label>
+                ))}
+              </div>
+            </PopoverContent>
+          </Popover>
+        )}
+
+        {view === "list" && onExport && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" className="h-9 px-3 text-sm">
+                <Download className="h-4 w-4 mr-2" /> Exportar
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => onExport("xlsx")}>
+                Exportar a Excel (.xlsx)
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => onExport("csv")}>
+                Exportar a CSV (.csv)
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
+      </div>
     </div>
   );
 }
