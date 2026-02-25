@@ -21,12 +21,19 @@ const ALL_ROLES = [
   { value: 'gerencia', label: 'Gerencia' },
   { value: 'coordinador_mercadeo', label: 'Coordinador de Mercadeo' },
   { value: 'admin_contabilidad', label: 'Administración / Contabilidad' },
+  { value: 'analista', label: 'Analista' },
 ];
 
 // Roles that a gerencia user can assign (not gerencia or super_admin)
-const ASSIGNABLE_ROLES = [
+const GERENCIA_ASSIGNABLE_ROLES = [
   { value: 'coordinador_mercadeo', label: 'Coordinador de Mercadeo' },
   { value: 'admin_contabilidad', label: 'Administración / Contabilidad' },
+  { value: 'analista', label: 'Analista' },
+];
+
+// Coordinador can only assign analista
+const COORDINADOR_ASSIGNABLE_ROLES = [
+  { value: 'analista', label: 'Analista' },
 ];
 
 const MODULES = [
@@ -70,6 +77,8 @@ export default function AdminPage() {
   const [tab, setTab] = useState('users');
   const [isAuthorized, setIsAuthorized] = useState<boolean | null>(null);
   const [callerIsSuperAdmin, setCallerIsSuperAdmin] = useState(false);
+  const [callerIsGerencia, setCallerIsGerencia] = useState(false);
+  const [callerIsCoordinador, setCallerIsCoordinador] = useState(false);
 
   // Users state
   const [users, setUsers] = useState<UserRow[]>([]);
@@ -144,11 +153,13 @@ export default function AdminPage() {
   useEffect(() => {
     if (!user) return;
     supabase.from('user_roles').select('role').eq('user_id', user.id)
-      .in('role', ['gerencia', 'super_admin'])
+      .in('role', ['gerencia', 'super_admin', 'coordinador_mercadeo'])
       .then(({ data }) => {
         const roles = (data || []).map(r => r.role);
         setIsAuthorized(roles.length > 0);
         setCallerIsSuperAdmin(roles.includes('super_admin'));
+        setCallerIsGerencia(roles.includes('gerencia'));
+        setCallerIsCoordinador(roles.includes('coordinador_mercadeo'));
       });
   }, [user]);
 
@@ -156,8 +167,21 @@ export default function AdminPage() {
     if (isAuthorized) { fetchUsers(); fetchPermissions(); fetchAudit(); }
   }, [isAuthorized]);
 
-  // Roles available for assignment - super_admin can assign all, gerencia only non-admin
-  const ROLES = callerIsSuperAdmin ? ALL_ROLES : ASSIGNABLE_ROLES;
+  // Roles available for assignment based on caller's role
+  const ROLES = callerIsSuperAdmin ? ALL_ROLES : callerIsGerencia ? GERENCIA_ASSIGNABLE_ROLES : COORDINADOR_ASSIGNABLE_ROLES;
+  
+  // Only gerencia and super_admin can create users
+  const canCreateUsers = callerIsSuperAdmin || callerIsGerencia;
+  
+  // Only gerencia and super_admin can delete users  
+  const canDeleteUsers = callerIsSuperAdmin || callerIsGerencia;
+  
+  // Determine which permission roles this user can edit
+  const editablePermissionRoles = callerIsSuperAdmin 
+    ? ALL_ROLES 
+    : callerIsGerencia 
+      ? GERENCIA_ASSIGNABLE_ROLES 
+      : COORDINADOR_ASSIGNABLE_ROLES;
 
   const rolePermissions = useMemo(() => permissions.filter(p => p.role === selectedRole), [permissions, selectedRole]);
   const otherUsers = users.filter(u => u.user_id !== deleteTarget?.user_id);
@@ -260,11 +284,13 @@ export default function AdminPage() {
 
         {/* USERS TAB */}
         <TabsContent value="users" className="space-y-4">
-          <div className="flex justify-end">
-            <Button className="gap-2" variant="gradient" onClick={() => setShowCreateUser(true)}>
-              <UserPlus className="w-4 h-4" /> Nuevo Usuario
-            </Button>
-          </div>
+          {canCreateUsers && (
+            <div className="flex justify-end">
+              <Button className="gap-2" variant="gradient" onClick={() => setShowCreateUser(true)}>
+                <UserPlus className="w-4 h-4" /> Nuevo Usuario
+              </Button>
+            </div>
+          )}
 
           <Card>
             <Table>
@@ -298,16 +324,34 @@ export default function AdminPage() {
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      {(() => {
-                        const isProtected = u.roles.includes('super_admin') || (!callerIsSuperAdmin && u.roles.includes('gerencia'));
-                        if (isProtected) return <span className="text-xs text-muted-foreground">—</span>;
+                    {(() => {
+                        // Determine if the current user can manage this user
+                        const targetRoles = u.roles;
+                        const isProtected = targetRoles.includes('super_admin');
+                        const isGerenciaTarget = targetRoles.includes('gerencia');
+                        const isContabilidadTarget = targetRoles.includes('admin_contabilidad');
+                        const isCoordinadorTarget = targetRoles.includes('coordinador_mercadeo');
+                        
+                        // Super admin can manage everyone except other super_admins
+                        // Gerencia can manage coordinador, contabilidad, analista (not gerencia or super_admin)
+                        // Coordinador can only manage analista
+                        let canManage = false;
+                        if (callerIsSuperAdmin) canManage = !isProtected;
+                        else if (callerIsGerencia) canManage = !isProtected && !isGerenciaTarget;
+                        else if (callerIsCoordinador) canManage = targetRoles.includes('analista');
+                        
+                        if (!canManage) return <span className="text-xs text-muted-foreground">—</span>;
                         return (
                           <div className="flex gap-1.5">
                             <Button variant="outline" size="sm" className="text-xs" onClick={() => openEditUser(u)}><Pencil className="w-3.5 h-3.5" /></Button>
-                            <Button variant="outline" size="sm" className="text-xs" onClick={() => toggleUserActive(u.user_id, u.is_active)}>{u.is_active ? 'Desactivar' : 'Activar'}</Button>
-                            <Button variant="outline" size="sm" className="text-xs text-destructive hover:text-destructive" onClick={() => { setDeleteTarget(u); setShowDeleteUser(true); }}>
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </Button>
+                            {canDeleteUsers && (
+                              <>
+                                <Button variant="outline" size="sm" className="text-xs" onClick={() => toggleUserActive(u.user_id, u.is_active)}>{u.is_active ? 'Desactivar' : 'Activar'}</Button>
+                                <Button variant="outline" size="sm" className="text-xs text-destructive hover:text-destructive" onClick={() => { setDeleteTarget(u); setShowDeleteUser(true); }}>
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </Button>
+                              </>
+                            )}
                           </div>
                         );
                       })()}
@@ -326,7 +370,7 @@ export default function AdminPage() {
             <Select value={selectedRole} onValueChange={setSelectedRole}>
               <SelectTrigger className="w-64"><SelectValue /></SelectTrigger>
               <SelectContent>
-                {ROLES.map(r => <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>)}
+                {editablePermissionRoles.map(r => <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>

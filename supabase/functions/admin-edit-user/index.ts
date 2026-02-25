@@ -36,10 +36,10 @@ Deno.serve(async (req) => {
     const { data: roleData } = await adminClient
       .from("user_roles").select("role")
       .eq("user_id", caller.id)
-      .in("role", ["gerencia", "super_admin"]);
+      .in("role", ["gerencia", "super_admin", "coordinador_mercadeo"]);
 
     if (!roleData || roleData.length === 0) {
-      return new Response(JSON.stringify({ error: "No tienes permisos de gerencia o super admin" }), {
+      return new Response(JSON.stringify({ error: "No tienes permisos para editar usuarios" }), {
         status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -54,16 +54,46 @@ Deno.serve(async (req) => {
 
     const callerRoles = (roleData || []).map((r: any) => r.role);
     const isSuperAdmin = callerRoles.includes("super_admin");
+    const isGerencia = callerRoles.includes("gerencia");
+    const isCoordinador = callerRoles.includes("coordinador_mercadeo");
+
+    // Get target user's current role
+    const { data: targetRoleData } = await adminClient
+      .from("user_roles").select("role")
+      .eq("user_id", user_id);
+    const targetRoles = (targetRoleData || []).map((r: any) => r.role);
+
+    // Coordinador can only edit analista users
+    if (isCoordinador && !isSuperAdmin && !isGerencia) {
+      if (!targetRoles.includes("analista")) {
+        return new Response(JSON.stringify({ error: "Solo puedes editar usuarios con rol analista" }), {
+          status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      // Coordinador can only assign analista role
+      if (role && role !== "analista") {
+        return new Response(JSON.stringify({ error: "Solo puedes asignar el rol de analista" }), {
+          status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    }
 
     // Gerencia cannot assign gerencia or super_admin roles
     const restrictedRoles = ["gerencia", "super_admin"];
-    if (role && !isSuperAdmin && restrictedRoles.includes(role)) {
+    if (role && !isSuperAdmin && isGerencia && restrictedRoles.includes(role)) {
       return new Response(JSON.stringify({ error: "No tienes permisos para asignar este rol" }), {
         status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // Gerencia can only edit users in their own company
+    // Gerencia cannot edit other gerencia users
+    if (isGerencia && !isSuperAdmin && targetRoles.includes("gerencia")) {
+      return new Response(JSON.stringify({ error: "No puedes editar usuarios con rol de gerencia" }), {
+        status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Non-super_admin can only edit users in their own company
     if (!isSuperAdmin) {
       const { data: callerProfile } = await adminClient.from("profiles").select("company_id").eq("user_id", caller.id).maybeSingle();
       const { data: targetProfile } = await adminClient.from("profiles").select("company_id").eq("user_id", user_id).maybeSingle();

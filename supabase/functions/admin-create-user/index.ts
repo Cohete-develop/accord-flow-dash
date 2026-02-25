@@ -41,7 +41,7 @@ Deno.serve(async (req) => {
       .in("role", ["gerencia", "super_admin"]);
 
     if (!roleData || roleData.length === 0) {
-      return new Response(JSON.stringify({ error: "No tienes permisos de gerencia o super admin" }), {
+      return new Response(JSON.stringify({ error: "Solo gerencia o super admin pueden crear usuarios" }), {
         status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
