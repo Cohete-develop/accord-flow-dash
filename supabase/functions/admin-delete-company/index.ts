@@ -73,7 +73,14 @@ Deno.serve(async (req) => {
     // Get all user_ids belonging to this company
     const { data: companyProfiles } = await adminClient
       .from("profiles").select("user_id").eq("company_id", company_id);
-    const userIds = (companyProfiles || []).map(p => p.user_id);
+    const allUserIds = (companyProfiles || []).map(p => p.user_id);
+
+    // Exclude super_admin users from deletion — they are platform owners, not clients
+    const { data: superAdminRoles } = await adminClient
+      .from("user_roles").select("user_id").eq("role", "super_admin");
+    const superAdminIds = new Set((superAdminRoles || []).map(r => r.user_id));
+    const userIdsToDelete = allUserIds.filter(id => !superAdminIds.has(id));
+    const superAdminIdsInCompany = allUserIds.filter(id => superAdminIds.has(id));
 
     // Delete in order: kpis, entregables, pagos, acuerdos (company data)
     await adminClient.from("kpis").delete().eq("company_id", company_id);
@@ -81,14 +88,14 @@ Deno.serve(async (req) => {
     await adminClient.from("pagos").delete().eq("company_id", company_id);
     await adminClient.from("acuerdos").delete().eq("company_id", company_id);
 
-    // Delete audit_log entries for these users
-    if (userIds.length > 0) {
-      await adminClient.from("audit_log").delete().in("user_id", userIds);
+    // Delete audit_log entries for users to be deleted
+    if (userIdsToDelete.length > 0) {
+      await adminClient.from("audit_log").delete().in("user_id", userIdsToDelete);
     }
 
-    // Delete user_roles for these users
-    if (userIds.length > 0) {
-      await adminClient.from("user_roles").delete().in("user_id", userIds);
+    // Delete user_roles for users to be deleted (NOT super_admins)
+    if (userIdsToDelete.length > 0) {
+      await adminClient.from("user_roles").delete().in("user_id", userIdsToDelete);
     }
 
     // Audit log BEFORE deleting users (to avoid FK violation)
@@ -97,21 +104,28 @@ Deno.serve(async (req) => {
       user_name: `${caller.user_metadata?.first_name || ""} ${caller.user_metadata?.last_name || ""}`.trim(),
       action: "delete_company",
       module: "super_admin",
-      details: { company_name: company.name, deleted_users: userIds.length },
+      details: { company_name: company.name, deleted_users: userIdsToDelete.length, preserved_super_admins: superAdminIdsInCompany.length },
     });
 
-    // Delete profiles
-    await adminClient.from("profiles").delete().eq("company_id", company_id);
+    // Unlink super_admin profiles from this company (set company_id to null) instead of deleting
+    if (superAdminIdsInCompany.length > 0) {
+      await adminClient.from("profiles").update({ company_id: null }).in("user_id", superAdminIdsInCompany);
+    }
 
-    // Delete auth users
-    for (const uid of userIds) {
+    // Delete profiles of non-super_admin users
+    if (userIdsToDelete.length > 0) {
+      await adminClient.from("profiles").delete().in("user_id", userIdsToDelete);
+    }
+
+    // Delete auth users (only non-super_admins)
+    for (const uid of userIdsToDelete) {
       await adminClient.auth.admin.deleteUser(uid);
     }
 
     // Delete the company itself
     await adminClient.from("companies").delete().eq("id", company_id);
 
-    return new Response(JSON.stringify({ success: true, deleted_users: userIds.length }), {
+    return new Response(JSON.stringify({ success: true, deleted_users: userIdsToDelete.length }), {
       status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err) {
