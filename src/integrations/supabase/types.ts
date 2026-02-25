@@ -236,6 +236,7 @@ export type Database = {
           notas: string
           periodo: string
           user_id: string
+          valor_mensual_snapshot: number
         }
         Insert: {
           acuerdo_id?: string | null
@@ -255,6 +256,7 @@ export type Database = {
           notas?: string
           periodo?: string
           user_id: string
+          valor_mensual_snapshot?: number
         }
         Update: {
           acuerdo_id?: string | null
@@ -274,6 +276,7 @@ export type Database = {
           notas?: string
           periodo?: string
           user_id?: string
+          valor_mensual_snapshot?: number
         }
         Relationships: [
           {

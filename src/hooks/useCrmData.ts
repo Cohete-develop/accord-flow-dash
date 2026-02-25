@@ -93,7 +93,8 @@ function dbToKPI(row: any): KPI {
     influencer: row.influencer, alcance: row.alcance, impresiones: row.impresiones,
     interacciones: row.interacciones, clicks: row.clicks, engagement: Number(row.engagement),
     cpr: Number(row.cpr), cpc: Number(row.cpc), periodo: row.periodo,
-    estado: row.estado, notas: row.notas, createdAt: row.created_at,
+    estado: row.estado, notas: row.notas, valorMensualSnapshot: Number(row.valor_mensual_snapshot || 0),
+    createdAt: row.created_at,
   };
 }
 
@@ -104,6 +105,7 @@ function kpiToDb(k: Omit<KPI, "id" | "createdAt">, userId: string, companyId: st
     influencer: k.influencer, alcance: k.alcance, impresiones: k.impresiones,
     interacciones: k.interacciones, clicks: k.clicks, engagement: k.engagement,
     cpr: k.cpr, cpc: k.cpc, periodo: k.periodo, estado: k.estado, notas: k.notas,
+    valor_mensual_snapshot: k.valorMensualSnapshot || 0,
   };
 }
 
