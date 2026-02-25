@@ -471,11 +471,11 @@ export default function SuperAdminPage() {
           </DialogHeader>
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-2"><Label>Nombre</Label><Input value={newFirstName} onChange={e => setNewFirstName(e.target.value)} /></div>
-              <div className="space-y-2"><Label>Apellido</Label><Input value={newLastName} onChange={e => setNewLastName(e.target.value)} /></div>
+              <div className="space-y-2"><Label>Nombre <span className="text-destructive">*</span></Label><Input value={newFirstName} onChange={e => setNewFirstName(e.target.value)} required placeholder="Nombre" /></div>
+              <div className="space-y-2"><Label>Apellido <span className="text-destructive">*</span></Label><Input value={newLastName} onChange={e => setNewLastName(e.target.value)} required placeholder="Apellido" /></div>
             </div>
-            <div className="space-y-2"><Label>Email</Label><Input type="email" value={newEmail} onChange={e => setNewEmail(e.target.value)} /></div>
-            <div className="space-y-2"><Label>Contraseña</Label><Input type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} /></div>
+            <div className="space-y-2"><Label>Email <span className="text-destructive">*</span></Label><Input type="email" value={newEmail} onChange={e => setNewEmail(e.target.value)} required placeholder="correo@ejemplo.com" /></div>
+            <div className="space-y-2"><Label>Contraseña <span className="text-destructive">*</span></Label><Input type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} required placeholder="Mínimo 6 caracteres" /></div>
             <div className="space-y-2">
               <Label>Rol</Label>
               <Select value={newRole} onValueChange={setNewRole}>
