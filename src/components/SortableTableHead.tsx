@@ -17,6 +17,8 @@ export interface SortableTableHeadProps {
   onDragOver?: (e: DragEvent) => void;
   onDrop?: (e: DragEvent) => void;
   onDragEnd?: () => void;
+  width?: number;
+  onResizeStart?: (e: React.MouseEvent) => void;
 }
 
 export default function SortableTableHead({
@@ -31,28 +33,38 @@ export default function SortableTableHead({
   onDragOver,
   onDrop,
   onDragEnd,
+  width,
+  onResizeStart,
 }: SortableTableHeadProps) {
   const isActive = currentSortKey === sortKey;
 
   return (
     <TableHead
-      className={cn("cursor-pointer select-none hover:text-foreground transition-colors", draggable && "cursor-grab", className)}
+      className={cn("cursor-pointer select-none hover:text-foreground transition-colors relative group", draggable && "cursor-grab", className)}
       onClick={() => onSort(sortKey)}
       draggable={draggable}
       onDragStart={onDragStart}
       onDragOver={onDragOver}
       onDrop={onDrop}
       onDragEnd={onDragEnd}
+      style={width ? { width: `${width}px`, minWidth: `${width}px`, maxWidth: `${width}px` } : undefined}
     >
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-1 overflow-hidden whitespace-nowrap">
         {draggable && <GripVertical className="h-3 w-3 opacity-40 flex-shrink-0" />}
-        {label}
+        <span className="truncate">{label}</span>
         {isActive ? (
-          currentDirection === "asc" ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
+          currentDirection === "asc" ? <ArrowUp className="h-3 w-3 flex-shrink-0" /> : <ArrowDown className="h-3 w-3 flex-shrink-0" />
         ) : (
-          <ArrowUpDown className="h-3 w-3 opacity-40" />
+          <ArrowUpDown className="h-3 w-3 opacity-40 flex-shrink-0" />
         )}
       </div>
+      {onResizeStart && (
+        <div
+          className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize bg-transparent hover:bg-primary/40 group-hover:bg-border"
+          onMouseDown={(e) => onResizeStart(e)}
+          onClick={(e) => e.stopPropagation()}
+        />
+      )}
     </TableHead>
   );
 }

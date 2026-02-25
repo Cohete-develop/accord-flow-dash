@@ -16,6 +16,7 @@ import KanbanBoard, { KanbanColumn } from "@/components/KanbanBoard";
 import ForecastBoard from "@/components/ForecastBoard";
 import SortableTableHead, { SortDirection, useSort } from "@/components/SortableTableHead";
 import { useColumnOrder, ColumnDef } from "@/hooks/useColumnOrder";
+import { useResizableColumns } from "@/hooks/useResizableColumns";
 
 const estadoColors: Record<string, string> = {
   Pendiente: "bg-amber-100 text-amber-800",
@@ -93,6 +94,7 @@ export default function PagosPage() {
   ];
 
   const { orderedColumns, draggedColumn, handleDragStart, handleDragOver, handleDrop, handleDragEnd } = useColumnOrder(pagoColumns);
+  const { columnWidths, handleResizeStart } = useResizableColumns(orderedColumns.map(c => c.key), 120);
 
   const byAcuerdo = filterAcuerdo === "all" ? pagos : pagos.filter((p) => p.acuerdoId === filterAcuerdo);
   const byDate = filterByDateRange(byAcuerdo, dateRange, (p) => [p.fechaPago, p.fechaVencimiento]);
@@ -171,7 +173,7 @@ export default function PagosPage() {
       {view === "list" && (
         <Card>
           <CardContent className="p-0">
-            <Table>
+            <Table className="table-fixed">
               <TableHeader>
                 <TableRow>
                   {orderedColumns.map((col) => (
@@ -188,6 +190,8 @@ export default function PagosPage() {
                       onDrop={(e) => handleDrop(e as any, col.key)}
                       onDragEnd={handleDragEnd}
                       className={draggedColumn === col.key ? "opacity-50" : ""}
+                      width={columnWidths[col.key]}
+                      onResizeStart={(e) => handleResizeStart(e, col.key)}
                     />
                   ))}
                   <TableHead className="text-right">Acciones</TableHead>
@@ -199,7 +203,7 @@ export default function PagosPage() {
                 ) : filtered.map((p) => (
                   <TableRow key={p.id}>
                     {orderedColumns.map((col) => (
-                      <TableCell key={col.key}>{col.render(p)}</TableCell>
+                      <TableCell key={col.key} className="truncate overflow-hidden" style={{ width: `${columnWidths[col.key]}px`, minWidth: `${columnWidths[col.key]}px`, maxWidth: `${columnWidths[col.key]}px` }}>{col.render(p)}</TableCell>
                     ))}
                     <TableCell className="text-right">
                       <Button variant="ghost" size="icon" onClick={() => handleOpen(p)}><Pencil className="h-4 w-4" /></Button>
