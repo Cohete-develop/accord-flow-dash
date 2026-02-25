@@ -6,29 +6,10 @@ import { Button } from "@/components/ui/button";
 import { Pin, PinOff, Filter, X } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Cell } from "recharts";
 
-const GRADIENT_PAIRS = [
-  { start: "#7030A0", end: "#4318FF" },
-  { start: "#5B21B6", end: "#6366F1" },
-  { start: "#8B5CF6", end: "#3B82F6" },
-  { start: "#A855F7", end: "#2563EB" },
-  { start: "#7C3AED", end: "#0EA5E9" },
-  { start: "#6D28D9", end: "#7C3AED" },
-  { start: "#9333EA", end: "#4F46E5" },
-  { start: "#581C87", end: "#6366F1" },
+const COLORS = [
+  "#7030A0", "#4318FF", "#8B5CF6", "#5B21B6",
+  "#6366F1", "#A855F7", "#7C3AED", "#9333EA",
 ];
-
-const COLORS = GRADIENT_PAIRS.map((_, i) => `url(#pfr-grad-${i})`);
-
-const GradientDefs = () => (
-  <defs>
-    {GRADIENT_PAIRS.map((g, i) => (
-      <linearGradient key={i} id={`pfr-grad-${i}`} x1="0" y1="0" x2="1" y2="1">
-        <stop offset="0%" stopColor={g.start} />
-        <stop offset="100%" stopColor={g.end} />
-      </linearGradient>
-    ))}
-  </defs>
-);
 
 const fmtCurrency = (v: number) => {
   if (v >= 1_000_000) return `$${Math.round(v / 1_000_000)}M`;
@@ -183,7 +164,7 @@ export default function ProductFamilyReport({ acuerdos }: Props) {
     ) : (
       <ResponsiveContainer width="100%" height={height}>
         <BarChart data={data}>
-          <GradientDefs />
+          
           <CartesianGrid strokeDasharray="3 3" />
           <XAxis dataKey="name" fontSize={11} />
           <YAxis fontSize={11} tickFormatter={fmtCurrency} />
