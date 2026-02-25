@@ -6,11 +6,30 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, AreaChart, Area } from "recharts";
 import ChartDetailDialog from "@/components/ChartDetailDialog";
 
-const COLORS = [
-  "hsl(264, 67%, 40%)", "hsl(250, 100%, 50%)", "hsl(270, 55%, 55%)",
-  "hsl(240, 80%, 60%)", "hsl(280, 50%, 48%)", "hsl(255, 70%, 68%)",
-  "hsl(235, 60%, 45%)", "hsl(290, 45%, 55%)",
+const GRADIENT_PAIRS = [
+  { start: "#7030A0", end: "#4318FF" },
+  { start: "#5B21B6", end: "#6366F1" },
+  { start: "#8B5CF6", end: "#3B82F6" },
+  { start: "#A855F7", end: "#2563EB" },
+  { start: "#7C3AED", end: "#0EA5E9" },
+  { start: "#6D28D9", end: "#7C3AED" },
+  { start: "#9333EA", end: "#4F46E5" },
+  { start: "#581C87", end: "#6366F1" },
 ];
+
+const COLORS = GRADIENT_PAIRS.map((_, i) => `url(#grad-${i})`);
+const FLAT_COLORS = GRADIENT_PAIRS.map(g => g.start);
+
+const GradientDefs = () => (
+  <defs>
+    {GRADIENT_PAIRS.map((g, i) => (
+      <linearGradient key={i} id={`grad-${i}`} x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0%" stopColor={g.start} />
+        <stop offset="100%" stopColor={g.end} />
+      </linearGradient>
+    ))}
+  </defs>
+);
 
 const fmtCurrency = (v: number) => {
   if (v >= 1_000_000) return `$${Math.round(v / 1_000_000)}M`;
@@ -172,9 +191,31 @@ export default function DashboardPage() {
         {data.length === 0 ? (
           <p className="text-sm text-muted-foreground text-center py-8">Sin datos</p>
         ) : (
-          <ResponsiveContainer width="100%" height={220}>
+          <ResponsiveContainer width="100%" height={280}>
             <PieChart>
-              <Pie data={data} cx="50%" cy="50%" outerRadius={80} dataKey="value" label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`} labelLine={false} fontSize={11} className="cursor-pointer" onClick={onClick}>
+              <GradientDefs />
+              <Pie
+                data={data}
+                cx="50%"
+                cy="50%"
+                outerRadius={70}
+                innerRadius={30}
+                dataKey="value"
+                label={({ name, percent, cx, midAngle, outerRadius: or }) => {
+                  const RADIAN = Math.PI / 180;
+                  const radius = or + 20;
+                  const x = cx + radius * Math.cos(-midAngle * RADIAN);
+                  const y = cx + radius * Math.sin(-midAngle * RADIAN);
+                  return (
+                    <text x={x} y={y} textAnchor={x > cx ? "start" : "end"} dominantBaseline="central" fontSize={10} fill="hsl(224, 30%, 12%)">
+                      {name} {(percent * 100).toFixed(0)}%
+                    </text>
+                  );
+                }}
+                labelLine={true}
+                className="cursor-pointer"
+                onClick={onClick}
+              >
                 {data.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
               </Pie>
               <Tooltip />
@@ -217,6 +258,7 @@ export default function DashboardPage() {
           ) : (
             <ResponsiveContainer width="100%" height={300}>
               <BarChart data={moneyBarData} onClick={handleBarClickInfluencer}>
+                <GradientDefs />
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="name" fontSize={12} />
                 <YAxis fontSize={12} tickFormatter={fmtCurrency} />
@@ -239,6 +281,7 @@ export default function DashboardPage() {
             ) : (
               <ResponsiveContainer width="100%" height={280}>
                 <BarChart data={moneyByTipoData} onClick={handleBarClickTipo}>
+                  <GradientDefs />
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="name" fontSize={12} />
                   <YAxis fontSize={12} tickFormatter={fmtCurrency} />
@@ -259,6 +302,7 @@ export default function DashboardPage() {
             ) : (
               <ResponsiveContainer width="100%" height={280}>
                 <BarChart data={moneyByRedData} onClick={handleBarClickRed}>
+                  <GradientDefs />
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="name" fontSize={12} />
                   <YAxis fontSize={12} tickFormatter={fmtCurrency} />
@@ -282,11 +326,18 @@ export default function DashboardPage() {
             ) : (
               <ResponsiveContainer width="100%" height={280}>
                 <AreaChart data={forecastData} onClick={handleAreaClickPagos}>
+                  <GradientDefs />
+                  <defs>
+                    <linearGradient id="areaGrad1" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#7030A0" stopOpacity={0.4} />
+                      <stop offset="100%" stopColor="#4318FF" stopOpacity={0.05} />
+                    </linearGradient>
+                  </defs>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="month" fontSize={11} />
                   <YAxis fontSize={11} tickFormatter={fmtCurrency} />
                   <Tooltip formatter={(v: number) => fmtTooltip(v)} />
-                  <Area type="monotone" dataKey="monto" stroke="hsl(264, 67%, 40%)" fill="hsl(264, 67%, 40%)" fillOpacity={0.2} name="Monto" className="cursor-pointer" />
+                  <Area type="monotone" dataKey="monto" stroke="#7030A0" fill="url(#areaGrad1)" name="Monto" className="cursor-pointer" />
                 </AreaChart>
               </ResponsiveContainer>
             )}
@@ -300,11 +351,17 @@ export default function DashboardPage() {
             ) : (
               <ResponsiveContainer width="100%" height={280}>
                 <AreaChart data={acuerdoForecast} onClick={handleAreaClickAcuerdos}>
+                  <defs>
+                    <linearGradient id="areaGrad2" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#4318FF" stopOpacity={0.4} />
+                      <stop offset="100%" stopColor="#7030A0" stopOpacity={0.05} />
+                    </linearGradient>
+                  </defs>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="month" fontSize={11} />
                   <YAxis fontSize={11} tickFormatter={fmtCurrency} />
                   <Tooltip formatter={(v: number) => fmtTooltip(v)} />
-                  <Area type="monotone" dataKey="valor" stroke="hsl(250, 100%, 50%)" fill="hsl(250, 100%, 50%)" fillOpacity={0.2} name="Valor" className="cursor-pointer" />
+                  <Area type="monotone" dataKey="valor" stroke="#4318FF" fill="url(#areaGrad2)" name="Valor" className="cursor-pointer" />
                 </AreaChart>
               </ResponsiveContainer>
             )}
