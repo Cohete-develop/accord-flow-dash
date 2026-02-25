@@ -11,9 +11,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Plus, Pencil, Trash2 } from "lucide-react";
-import ViewToolbar, { ViewMode } from "@/components/ViewToolbar";
+import ViewToolbar, { ViewMode, DateRange } from "@/components/ViewToolbar";
 import KanbanBoard, { KanbanColumn } from "@/components/KanbanBoard";
 import ForecastBoard from "@/components/ForecastBoard";
+import SortableTableHead, { SortDirection, useSort } from "@/components/SortableTableHead";
 
 const estadoColors: Record<string, string> = {
   Pendiente: "bg-amber-100 text-amber-800",
@@ -50,6 +51,23 @@ function NumericInput({ value, onChange, ...props }: { value: number; onChange: 
   );
 }
 
+function filterByDateRange<T>(items: T[], dateRange: DateRange, getDateFields: (item: T) => string[]): T[] {
+  if (!dateRange.from && !dateRange.to) return items;
+  return items.filter((item) => {
+    const dates = getDateFields(item).filter(Boolean).map((d) => new Date(d));
+    if (dates.length === 0) return true;
+    return dates.some((d) => {
+      if (dateRange.from && d < dateRange.from) return false;
+      if (dateRange.to) {
+        const endOfDay = new Date(dateRange.to);
+        endOfDay.setHours(23, 59, 59, 999);
+        if (d > endOfDay) return false;
+      }
+      return true;
+    });
+  });
+}
+
 export default function PagosPage() {
   const { acuerdos } = useAcuerdos();
   const { pagos, isLoading, save, remove } = usePagos();
@@ -58,8 +76,20 @@ export default function PagosPage() {
   const [form, setForm] = useState(emptyPago());
   const [view, setView] = useState<ViewMode>("list");
   const [filterAcuerdo, setFilterAcuerdo] = useState("all");
+  const [dateRange, setDateRange] = useState<DateRange>({});
+  const [sortKey, setSortKey] = useState<string | null>(null);
+  const [sortDirection, setSortDirection] = useState<SortDirection>(null);
+  const { sortItems, toggleSort } = useSort<Pago>();
 
-  const filtered = filterAcuerdo === "all" ? pagos : pagos.filter((p) => p.acuerdoId === filterAcuerdo);
+  const byAcuerdo = filterAcuerdo === "all" ? pagos : pagos.filter((p) => p.acuerdoId === filterAcuerdo);
+  const byDate = filterByDateRange(byAcuerdo, dateRange, (p) => [p.fechaPago, p.fechaVencimiento]);
+  const filtered = sortItems(byDate, sortKey, sortDirection);
+
+  const handleSort = (key: string) => {
+    const result = toggleSort(key, sortKey, sortDirection);
+    setSortKey(result.sortKey);
+    setSortDirection(result.sortDirection);
+  };
 
   const handleOpen = (p?: Pago) => {
     if (p) { setEditing(p); const { id, createdAt, ...rest } = p; setForm(rest); }
@@ -105,7 +135,7 @@ export default function PagosPage() {
         <Button variant="gradient" onClick={() => handleOpen()} disabled={acuerdos.length === 0}><Plus className="h-4 w-4 mr-2" /> Nuevo Pago</Button>
       </div>
 
-      <ViewToolbar view={view} onViewChange={setView} acuerdos={acuerdos} selectedAcuerdo={filterAcuerdo} onAcuerdoChange={setFilterAcuerdo} />
+      <ViewToolbar view={view} onViewChange={setView} acuerdos={acuerdos} selectedAcuerdo={filterAcuerdo} onAcuerdoChange={setFilterAcuerdo} dateRange={dateRange} onDateRangeChange={setDateRange} />
 
       {acuerdos.length === 0 && (
         <Card><CardContent className="py-8 text-center text-muted-foreground">Primero debes crear un acuerdo en el módulo de Acuerdos antes de registrar pagos.</CardContent></Card>
@@ -131,9 +161,14 @@ export default function PagosPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Influencer</TableHead><TableHead>Concepto</TableHead><TableHead>Monto</TableHead>
-                  <TableHead>Fecha Pago</TableHead><TableHead>Vencimiento</TableHead><TableHead>Método</TableHead>
-                  <TableHead>Estado</TableHead><TableHead className="text-right">Acciones</TableHead>
+                  <SortableTableHead label="Influencer" sortKey="influencer" currentSortKey={sortKey} currentDirection={sortDirection} onSort={handleSort} />
+                  <SortableTableHead label="Concepto" sortKey="concepto" currentSortKey={sortKey} currentDirection={sortDirection} onSort={handleSort} />
+                  <SortableTableHead label="Monto" sortKey="monto" currentSortKey={sortKey} currentDirection={sortDirection} onSort={handleSort} />
+                  <SortableTableHead label="Fecha Pago" sortKey="fechaPago" currentSortKey={sortKey} currentDirection={sortDirection} onSort={handleSort} />
+                  <SortableTableHead label="Vencimiento" sortKey="fechaVencimiento" currentSortKey={sortKey} currentDirection={sortDirection} onSort={handleSort} />
+                  <SortableTableHead label="Método" sortKey="metodoPago" currentSortKey={sortKey} currentDirection={sortDirection} onSort={handleSort} />
+                  <SortableTableHead label="Estado" sortKey="estado" currentSortKey={sortKey} currentDirection={sortDirection} onSort={handleSort} />
+                  <TableHead className="text-right">Acciones</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>

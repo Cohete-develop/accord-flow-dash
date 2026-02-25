@@ -12,9 +12,10 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Plus, Pencil, Trash2, Users } from "lucide-react";
-import ViewToolbar, { ViewMode } from "@/components/ViewToolbar";
+import ViewToolbar, { ViewMode, DateRange } from "@/components/ViewToolbar";
 import KanbanBoard, { KanbanColumn } from "@/components/KanbanBoard";
 import ForecastBoard from "@/components/ForecastBoard";
+import SortableTableHead, { SortDirection, useSort } from "@/components/SortableTableHead";
 
 const REDES_SOCIALES = ["Instagram", "TikTok", "YouTube", "Twitter", "Facebook"];
 const TIPOS_CONTENIDO = ["Reel", "Story", "Collab", "UGC"];
@@ -97,6 +98,23 @@ function NumericInput({ value, onChange, ...props }: { value: number; onChange: 
   );
 }
 
+function filterByDateRange<T>(items: T[], dateRange: DateRange, getDateFields: (item: T) => string[]): T[] {
+  if (!dateRange.from && !dateRange.to) return items;
+  return items.filter((item) => {
+    const dates = getDateFields(item).filter(Boolean).map((d) => new Date(d));
+    if (dates.length === 0) return true;
+    return dates.some((d) => {
+      if (dateRange.from && d < dateRange.from) return false;
+      if (dateRange.to) {
+        const endOfDay = new Date(dateRange.to);
+        endOfDay.setHours(23, 59, 59, 999);
+        if (d > endOfDay) return false;
+      }
+      return true;
+    });
+  });
+}
+
 export default function AcuerdosPage() {
   const { acuerdos, isLoading, save, remove } = useAcuerdos();
   const [open, setOpen] = useState(false);
@@ -104,8 +122,20 @@ export default function AcuerdosPage() {
   const [form, setForm] = useState(emptyAcuerdo());
   const [view, setView] = useState<ViewMode>("list");
   const [filterAcuerdo, setFilterAcuerdo] = useState("all");
+  const [dateRange, setDateRange] = useState<DateRange>({});
+  const [sortKey, setSortKey] = useState<string | null>(null);
+  const [sortDirection, setSortDirection] = useState<SortDirection>(null);
+  const { sortItems, toggleSort } = useSort<Acuerdo>();
 
-  const filtered = filterAcuerdo === "all" ? acuerdos : acuerdos.filter((a) => a.id === filterAcuerdo);
+  const byAcuerdo = filterAcuerdo === "all" ? acuerdos : acuerdos.filter((a) => a.id === filterAcuerdo);
+  const byDate = filterByDateRange(byAcuerdo, dateRange, (a) => [a.fechaInicio, a.fechaFin]);
+  const filtered = sortItems(byDate, sortKey, sortDirection);
+
+  const handleSort = (key: string) => {
+    const result = toggleSort(key, sortKey, sortDirection);
+    setSortKey(result.sortKey);
+    setSortDirection(result.sortDirection);
+  };
 
   useEffect(() => {
     const dur = calcDuration(form.fechaInicio, form.fechaFin);
@@ -183,7 +213,7 @@ export default function AcuerdosPage() {
         <Button variant="gradient" onClick={() => handleOpen()}><Plus className="h-4 w-4 mr-2" /> Nuevo Acuerdo</Button>
       </div>
 
-      <ViewToolbar view={view} onViewChange={setView} acuerdos={acuerdos} selectedAcuerdo={filterAcuerdo} onAcuerdoChange={setFilterAcuerdo} />
+      <ViewToolbar view={view} onViewChange={setView} acuerdos={acuerdos} selectedAcuerdo={filterAcuerdo} onAcuerdoChange={setFilterAcuerdo} dateRange={dateRange} onDateRangeChange={setDateRange} />
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Total Acuerdos</CardTitle></CardHeader><CardContent><div className="text-2xl font-bold">{filtered.length}</div></CardContent></Card>
@@ -206,15 +236,24 @@ export default function AcuerdosPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Influencer</TableHead><TableHead>Red Social</TableHead><TableHead>Seguidores</TableHead>
-                  <TableHead>Tipo</TableHead><TableHead>Reels</TableHead><TableHead>Stories</TableHead>
-                  <TableHead>Inicio</TableHead><TableHead>Fin</TableHead><TableHead>Duración</TableHead>
-                  <TableHead>V. Mensual</TableHead><TableHead>V. Total</TableHead><TableHead>Estado</TableHead><TableHead className="text-right">Acciones</TableHead>
+                  <SortableTableHead label="Influencer" sortKey="influencer" currentSortKey={sortKey} currentDirection={sortDirection} onSort={handleSort} />
+                  <SortableTableHead label="Red Social" sortKey="redSocial" currentSortKey={sortKey} currentDirection={sortDirection} onSort={handleSort} />
+                  <SortableTableHead label="Seguidores" sortKey="seguidores" currentSortKey={sortKey} currentDirection={sortDirection} onSort={handleSort} />
+                  <SortableTableHead label="Tipo" sortKey="tipoContenido" currentSortKey={sortKey} currentDirection={sortDirection} onSort={handleSort} />
+                  <SortableTableHead label="Reels" sortKey="reelsPactados" currentSortKey={sortKey} currentDirection={sortDirection} onSort={handleSort} />
+                  <SortableTableHead label="Stories" sortKey="storiesPactadas" currentSortKey={sortKey} currentDirection={sortDirection} onSort={handleSort} />
+                  <SortableTableHead label="Inicio" sortKey="fechaInicio" currentSortKey={sortKey} currentDirection={sortDirection} onSort={handleSort} />
+                  <SortableTableHead label="Fin" sortKey="fechaFin" currentSortKey={sortKey} currentDirection={sortDirection} onSort={handleSort} />
+                  <SortableTableHead label="Duración" sortKey="duracionMeses" currentSortKey={sortKey} currentDirection={sortDirection} onSort={handleSort} />
+                  <SortableTableHead label="V. Mensual" sortKey="valorMensual" currentSortKey={sortKey} currentDirection={sortDirection} onSort={handleSort} />
+                  <SortableTableHead label="V. Total" sortKey="valorTotal" currentSortKey={sortKey} currentDirection={sortDirection} onSort={handleSort} />
+                  <SortableTableHead label="Estado" sortKey="estado" currentSortKey={sortKey} currentDirection={sortDirection} onSort={handleSort} />
+                  <TableHead className="text-right">Acciones</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filtered.length === 0 ? (
-                  <TableRow><TableCell colSpan={12} className="text-center py-8 text-muted-foreground">No hay acuerdos registrados.</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={13} className="text-center py-8 text-muted-foreground">No hay acuerdos registrados.</TableCell></TableRow>
                 ) : filtered.map((a) => (
                   <TableRow key={a.id}>
                     <TableCell className="font-medium">{a.influencer}</TableCell>

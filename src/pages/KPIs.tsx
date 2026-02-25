@@ -11,9 +11,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Textarea } from "@/components/ui/textarea";
 import { Plus, Pencil, Trash2, TrendingUp, Eye, MousePointerClick } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
-import ViewToolbar, { ViewMode } from "@/components/ViewToolbar";
+import ViewToolbar, { ViewMode, DateRange } from "@/components/ViewToolbar";
 import KanbanBoard, { KanbanColumn } from "@/components/KanbanBoard";
 import ForecastBoard from "@/components/ForecastBoard";
+import SortableTableHead, { SortDirection, useSort } from "@/components/SortableTableHead";
 
 const kanbanColumns: KanbanColumn[] = [
   { key: "Pendiente", label: "Pendiente", colorClass: "bg-amber-100 text-amber-800" },
@@ -27,6 +28,31 @@ const emptyKPI = (): Omit<KPI, "id" | "createdAt"> => ({
   interacciones: 0, clicks: 0, engagement: 0, cpr: 0, cpc: 0, periodo: "", estado: "Pendiente", notas: "",
 });
 
+function filterByDateRange<T>(items: T[], dateRange: DateRange, getDateFields: (item: T) => string[]): T[] {
+  if (!dateRange.from && !dateRange.to) return items;
+  return items.filter((item) => {
+    const dates = getDateFields(item).filter(Boolean).map((d) => new Date(d));
+    if (dates.length === 0) return true;
+    return dates.some((d) => {
+      if (dateRange.from && d < dateRange.from) return false;
+      if (dateRange.to) {
+        const endOfDay = new Date(dateRange.to);
+        endOfDay.setHours(23, 59, 59, 999);
+        if (d > endOfDay) return false;
+      }
+      return true;
+    });
+  });
+}
+
+// Convert periodo "Enero 2026" to a date string for filtering
+function periodoToDate(periodo: string): string {
+  const meses: Record<string, string> = { Enero: "01", Febrero: "02", Marzo: "03", Abril: "04", Mayo: "05", Junio: "06", Julio: "07", Agosto: "08", Septiembre: "09", Octubre: "10", Noviembre: "11", Diciembre: "12" };
+  const parts = periodo.split(" ");
+  if (parts.length === 2 && meses[parts[0]]) return `${parts[1]}-${meses[parts[0]]}-01`;
+  return "";
+}
+
 export default function KPIsPage() {
   const { acuerdos } = useAcuerdos();
   const { entregables } = useEntregables();
@@ -36,8 +62,11 @@ export default function KPIsPage() {
   const [form, setForm] = useState(emptyKPI());
   const [view, setView] = useState<ViewMode>("list");
   const [filterAcuerdo, setFilterAcuerdo] = useState("all");
+  const [dateRange, setDateRange] = useState<DateRange>({});
+  const [sortKey, setSortKey] = useState<string | null>(null);
+  const [sortDirection, setSortDirection] = useState<SortDirection>(null);
+  const { sortItems, toggleSort } = useSort<KPI>();
 
-  // Build list: all influencers from acuerdos (with placeholder if no KPI) + existing KPIs
   const influencersWithKpis = new Set(kpis.map(k => k.acuerdoId));
   const placeholderKpis: KPI[] = acuerdos
     .filter(a => !influencersWithKpis.has(a.id) && a.estado !== 'Cancelado')
@@ -46,21 +75,20 @@ export default function KPIsPage() {
       entregableId: "",
       acuerdoId: a.id,
       influencer: a.influencer,
-      alcance: 0,
-      impresiones: 0,
-      interacciones: 0,
-      clicks: 0,
-      engagement: 0,
-      cpr: 0,
-      cpc: 0,
-      periodo: "",
-      estado: "Pendiente" as const,
-      notas: "",
-      createdAt: "",
+      alcance: 0, impresiones: 0, interacciones: 0, clicks: 0, engagement: 0, cpr: 0, cpc: 0,
+      periodo: "", estado: "Pendiente" as const, notas: "", createdAt: "",
     }));
 
   const allKpis = [...kpis, ...placeholderKpis];
-  const filtered = filterAcuerdo === "all" ? allKpis : allKpis.filter((k) => k.acuerdoId === filterAcuerdo);
+  const byAcuerdo = filterAcuerdo === "all" ? allKpis : allKpis.filter((k) => k.acuerdoId === filterAcuerdo);
+  const byDate = filterByDateRange(byAcuerdo, dateRange, (k) => [periodoToDate(k.periodo)]);
+  const filtered = sortItems(byDate, sortKey, sortDirection);
+
+  const handleSort = (key: string) => {
+    const result = toggleSort(key, sortKey, sortDirection);
+    setSortKey(result.sortKey);
+    setSortDirection(result.sortDirection);
+  };
 
   const handleOpen = (k?: KPI) => {
     if (k) { setEditing(k); const { id, createdAt, ...rest } = k; setForm(rest); }
@@ -119,7 +147,7 @@ export default function KPIsPage() {
         <Button variant="gradient" onClick={() => handleOpen()} disabled={acuerdos.length === 0}><Plus className="h-4 w-4 mr-2" /> Nuevo KPI</Button>
       </div>
 
-      <ViewToolbar view={view} onViewChange={setView} acuerdos={acuerdos} selectedAcuerdo={filterAcuerdo} onAcuerdoChange={setFilterAcuerdo} />
+      <ViewToolbar view={view} onViewChange={setView} acuerdos={acuerdos} selectedAcuerdo={filterAcuerdo} onAcuerdoChange={setFilterAcuerdo} dateRange={dateRange} onDateRangeChange={setDateRange} />
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Registros</CardTitle></CardHeader><CardContent><div className="text-2xl font-bold">{filtered.length}</div></CardContent></Card>
@@ -151,12 +179,7 @@ export default function KPIsPage() {
       )}
 
       {view === "forecast" && (
-        <ForecastBoard items={filtered} getDate={(k) => {
-          const meses: Record<string, string> = { Enero: "01", Febrero: "02", Marzo: "03", Abril: "04", Mayo: "05", Junio: "06", Julio: "07", Agosto: "08", Septiembre: "09", Octubre: "10", Noviembre: "11", Diciembre: "12" };
-          const parts = k.periodo.split(" ");
-          if (parts.length === 2 && meses[parts[0]]) return `${parts[1]}-${meses[parts[0]]}-01`;
-          return "";
-        }} getValue={(k) => k.alcance} renderCard={renderCard} getId={(k) => k.id} valuePrefix="" emptyLabel="No hay KPIs con periodo asignado." />
+        <ForecastBoard items={filtered} getDate={(k) => periodoToDate(k.periodo)} getValue={(k) => k.alcance} renderCard={renderCard} getId={(k) => k.id} valuePrefix="" emptyLabel="No hay KPIs con periodo asignado." />
       )}
 
       {view === "list" && (
@@ -165,9 +188,15 @@ export default function KPIsPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Influencer</TableHead><TableHead>Alcance</TableHead><TableHead>Impresiones</TableHead>
-                  <TableHead>Interacciones</TableHead><TableHead>Clicks</TableHead><TableHead>Engagement</TableHead>
-                  <TableHead>CPR</TableHead><TableHead>CPC</TableHead><TableHead>Periodo</TableHead>
+                  <SortableTableHead label="Influencer" sortKey="influencer" currentSortKey={sortKey} currentDirection={sortDirection} onSort={handleSort} />
+                  <SortableTableHead label="Alcance" sortKey="alcance" currentSortKey={sortKey} currentDirection={sortDirection} onSort={handleSort} />
+                  <SortableTableHead label="Impresiones" sortKey="impresiones" currentSortKey={sortKey} currentDirection={sortDirection} onSort={handleSort} />
+                  <SortableTableHead label="Interacciones" sortKey="interacciones" currentSortKey={sortKey} currentDirection={sortDirection} onSort={handleSort} />
+                  <SortableTableHead label="Clicks" sortKey="clicks" currentSortKey={sortKey} currentDirection={sortDirection} onSort={handleSort} />
+                  <SortableTableHead label="Engagement" sortKey="engagement" currentSortKey={sortKey} currentDirection={sortDirection} onSort={handleSort} />
+                  <SortableTableHead label="CPR" sortKey="cpr" currentSortKey={sortKey} currentDirection={sortDirection} onSort={handleSort} />
+                  <SortableTableHead label="CPC" sortKey="cpc" currentSortKey={sortKey} currentDirection={sortDirection} onSort={handleSort} />
+                  <SortableTableHead label="Periodo" sortKey="periodo" currentSortKey={sortKey} currentDirection={sortDirection} onSort={handleSort} />
                   <TableHead className="text-right">Acciones</TableHead>
                 </TableRow>
               </TableHeader>
