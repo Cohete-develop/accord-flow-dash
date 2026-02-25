@@ -288,7 +288,7 @@ export default function AdminPage() {
                     <TableCell>
                       <div className="flex gap-1 flex-wrap">
                         {u.roles.length === 0 && <Badge variant="outline" className="text-xs">Sin rol</Badge>}
-                        {u.roles.map(r => <Badge key={r} variant="secondary" className="text-xs capitalize">{ROLES.find(rl => rl.value === r)?.label || r}</Badge>)}
+                        {u.roles.map(r => <Badge key={r} variant="secondary" className="text-xs capitalize">{ALL_ROLES.find(rl => rl.value === r)?.label || r}</Badge>)}
                       </div>
                     </TableCell>
                     <TableCell>
@@ -297,13 +297,19 @@ export default function AdminPage() {
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      <div className="flex gap-1.5">
-                        <Button variant="outline" size="sm" className="text-xs" onClick={() => openEditUser(u)}><Pencil className="w-3.5 h-3.5" /></Button>
-                        <Button variant="outline" size="sm" className="text-xs" onClick={() => toggleUserActive(u.user_id, u.is_active)}>{u.is_active ? 'Desactivar' : 'Activar'}</Button>
-                        <Button variant="outline" size="sm" className="text-xs text-destructive hover:text-destructive" onClick={() => { setDeleteTarget(u); setShowDeleteUser(true); }}>
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </Button>
-                      </div>
+                      {(() => {
+                        const isProtected = u.roles.includes('super_admin') || (!callerIsSuperAdmin && u.roles.includes('gerencia'));
+                        if (isProtected) return <span className="text-xs text-muted-foreground">—</span>;
+                        return (
+                          <div className="flex gap-1.5">
+                            <Button variant="outline" size="sm" className="text-xs" onClick={() => openEditUser(u)}><Pencil className="w-3.5 h-3.5" /></Button>
+                            <Button variant="outline" size="sm" className="text-xs" onClick={() => toggleUserActive(u.user_id, u.is_active)}>{u.is_active ? 'Desactivar' : 'Activar'}</Button>
+                            <Button variant="outline" size="sm" className="text-xs text-destructive hover:text-destructive" onClick={() => { setDeleteTarget(u); setShowDeleteUser(true); }}>
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </Button>
+                          </div>
+                        );
+                      })()}
                     </TableCell>
                   </TableRow>
                 ))}
