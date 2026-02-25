@@ -159,6 +159,9 @@ export default function AdminPage() {
   // Roles available for assignment - super_admin can assign all, gerencia only non-admin
   const ROLES = callerIsSuperAdmin ? ALL_ROLES : ASSIGNABLE_ROLES;
 
+  const rolePermissions = useMemo(() => permissions.filter(p => p.role === selectedRole), [permissions, selectedRole]);
+  const otherUsers = users.filter(u => u.user_id !== deleteTarget?.user_id);
+
   if (isAuthorized === false) return <Navigate to="/dashboard" replace />;
   if (isAuthorized === null) return <div className="flex items-center justify-center min-h-[50vh]"><p>Verificando permisos...</p></div>;
 
@@ -229,8 +232,6 @@ export default function AdminPage() {
     setPermissions(prev => prev.map(p => p.id === permId ? { ...p, [field]: value } : p));
   }
 
-  const rolePermissions = useMemo(() => permissions.filter(p => p.role === selectedRole), [permissions, selectedRole]);
-  const otherUsers = users.filter(u => u.user_id !== deleteTarget?.user_id);
 
   const actionLabels: Record<string, string> = {
     create_user: 'Creó usuario',
