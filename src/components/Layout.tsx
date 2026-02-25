@@ -1,8 +1,11 @@
+import { useState, useEffect } from "react";
 import { NavLink } from "@/components/NavLink";
-import { Handshake, CreditCard, Package, BarChart3, LayoutDashboard, LogOut } from "lucide-react";
+import { Handshake, CreditCard, Package, BarChart3, LayoutDashboard, LogOut, Settings } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Navigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+
 const navItems = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { to: "/acuerdos", label: "Acuerdos", icon: Handshake },
@@ -13,6 +16,13 @@ const navItems = [
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   const { signOut, user, loading } = useAuth();
+  const [isGerencia, setIsGerencia] = useState(false);
+
+  useEffect(() => {
+    if (!user) return;
+    supabase.from('user_roles').select('role').eq('user_id', user.id).eq('role', 'gerencia').maybeSingle()
+      .then(({ data }) => setIsGerencia(!!data));
+  }, [user]);
 
   if (loading) {
     return <div className="min-h-screen flex items-center justify-center bg-background"><p>Cargando...</p></div>;
@@ -41,6 +51,19 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               {item.label}
             </NavLink>
           ))}
+          {isGerencia && (
+            <>
+              <div className="my-2 border-t border-sidebar-border" />
+              <NavLink
+                to="/admin"
+                className="flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                activeClassName="bg-sidebar-accent text-sidebar-accent-foreground"
+              >
+                <Settings className="h-4 w-4" />
+                Administración
+              </NavLink>
+            </>
+          )}
         </nav>
         {user && (
           <div className="p-3 border-t border-sidebar-border">

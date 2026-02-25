@@ -10,6 +10,7 @@ import AcuerdosPage from "./pages/Acuerdos";
 import PagosPage from "./pages/Pagos";
 import EntregablesPage from "./pages/Entregables";
 import KPIsPage from "./pages/KPIs";
+import AdminPage from "./pages/Admin";
 import AuthPage from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 
@@ -30,6 +31,7 @@ const App = () => (
             <Route path="/pagos" element={<Layout><PagosPage /></Layout>} />
             <Route path="/entregables" element={<Layout><EntregablesPage /></Layout>} />
             <Route path="/kpis" element={<Layout><KPIsPage /></Layout>} />
+            <Route path="/admin" element={<Layout><AdminPage /></Layout>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>
