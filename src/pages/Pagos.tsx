@@ -85,14 +85,13 @@ function getLastBusinessDay(year: number, month: number): string {
 
 /** Generate expected monthly payments for an agreement */
 function generatePaymentsForAcuerdo(acuerdo: Acuerdo): Omit<Pago, "id" | "createdAt">[] {
-  if (!acuerdo.fechaInicio || !acuerdo.fechaFin) return [];
+  if (!acuerdo.fechaInicio || acuerdo.duracionMeses <= 0) return [];
   const start = new Date(acuerdo.fechaInicio);
-  const end = new Date(acuerdo.fechaFin);
   const payments: Omit<Pago, "id" | "createdAt">[] = [];
   
-  let current = new Date(start.getFullYear(), start.getMonth(), 1);
-  while (current <= end) {
-    const fechaPago = getLastBusinessDay(current.getFullYear(), current.getMonth());
+  for (let i = 0; i < acuerdo.duracionMeses; i++) {
+    const month = new Date(start.getFullYear(), start.getMonth() + i, 1);
+    const fechaPago = getLastBusinessDay(month.getFullYear(), month.getMonth());
     payments.push({
       acuerdoId: acuerdo.id,
       influencer: acuerdo.influencer,
@@ -105,7 +104,6 @@ function generatePaymentsForAcuerdo(acuerdo: Acuerdo): Omit<Pago, "id" | "create
       comprobante: "",
       notas: "",
     });
-    current.setMonth(current.getMonth() + 1);
   }
   return payments;
 }
