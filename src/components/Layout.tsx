@@ -18,6 +18,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const { signOut, user, loading } = useAuth();
   const [isGerencia, setIsGerencia] = useState(false);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+  const [isCoordinador, setIsCoordinador] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -26,6 +27,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         const roles = (data || []).map(r => r.role);
         setIsGerencia(roles.includes('gerencia'));
         setIsSuperAdmin(roles.includes('super_admin'));
+        setIsCoordinador(roles.includes('coordinador_mercadeo'));
       });
   }, [user]);
 
@@ -56,10 +58,10 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               {item.label}
             </NavLink>
           ))}
-          {(isGerencia || isSuperAdmin) && (
+          {(isGerencia || isSuperAdmin || isCoordinador) && (
             <>
               <div className="my-2 border-t border-sidebar-border" />
-              {isGerencia && (
+              {(isGerencia || isCoordinador) && (
                 <NavLink
                   to="/admin"
                   className="flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
