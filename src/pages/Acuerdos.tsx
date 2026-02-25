@@ -62,8 +62,8 @@ const fieldDescriptions: Record<string, string> = {
   seguidores: "Cantidad total de seguidores del influencer",
   plataforma: "Herramienta o agencia intermediaria (ej: CreatorIQ, AspireIQ, directo)",
   tipoContenido: "Formato principal del contenido pactado",
-  reelsPactados: "Cantidad de reels acordados en el contrato",
-  storiesPactadas: "Cantidad de stories acordadas en el contrato",
+  reelsPactados: "Cantidad de reels mensuales acordados",
+  storiesPactadas: "Cantidad de stories mensuales acordadas",
   fechaInicio: "Fecha de inicio del acuerdo",
   fechaFin: "Fecha de finalización del acuerdo",
   valorMensual: "Monto mensual antes de IVA",
@@ -136,8 +136,8 @@ export default function AcuerdosPage() {
     { key: "redSocial", label: "Red Social", sortKey: "redSocial", render: (a) => (Array.isArray(a.redSocial) ? a.redSocial : [a.redSocial]).join(", ") },
     { key: "seguidores", label: "Seguidores", sortKey: "seguidores", render: (a) => a.seguidores.toLocaleString() },
     { key: "tipoContenido", label: "Tipo", sortKey: "tipoContenido", render: (a) => (Array.isArray(a.tipoContenido) ? a.tipoContenido : [a.tipoContenido]).filter(Boolean).join(", ") },
-    { key: "reelsPactados", label: "Reels", sortKey: "reelsPactados", render: (a) => a.reelsPactados },
-    { key: "storiesPactadas", label: "Stories", sortKey: "storiesPactadas", render: (a) => a.storiesPactadas },
+    { key: "reelsPactados", label: "Reels/mes", sortKey: "reelsPactados", render: (a) => a.reelsPactados },
+    { key: "storiesPactadas", label: "Stories/mes", sortKey: "storiesPactadas", render: (a) => a.storiesPactadas },
     { key: "fechaInicio", label: "Inicio", sortKey: "fechaInicio", render: (a) => a.fechaInicio },
     { key: "fechaFin", label: "Fin", sortKey: "fechaFin", render: (a) => a.fechaFin },
     { key: "duracionMeses", label: "Duración", sortKey: "duracionMeses", render: (a) => `${a.duracionMeses} meses` },
@@ -329,8 +329,12 @@ export default function AcuerdosPage() {
                 ))}
               </div>
             </div>
-            <div className="space-y-2"><FieldLabel field="reelsPactados"># Reels Pactados</FieldLabel><NumericInput value={form.reelsPactados} onChange={(v) => update("reelsPactados", v)} /></div>
-            <div className="space-y-2"><FieldLabel field="storiesPactadas"># Stories Pactadas</FieldLabel><NumericInput value={form.storiesPactadas} onChange={(v) => update("storiesPactadas", v)} /></div>
+            {(form.tipoContenido || []).includes("Reel") && (
+              <div className="space-y-2"><FieldLabel field="reelsPactados">Reels Mensuales</FieldLabel><NumericInput value={form.reelsPactados} onChange={(v) => update("reelsPactados", v)} /></div>
+            )}
+            {(form.tipoContenido || []).includes("Story") && (
+              <div className="space-y-2"><FieldLabel field="storiesPactadas">Stories Mensuales</FieldLabel><NumericInput value={form.storiesPactadas} onChange={(v) => update("storiesPactadas", v)} /></div>
+            )}
             <div className="space-y-2"><FieldLabel field="fechaInicio">Fecha Inicio</FieldLabel><Input type="date" value={form.fechaInicio} onChange={(e) => update("fechaInicio", e.target.value)} /></div>
             <div className="space-y-2"><FieldLabel field="fechaFin">Fecha Fin</FieldLabel><Input type="date" value={form.fechaFin} onChange={(e) => update("fechaFin", e.target.value)} /></div>
             <div className="space-y-2">
