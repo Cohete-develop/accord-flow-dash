@@ -64,5 +64,6 @@ export interface KPI {
   periodo: string;
   estado: "Pendiente" | "Medido" | "Revisado" | "Aprobado";
   notas: string;
+  valorMensualSnapshot: number;
   createdAt: string;
 }

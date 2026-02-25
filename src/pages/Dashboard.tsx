@@ -1,9 +1,10 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { useAcuerdos, usePagos, useEntregables, useKPIs } from "@/hooks/useCrmData";
 import ProductFamilyReport from "@/components/ProductFamilyReport";
 import { Acuerdo, Pago, Entregable } from "@/types/crm";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, AreaChart, Area } from "recharts";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, AreaChart, Area, LineChart, Line, Legend } from "recharts";
 import ChartDetailDialog from "@/components/ChartDetailDialog";
 import { CHART_COLORS as COLORS } from "@/lib/chart-colors";
 
@@ -112,6 +113,42 @@ export default function DashboardPage() {
   const totalValorAcuerdos = acuerdos.reduce((s, a) => s + a.valorTotal, 0);
   const totalPagado = pagos.filter((p) => p.estado === "Pagado").reduce((s, p) => s + p.monto, 0);
   const totalPendiente = pagos.filter((p) => p.estado === "Pendiente").reduce((s, p) => s + p.monto, 0);
+
+  // KPI CPR/CPC averages (only measured/approved KPIs)
+  const measuredKpis = kpis.filter(k => k.cpr > 0 || k.cpc > 0);
+  const avgCPR = measuredKpis.length > 0 ? measuredKpis.reduce((s, k) => s + k.cpr, 0) / measuredKpis.length : 0;
+  const avgCPC = measuredKpis.length > 0 ? measuredKpis.reduce((s, k) => s + k.cpc, 0) / measuredKpis.length : 0;
+
+  // KPI evolution chart data
+  const [selectedInfluencerChart, setSelectedInfluencerChart] = useState<string>("all");
+  const kpiInfluencers = useMemo(() => [...new Set(kpis.map(k => k.influencer))].filter(Boolean), [kpis]);
+
+  const kpiEvolutionData = useMemo(() => {
+    const relevantKpis = selectedInfluencerChart === "all" ? kpis : kpis.filter(k => k.influencer === selectedInfluencerChart);
+    const byPeriodo: Record<string, { cpr: number[]; cpc: number[] }> = {};
+    relevantKpis.forEach(k => {
+      const dateKey = periodoToDate(k.periodo);
+      if (!dateKey) return;
+      if (!byPeriodo[dateKey]) byPeriodo[dateKey] = { cpr: [], cpc: [] };
+      if (k.cpr > 0) byPeriodo[dateKey].cpr.push(k.cpr);
+      if (k.cpc > 0) byPeriodo[dateKey].cpc.push(k.cpc);
+    });
+    return Object.entries(byPeriodo)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([key, data]) => ({
+        month: formatMonth(getMonthKey(key) || key),
+        CPR: data.cpr.length > 0 ? Math.round(data.cpr.reduce((a, b) => a + b, 0) / data.cpr.length) : 0,
+        CPC: data.cpc.length > 0 ? Math.round(data.cpc.reduce((a, b) => a + b, 0) / data.cpc.length) : 0,
+      }))
+      .filter(d => d.CPR > 0 || d.CPC > 0);
+  }, [kpis, selectedInfluencerChart]);
+
+  function periodoToDate(periodo: string): string {
+    const meses: Record<string, string> = { Enero: "01", Febrero: "02", Marzo: "03", Abril: "04", Mayo: "05", Junio: "06", Julio: "07", Agosto: "08", Septiembre: "09", Octubre: "10", Noviembre: "11", Diciembre: "12" };
+    const parts = periodo.split(" ");
+    if (parts.length === 2 && meses[parts[0]]) return `${parts[1]}-${meses[parts[0]]}-01`;
+    return "";
+  }
 
   // Click handlers
   const handlePieClickAcuerdos = (_: any, index: number) => {
@@ -357,10 +394,47 @@ export default function DashboardPage() {
         <ProductFamilyReport acuerdos={acuerdos} />
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 animate-fade-in" style={{ animationDelay: '800ms', animationFillMode: 'backwards' }}>
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-4 animate-fade-in" style={{ animationDelay: '800ms', animationFillMode: 'backwards' }}>
         <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Alcance Total</CardTitle></CardHeader><CardContent><div className="text-2xl font-bold">{totalAlcance.toLocaleString()}</div></CardContent></Card>
         <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Clicks Totales</CardTitle></CardHeader><CardContent><div className="text-2xl font-bold">{totalClicks.toLocaleString()}</div></CardContent></Card>
         <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Entregables</CardTitle></CardHeader><CardContent><div className="text-2xl font-bold">{entregables.length}</div></CardContent></Card>
+        <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">CPR Promedio</CardTitle></CardHeader><CardContent><div className="text-2xl font-bold">{avgCPR > 0 ? fmtCurrency(avgCPR) : "—"}</div></CardContent></Card>
+        <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">CPC Promedio</CardTitle></CardHeader><CardContent><div className="text-2xl font-bold">{avgCPC > 0 ? fmtCurrency(avgCPC) : "—"}</div></CardContent></Card>
+      </div>
+
+      {/* KPI CPR/CPC Evolution Chart */}
+      <div className="animate-fade-in" style={{ animationDelay: '900ms', animationFillMode: 'backwards' }}>
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base">Evolución CPR y CPC por mes</CardTitle>
+              <Select value={selectedInfluencerChart} onValueChange={setSelectedInfluencerChart}>
+                <SelectTrigger className="w-[200px]"><SelectValue placeholder="Influencer" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos los influencers</SelectItem>
+                  {kpiInfluencers.map(inf => <SelectItem key={inf} value={inf}>{inf}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {kpiEvolutionData.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-8">Sin datos de CPR/CPC disponibles</p>
+            ) : (
+              <ResponsiveContainer width="100%" height={300}>
+                <LineChart data={kpiEvolutionData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="month" fontSize={11} />
+                  <YAxis fontSize={11} tickFormatter={fmtCurrency} />
+                  <Tooltip formatter={(v: number) => fmtTooltip(v)} />
+                  <Legend />
+                  <Line type="monotone" dataKey="CPR" stroke="hsl(250, 60%, 52%)" strokeWidth={2} dot={{ r: 4 }} name="CPR" />
+                  <Line type="monotone" dataKey="CPC" stroke="hsl(152, 60%, 42%)" strokeWidth={2} dot={{ r: 4 }} name="CPC" />
+                </LineChart>
+              </ResponsiveContainer>
+            )}
+          </CardContent>
+        </Card>
       </div>
 
       <ChartDetailDialog
