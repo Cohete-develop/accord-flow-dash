@@ -23,13 +23,17 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (!user) return;
-    supabase.from('user_roles').select('role').eq('user_id', user.id)
-      .then(({ data }) => {
-        const roles = (data || []).map(r => r.role);
-        setIsGerencia(roles.includes('gerencia'));
-        setIsSuperAdmin(roles.includes('super_admin'));
-        setIsCoordinador(roles.includes('coordinador_mercadeo'));
-      });
+    Promise.all([
+      supabase.from('user_roles').select('role').eq('user_id', user.id),
+      supabase.from('profiles').select('company_id').eq('user_id', user.id).maybeSingle(),
+    ]).then(([rolesRes, profileRes]) => {
+      const roles = (rolesRes.data || []).map(r => r.role);
+      const hasNoCompany = !profileRes.data?.company_id;
+      setIsGerencia(roles.includes('gerencia'));
+      // super_admin link only for platform owners (no company)
+      setIsSuperAdmin(roles.includes('super_admin') && hasNoCompany);
+      setIsCoordinador(roles.includes('coordinador_mercadeo'));
+    });
   }, [user]);
 
   if (loading) {

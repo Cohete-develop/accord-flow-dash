@@ -152,15 +152,20 @@ export default function AdminPage() {
 
   useEffect(() => {
     if (!user) return;
-    supabase.from('user_roles').select('role').eq('user_id', user.id)
-      .in('role', ['gerencia', 'super_admin', 'coordinador_mercadeo'])
-      .then(({ data }) => {
-        const roles = (data || []).map(r => r.role);
-        setIsAuthorized(roles.length > 0);
-        setCallerIsSuperAdmin(roles.includes('super_admin'));
-        setCallerIsGerencia(roles.includes('gerencia'));
-        setCallerIsCoordinador(roles.includes('coordinador_mercadeo'));
-      });
+    Promise.all([
+      supabase.from('user_roles').select('role').eq('user_id', user.id)
+        .in('role', ['gerencia', 'super_admin', 'coordinador_mercadeo']),
+      supabase.from('profiles').select('company_id').eq('user_id', user.id).maybeSingle(),
+    ]).then(([rolesRes, profileRes]) => {
+      const roles = (rolesRes.data || []).map(r => r.role);
+      const hasNoCompany = !profileRes.data?.company_id;
+      // super_admin powers only for platform owners (no company_id)
+      const effectiveSuperAdmin = roles.includes('super_admin') && hasNoCompany;
+      setIsAuthorized(roles.includes('gerencia') || effectiveSuperAdmin || roles.includes('coordinador_mercadeo'));
+      setCallerIsSuperAdmin(effectiveSuperAdmin);
+      setCallerIsGerencia(roles.includes('gerencia'));
+      setCallerIsCoordinador(roles.includes('coordinador_mercadeo'));
+    });
   }, [user]);
 
   useEffect(() => { 

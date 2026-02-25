@@ -92,8 +92,15 @@ export default function SuperAdminPage() {
 
   useEffect(() => {
     if (!user) return;
-    supabase.from('user_roles').select('role').eq('user_id', user.id).eq('role', 'super_admin')
-      .then(({ data }) => setIsSuperAdmin((data || []).length > 0));
+    // super_admin must also NOT belong to any company (platform owner only)
+    Promise.all([
+      supabase.from('user_roles').select('role').eq('user_id', user.id).eq('role', 'super_admin'),
+      supabase.from('profiles').select('company_id').eq('user_id', user.id).maybeSingle(),
+    ]).then(([rolesRes, profileRes]) => {
+      const hasSuperAdminRole = (rolesRes.data || []).length > 0;
+      const hasNoCompany = !profileRes.data?.company_id;
+      setIsSuperAdmin(hasSuperAdminRole && hasNoCompany);
+    });
   }, [user]);
 
   const fetchCompanies = useCallback(async () => {
