@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -55,6 +56,27 @@ export default function AuthPage() {
             </div>
             <Button type="submit" className="w-full" disabled={loading}>
               {loading ? "Cargando..." : "Iniciar Sesión"}
+            </Button>
+            <Button
+              type="button"
+              variant="link"
+              className="w-full text-sm text-muted-foreground"
+              onClick={async () => {
+                if (!email.trim()) {
+                  toast({ title: "Ingresa tu email", description: "Escribe tu correo para recuperar la contraseña", variant: "destructive" });
+                  return;
+                }
+                const { error } = await supabase.auth.resetPasswordForEmail(email, {
+                  redirectTo: `${window.location.origin}/reset-password`,
+                });
+                if (error) {
+                  toast({ title: "Error", description: error.message, variant: "destructive" });
+                } else {
+                  toast({ title: "Correo enviado", description: "Revisa tu bandeja de entrada para restablecer tu contraseña" });
+                }
+              }}
+            >
+              ¿Olvidaste tu contraseña?
             </Button>
           </form>
         </CardContent>
