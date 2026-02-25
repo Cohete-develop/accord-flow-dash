@@ -57,6 +57,28 @@ Deno.serve(async (req) => {
       });
     }
 
+    const callerRoles = (roleData || []).map((r: any) => r.role);
+    const isSuperAdmin = callerRoles.includes("super_admin");
+
+    // Gerencia can only delete users in their own company
+    if (!isSuperAdmin) {
+      const { data: callerProfile } = await adminClient.from("profiles").select("company_id").eq("user_id", caller.id).maybeSingle();
+      const { data: targetProfile } = await adminClient.from("profiles").select("company_id").eq("user_id", user_id).maybeSingle();
+      if (!callerProfile?.company_id || callerProfile.company_id !== targetProfile?.company_id) {
+        return new Response(JSON.stringify({ error: "Solo puedes eliminar usuarios de tu propia empresa" }), {
+          status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      // Gerencia cannot delete other gerencia users
+      const { data: targetRoles } = await adminClient.from("user_roles").select("role").eq("user_id", user_id);
+      const targetRoleList = (targetRoles || []).map((r: any) => r.role);
+      if (targetRoleList.includes("gerencia") || targetRoleList.includes("super_admin")) {
+        return new Response(JSON.stringify({ error: "No tienes permisos para eliminar este usuario" }), {
+          status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    }
+
     // Transfer data if requested
     if (transfer_to_user_id) {
       await Promise.all([
