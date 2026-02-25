@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import companyLogo from "@/assets/company-logo.png";
 import { NavLink } from "@/components/NavLink";
 import { Handshake, CreditCard, Package, BarChart3, LayoutDashboard, LogOut, Settings, Crown } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
@@ -42,9 +43,12 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex min-h-screen">
       <aside className="w-64 border-r bg-sidebar text-sidebar-foreground flex flex-col">
-        <div className="p-6 border-b border-sidebar-border">
-          <h1 className="text-lg font-bold tracking-tight">InfluXpert</h1>
-          <p className="text-xs text-muted-foreground mt-1">by Cohete</p>
+        <div className="p-6 border-b border-sidebar-border flex items-center gap-3">
+          <img src={companyLogo} alt="Logo empresa" className="h-8 w-auto" />
+          <div>
+            <h1 className="text-lg font-bold tracking-tight">InfluXpert</h1>
+            <p className="text-xs text-muted-foreground">by Cohete</p>
+          </div>
         </div>
         <nav className="flex-1 p-3 space-y-1">
           {navItems.map((item) => (
