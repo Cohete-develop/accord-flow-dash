@@ -2,7 +2,8 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { List, Kanban, TrendingUp, CalendarIcon, X } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { List, Kanban, TrendingUp, CalendarIcon, X, Download } from "lucide-react";
 import { Acuerdo } from "@/types/crm";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
@@ -24,6 +25,7 @@ interface ViewToolbarProps {
   showForecast?: boolean;
   dateRange?: DateRange;
   onDateRangeChange?: (range: DateRange) => void;
+  onExport?: (format: "xlsx" | "csv") => void;
 }
 
 export default function ViewToolbar({
@@ -35,6 +37,7 @@ export default function ViewToolbar({
   showForecast = true,
   dateRange,
   onDateRangeChange,
+  onExport,
 }: ViewToolbarProps) {
   const hasDateFilter = dateRange?.from || dateRange?.to;
 
@@ -97,6 +100,24 @@ export default function ViewToolbar({
             </Button>
           )}
         </div>
+      )}
+
+      {view === "list" && onExport && (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" size="sm" className="h-9 px-3 text-sm">
+              <Download className="h-4 w-4 mr-2" /> Exportar
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={() => onExport("xlsx")}>
+              Exportar a Excel (.xlsx)
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => onExport("csv")}>
+              Exportar a CSV (.csv)
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       )}
     </div>
   );
