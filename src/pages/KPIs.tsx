@@ -37,7 +37,30 @@ export default function KPIsPage() {
   const [view, setView] = useState<ViewMode>("list");
   const [filterAcuerdo, setFilterAcuerdo] = useState("all");
 
-  const filtered = filterAcuerdo === "all" ? kpis : kpis.filter((k) => k.acuerdoId === filterAcuerdo);
+  // Build list: all influencers from acuerdos (with placeholder if no KPI) + existing KPIs
+  const influencersWithKpis = new Set(kpis.map(k => k.acuerdoId));
+  const placeholderKpis: KPI[] = acuerdos
+    .filter(a => !influencersWithKpis.has(a.id) && a.estado !== 'Cancelado')
+    .map(a => ({
+      id: `placeholder-${a.id}`,
+      entregableId: "",
+      acuerdoId: a.id,
+      influencer: a.influencer,
+      alcance: 0,
+      impresiones: 0,
+      interacciones: 0,
+      clicks: 0,
+      engagement: 0,
+      cpr: 0,
+      cpc: 0,
+      periodo: "",
+      estado: "Pendiente" as const,
+      notas: "",
+      createdAt: "",
+    }));
+
+  const allKpis = [...kpis, ...placeholderKpis];
+  const filtered = filterAcuerdo === "all" ? allKpis : allKpis.filter((k) => k.acuerdoId === filterAcuerdo);
 
   const handleOpen = (k?: KPI) => {
     if (k) { setEditing(k); const { id, createdAt, ...rest } = k; setForm(rest); }
@@ -151,23 +174,37 @@ export default function KPIsPage() {
               <TableBody>
                 {filtered.length === 0 ? (
                   <TableRow><TableCell colSpan={10} className="text-center py-8 text-muted-foreground">No hay KPIs registrados.</TableCell></TableRow>
-                ) : filtered.map((k) => (
-                  <TableRow key={k.id}>
-                    <TableCell className="font-medium">{k.influencer}</TableCell>
-                    <TableCell>{k.alcance.toLocaleString()}</TableCell>
-                    <TableCell>{k.impresiones.toLocaleString()}</TableCell>
-                    <TableCell>{k.interacciones.toLocaleString()}</TableCell>
-                    <TableCell>{k.clicks.toLocaleString()}</TableCell>
-                    <TableCell>{k.engagement}%</TableCell>
-                    <TableCell>${k.cpr}</TableCell>
-                    <TableCell>${k.cpc}</TableCell>
-                    <TableCell>{k.periodo}</TableCell>
-                    <TableCell className="text-right">
-                      <Button variant="ghost" size="icon" onClick={() => handleOpen(k)}><Pencil className="h-4 w-4" /></Button>
-                      <Button variant="ghost" size="icon" onClick={() => handleDelete(k.id)}><Trash2 className="h-4 w-4" /></Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                ) : filtered.map((k) => {
+                  const isPlaceholder = k.id.startsWith("placeholder-");
+                  return (
+                    <TableRow key={k.id} className={isPlaceholder ? "opacity-60 bg-muted/30" : ""}>
+                      <TableCell className="font-medium">
+                        {k.influencer}
+                        {isPlaceholder && <span className="ml-2 text-xs text-amber-600 font-normal">Sin KPI</span>}
+                      </TableCell>
+                      <TableCell>{isPlaceholder ? "—" : k.alcance.toLocaleString()}</TableCell>
+                      <TableCell>{isPlaceholder ? "—" : k.impresiones.toLocaleString()}</TableCell>
+                      <TableCell>{isPlaceholder ? "—" : k.interacciones.toLocaleString()}</TableCell>
+                      <TableCell>{isPlaceholder ? "—" : k.clicks.toLocaleString()}</TableCell>
+                      <TableCell>{isPlaceholder ? "—" : `${k.engagement}%`}</TableCell>
+                      <TableCell>{isPlaceholder ? "—" : `$${k.cpr}`}</TableCell>
+                      <TableCell>{isPlaceholder ? "—" : `$${k.cpc}`}</TableCell>
+                      <TableCell>{isPlaceholder ? "—" : k.periodo}</TableCell>
+                      <TableCell className="text-right">
+                        {isPlaceholder ? (
+                          <Button variant="outline" size="sm" onClick={() => { setEditing(null); setForm({ ...emptyKPI(), acuerdoId: k.acuerdoId, influencer: k.influencer }); setOpen(true); }}>
+                            <Plus className="h-3 w-3 mr-1" /> Crear KPI
+                          </Button>
+                        ) : (
+                          <>
+                            <Button variant="ghost" size="icon" onClick={() => handleOpen(k)}><Pencil className="h-4 w-4" /></Button>
+                            <Button variant="ghost" size="icon" onClick={() => handleDelete(k.id)}><Trash2 className="h-4 w-4" /></Button>
+                          </>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           </CardContent>
