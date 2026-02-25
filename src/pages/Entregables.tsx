@@ -15,6 +15,7 @@ import ViewToolbar, { ViewMode, DateRange } from "@/components/ViewToolbar";
 import KanbanBoard, { KanbanColumn } from "@/components/KanbanBoard";
 import ForecastBoard from "@/components/ForecastBoard";
 import SortableTableHead, { SortDirection, useSort } from "@/components/SortableTableHead";
+import { useColumnOrder, ColumnDef } from "@/hooks/useColumnOrder";
 
 const estadoColors: Record<string, string> = {
   Pendiente: "bg-amber-100 text-amber-800",
@@ -66,6 +67,18 @@ export default function EntregablesPage() {
   const [sortKey, setSortKey] = useState<string | null>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>(null);
   const { sortItems, toggleSort } = useSort<Entregable>();
+
+  const entregableColumns: ColumnDef<Entregable>[] = [
+    { key: "influencer", label: "Influencer", sortKey: "influencer", render: (e) => <span className="font-medium">{e.influencer}</span> },
+    { key: "tipoContenido", label: "Tipo", sortKey: "tipoContenido", render: (e) => e.tipoContenido },
+    { key: "descripcion", label: "Descripción", sortKey: "descripcion", render: (e) => <span className="max-w-[200px] truncate block">{e.descripcion}</span> },
+    { key: "fechaProgramada", label: "Programada", sortKey: "fechaProgramada", render: (e) => e.fechaProgramada },
+    { key: "fechaEntrega", label: "Entrega", sortKey: "fechaEntrega", render: (e) => e.fechaEntrega },
+    { key: "estado", label: "Estado", sortKey: "estado", render: (e) => <Badge variant="secondary" className={estadoColors[e.estado]}>{e.estado}</Badge> },
+    { key: "urlContenido", label: "URL", render: (e) => e.urlContenido ? <a href={e.urlContenido} target="_blank" rel="noopener noreferrer" className="text-primary underline text-xs">Ver</a> : "—" },
+  ];
+
+  const { orderedColumns, draggedColumn, handleDragStart, handleDragOver, handleDrop, handleDragEnd } = useColumnOrder(entregableColumns);
 
   const byAcuerdo = filterAcuerdo === "all" ? entregables : entregables.filter((e) => e.acuerdoId === filterAcuerdo);
   const byDate = filterByDateRange(byAcuerdo, dateRange, (e) => [e.fechaProgramada, e.fechaEntrega]);
@@ -143,28 +156,45 @@ export default function EntregablesPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <SortableTableHead label="Influencer" sortKey="influencer" currentSortKey={sortKey} currentDirection={sortDirection} onSort={handleSort} />
-                  <SortableTableHead label="Tipo" sortKey="tipoContenido" currentSortKey={sortKey} currentDirection={sortDirection} onSort={handleSort} />
-                  <SortableTableHead label="Descripción" sortKey="descripcion" currentSortKey={sortKey} currentDirection={sortDirection} onSort={handleSort} />
-                  <SortableTableHead label="Programada" sortKey="fechaProgramada" currentSortKey={sortKey} currentDirection={sortDirection} onSort={handleSort} />
-                  <SortableTableHead label="Entrega" sortKey="fechaEntrega" currentSortKey={sortKey} currentDirection={sortDirection} onSort={handleSort} />
-                  <SortableTableHead label="Estado" sortKey="estado" currentSortKey={sortKey} currentDirection={sortDirection} onSort={handleSort} />
-                  <TableHead>URL</TableHead>
+                  {orderedColumns.map((col) => (
+                    col.sortKey ? (
+                      <SortableTableHead
+                        key={col.key}
+                        label={col.label}
+                        sortKey={col.sortKey}
+                        currentSortKey={sortKey}
+                        currentDirection={sortDirection}
+                        onSort={handleSort}
+                        draggable
+                        onDragStart={(e) => handleDragStart(e as any, col.key)}
+                        onDragOver={(e) => handleDragOver(e as any, col.key)}
+                        onDrop={(e) => handleDrop(e as any, col.key)}
+                        onDragEnd={handleDragEnd}
+                        className={draggedColumn === col.key ? "opacity-50" : ""}
+                      />
+                    ) : (
+                      <TableHead
+                        key={col.key}
+                        draggable
+                        onDragStart={(e) => handleDragStart(e as any, col.key)}
+                        onDragOver={(e) => handleDragOver(e as any, col.key)}
+                        onDrop={(e) => handleDrop(e as any, col.key)}
+                        onDragEnd={handleDragEnd}
+                        className={draggedColumn === col.key ? "opacity-50 cursor-grab" : "cursor-grab"}
+                      >{col.label}</TableHead>
+                    )
+                  ))}
                   <TableHead className="text-right">Acciones</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filtered.length === 0 ? (
-                  <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">No hay entregables registrados.</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={orderedColumns.length + 1} className="text-center py-8 text-muted-foreground">No hay entregables registrados.</TableCell></TableRow>
                 ) : filtered.map((e) => (
                   <TableRow key={e.id}>
-                    <TableCell className="font-medium">{e.influencer}</TableCell>
-                    <TableCell>{e.tipoContenido}</TableCell>
-                    <TableCell className="max-w-[200px] truncate">{e.descripcion}</TableCell>
-                    <TableCell>{e.fechaProgramada}</TableCell>
-                    <TableCell>{e.fechaEntrega}</TableCell>
-                    <TableCell><Badge variant="secondary" className={estadoColors[e.estado]}>{e.estado}</Badge></TableCell>
-                    <TableCell>{e.urlContenido ? <a href={e.urlContenido} target="_blank" rel="noopener noreferrer" className="text-primary underline text-xs">Ver</a> : "—"}</TableCell>
+                    {orderedColumns.map((col) => (
+                      <TableCell key={col.key}>{col.render(e)}</TableCell>
+                    ))}
                     <TableCell className="text-right">
                       <Button variant="ghost" size="icon" onClick={() => handleOpen(e)}><Pencil className="h-4 w-4" /></Button>
                       <Button variant="ghost" size="icon" onClick={() => handleDelete(e.id)}><Trash2 className="h-4 w-4" /></Button>

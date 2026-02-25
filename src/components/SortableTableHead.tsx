@@ -1,16 +1,22 @@
+import { DragEvent } from "react";
 import { TableHead } from "@/components/ui/table";
-import { ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
+import { ArrowUpDown, ArrowUp, ArrowDown, GripVertical } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export type SortDirection = "asc" | "desc" | null;
 
-interface SortableTableHeadProps {
+export interface SortableTableHeadProps {
   label: string;
   sortKey: string;
   currentSortKey: string | null;
   currentDirection: SortDirection;
   onSort: (key: string) => void;
   className?: string;
+  draggable?: boolean;
+  onDragStart?: (e: DragEvent) => void;
+  onDragOver?: (e: DragEvent) => void;
+  onDrop?: (e: DragEvent) => void;
+  onDragEnd?: () => void;
 }
 
 export default function SortableTableHead({
@@ -20,15 +26,26 @@ export default function SortableTableHead({
   currentDirection,
   onSort,
   className,
+  draggable,
+  onDragStart,
+  onDragOver,
+  onDrop,
+  onDragEnd,
 }: SortableTableHeadProps) {
   const isActive = currentSortKey === sortKey;
 
   return (
     <TableHead
-      className={cn("cursor-pointer select-none hover:text-foreground transition-colors", className)}
+      className={cn("cursor-pointer select-none hover:text-foreground transition-colors", draggable && "cursor-grab", className)}
       onClick={() => onSort(sortKey)}
+      draggable={draggable}
+      onDragStart={onDragStart}
+      onDragOver={onDragOver}
+      onDrop={onDrop}
+      onDragEnd={onDragEnd}
     >
       <div className="flex items-center gap-1">
+        {draggable && <GripVertical className="h-3 w-3 opacity-40 flex-shrink-0" />}
         {label}
         {isActive ? (
           currentDirection === "asc" ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />

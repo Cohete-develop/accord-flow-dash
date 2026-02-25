@@ -16,6 +16,7 @@ import ViewToolbar, { ViewMode, DateRange } from "@/components/ViewToolbar";
 import KanbanBoard, { KanbanColumn } from "@/components/KanbanBoard";
 import ForecastBoard from "@/components/ForecastBoard";
 import SortableTableHead, { SortDirection, useSort } from "@/components/SortableTableHead";
+import { useColumnOrder, ColumnDef } from "@/hooks/useColumnOrder";
 
 const REDES_SOCIALES = ["Instagram", "TikTok", "YouTube", "Twitter", "Facebook"];
 const TIPOS_CONTENIDO = ["Reel", "Story", "Collab", "UGC"];
@@ -127,6 +128,23 @@ export default function AcuerdosPage() {
   const [sortDirection, setSortDirection] = useState<SortDirection>(null);
   const { sortItems, toggleSort } = useSort<Acuerdo>();
 
+  const acuerdoColumns: ColumnDef<Acuerdo>[] = [
+    { key: "influencer", label: "Influencer", sortKey: "influencer", render: (a) => <span className="font-medium">{a.influencer}</span> },
+    { key: "redSocial", label: "Red Social", sortKey: "redSocial", render: (a) => (Array.isArray(a.redSocial) ? a.redSocial : [a.redSocial]).join(", ") },
+    { key: "seguidores", label: "Seguidores", sortKey: "seguidores", render: (a) => a.seguidores.toLocaleString() },
+    { key: "tipoContenido", label: "Tipo", sortKey: "tipoContenido", render: (a) => (Array.isArray(a.tipoContenido) ? a.tipoContenido : [a.tipoContenido]).filter(Boolean).join(", ") },
+    { key: "reelsPactados", label: "Reels", sortKey: "reelsPactados", render: (a) => a.reelsPactados },
+    { key: "storiesPactadas", label: "Stories", sortKey: "storiesPactadas", render: (a) => a.storiesPactadas },
+    { key: "fechaInicio", label: "Inicio", sortKey: "fechaInicio", render: (a) => a.fechaInicio },
+    { key: "fechaFin", label: "Fin", sortKey: "fechaFin", render: (a) => a.fechaFin },
+    { key: "duracionMeses", label: "Duración", sortKey: "duracionMeses", render: (a) => `${a.duracionMeses} meses` },
+    { key: "valorMensual", label: "V. Mensual", sortKey: "valorMensual", render: (a) => `$${(a.valorMensual || 0).toLocaleString()}` },
+    { key: "valorTotal", label: "V. Total", sortKey: "valorTotal", render: (a) => `$${a.valorTotal.toLocaleString()}` },
+    { key: "estado", label: "Estado", sortKey: "estado", render: (a) => <Badge variant="secondary" className={estadoColors[a.estado]}>{a.estado}</Badge> },
+  ];
+
+  const { orderedColumns, draggedColumn, handleDragStart, handleDragOver, handleDrop, handleDragEnd } = useColumnOrder(acuerdoColumns);
+
   const byAcuerdo = filterAcuerdo === "all" ? acuerdos : acuerdos.filter((a) => a.id === filterAcuerdo);
   const byDate = filterByDateRange(byAcuerdo, dateRange, (a) => [a.fechaInicio, a.fechaFin]);
   const filtered = sortItems(byDate, sortKey, sortDirection);
@@ -236,38 +254,33 @@ export default function AcuerdosPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <SortableTableHead label="Influencer" sortKey="influencer" currentSortKey={sortKey} currentDirection={sortDirection} onSort={handleSort} />
-                  <SortableTableHead label="Red Social" sortKey="redSocial" currentSortKey={sortKey} currentDirection={sortDirection} onSort={handleSort} />
-                  <SortableTableHead label="Seguidores" sortKey="seguidores" currentSortKey={sortKey} currentDirection={sortDirection} onSort={handleSort} />
-                  <SortableTableHead label="Tipo" sortKey="tipoContenido" currentSortKey={sortKey} currentDirection={sortDirection} onSort={handleSort} />
-                  <SortableTableHead label="Reels" sortKey="reelsPactados" currentSortKey={sortKey} currentDirection={sortDirection} onSort={handleSort} />
-                  <SortableTableHead label="Stories" sortKey="storiesPactadas" currentSortKey={sortKey} currentDirection={sortDirection} onSort={handleSort} />
-                  <SortableTableHead label="Inicio" sortKey="fechaInicio" currentSortKey={sortKey} currentDirection={sortDirection} onSort={handleSort} />
-                  <SortableTableHead label="Fin" sortKey="fechaFin" currentSortKey={sortKey} currentDirection={sortDirection} onSort={handleSort} />
-                  <SortableTableHead label="Duración" sortKey="duracionMeses" currentSortKey={sortKey} currentDirection={sortDirection} onSort={handleSort} />
-                  <SortableTableHead label="V. Mensual" sortKey="valorMensual" currentSortKey={sortKey} currentDirection={sortDirection} onSort={handleSort} />
-                  <SortableTableHead label="V. Total" sortKey="valorTotal" currentSortKey={sortKey} currentDirection={sortDirection} onSort={handleSort} />
-                  <SortableTableHead label="Estado" sortKey="estado" currentSortKey={sortKey} currentDirection={sortDirection} onSort={handleSort} />
+                  {orderedColumns.map((col) => (
+                    <SortableTableHead
+                      key={col.key}
+                      label={col.label}
+                      sortKey={col.sortKey || col.key}
+                      currentSortKey={sortKey}
+                      currentDirection={sortDirection}
+                      onSort={handleSort}
+                      draggable
+                      onDragStart={(e) => handleDragStart(e as any, col.key)}
+                      onDragOver={(e) => handleDragOver(e as any, col.key)}
+                      onDrop={(e) => handleDrop(e as any, col.key)}
+                      onDragEnd={handleDragEnd}
+                      className={draggedColumn === col.key ? "opacity-50" : ""}
+                    />
+                  ))}
                   <TableHead className="text-right">Acciones</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filtered.length === 0 ? (
-                  <TableRow><TableCell colSpan={13} className="text-center py-8 text-muted-foreground">No hay acuerdos registrados.</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={orderedColumns.length + 1} className="text-center py-8 text-muted-foreground">No hay acuerdos registrados.</TableCell></TableRow>
                 ) : filtered.map((a) => (
                   <TableRow key={a.id}>
-                    <TableCell className="font-medium">{a.influencer}</TableCell>
-                    <TableCell>{(Array.isArray(a.redSocial) ? a.redSocial : [a.redSocial]).join(", ")}</TableCell>
-                    <TableCell>{a.seguidores.toLocaleString()}</TableCell>
-                    <TableCell>{(Array.isArray(a.tipoContenido) ? a.tipoContenido : [a.tipoContenido]).filter(Boolean).join(", ")}</TableCell>
-                    <TableCell>{a.reelsPactados}</TableCell>
-                    <TableCell>{a.storiesPactadas}</TableCell>
-                    <TableCell>{a.fechaInicio}</TableCell>
-                    <TableCell>{a.fechaFin}</TableCell>
-                    <TableCell>{a.duracionMeses} meses</TableCell>
-                    <TableCell>${(a.valorMensual || 0).toLocaleString()}</TableCell>
-                    <TableCell>${a.valorTotal.toLocaleString()}</TableCell>
-                    <TableCell><Badge variant="secondary" className={estadoColors[a.estado]}>{a.estado}</Badge></TableCell>
+                    {orderedColumns.map((col) => (
+                      <TableCell key={col.key}>{col.render(a)}</TableCell>
+                    ))}
                     <TableCell className="text-right">
                       <Button variant="ghost" size="icon" onClick={() => handleOpen(a)}><Pencil className="h-4 w-4" /></Button>
                       <Button variant="ghost" size="icon" onClick={() => handleDelete(a.id)}><Trash2 className="h-4 w-4" /></Button>
