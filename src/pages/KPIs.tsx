@@ -15,6 +15,7 @@ import ViewToolbar, { ViewMode, DateRange } from "@/components/ViewToolbar";
 import KanbanBoard, { KanbanColumn } from "@/components/KanbanBoard";
 import ForecastBoard from "@/components/ForecastBoard";
 import SortableTableHead, { SortDirection, useSort } from "@/components/SortableTableHead";
+import { useColumnOrder, ColumnDef } from "@/hooks/useColumnOrder";
 
 const kanbanColumns: KanbanColumn[] = [
   { key: "Pendiente", label: "Pendiente", colorClass: "bg-amber-100 text-amber-800" },
@@ -66,6 +67,20 @@ export default function KPIsPage() {
   const [sortKey, setSortKey] = useState<string | null>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>(null);
   const { sortItems, toggleSort } = useSort<KPI>();
+
+  const kpiColumns: ColumnDef<KPI>[] = [
+    { key: "influencer", label: "Influencer", sortKey: "influencer", render: (k) => <span className="font-medium">{k.influencer}{k.id.startsWith("placeholder-") && <span className="ml-2 text-xs text-amber-600 font-normal">Sin KPI</span>}</span> },
+    { key: "alcance", label: "Alcance", sortKey: "alcance", render: (k) => k.id.startsWith("placeholder-") ? "—" : k.alcance.toLocaleString() },
+    { key: "impresiones", label: "Impresiones", sortKey: "impresiones", render: (k) => k.id.startsWith("placeholder-") ? "—" : k.impresiones.toLocaleString() },
+    { key: "interacciones", label: "Interacciones", sortKey: "interacciones", render: (k) => k.id.startsWith("placeholder-") ? "—" : k.interacciones.toLocaleString() },
+    { key: "clicks", label: "Clicks", sortKey: "clicks", render: (k) => k.id.startsWith("placeholder-") ? "—" : k.clicks.toLocaleString() },
+    { key: "engagement", label: "Engagement", sortKey: "engagement", render: (k) => k.id.startsWith("placeholder-") ? "—" : `${k.engagement}%` },
+    { key: "cpr", label: "CPR", sortKey: "cpr", render: (k) => k.id.startsWith("placeholder-") ? "—" : `$${k.cpr}` },
+    { key: "cpc", label: "CPC", sortKey: "cpc", render: (k) => k.id.startsWith("placeholder-") ? "—" : `$${k.cpc}` },
+    { key: "periodo", label: "Periodo", sortKey: "periodo", render: (k) => k.id.startsWith("placeholder-") ? "—" : k.periodo },
+  ];
+
+  const { orderedColumns, draggedColumn, handleDragStart, handleDragOver, handleDrop, handleDragEnd } = useColumnOrder(kpiColumns);
 
   const influencersWithKpis = new Set(kpis.map(k => k.acuerdoId));
   const placeholderKpis: KPI[] = acuerdos
@@ -188,37 +203,35 @@ export default function KPIsPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <SortableTableHead label="Influencer" sortKey="influencer" currentSortKey={sortKey} currentDirection={sortDirection} onSort={handleSort} />
-                  <SortableTableHead label="Alcance" sortKey="alcance" currentSortKey={sortKey} currentDirection={sortDirection} onSort={handleSort} />
-                  <SortableTableHead label="Impresiones" sortKey="impresiones" currentSortKey={sortKey} currentDirection={sortDirection} onSort={handleSort} />
-                  <SortableTableHead label="Interacciones" sortKey="interacciones" currentSortKey={sortKey} currentDirection={sortDirection} onSort={handleSort} />
-                  <SortableTableHead label="Clicks" sortKey="clicks" currentSortKey={sortKey} currentDirection={sortDirection} onSort={handleSort} />
-                  <SortableTableHead label="Engagement" sortKey="engagement" currentSortKey={sortKey} currentDirection={sortDirection} onSort={handleSort} />
-                  <SortableTableHead label="CPR" sortKey="cpr" currentSortKey={sortKey} currentDirection={sortDirection} onSort={handleSort} />
-                  <SortableTableHead label="CPC" sortKey="cpc" currentSortKey={sortKey} currentDirection={sortDirection} onSort={handleSort} />
-                  <SortableTableHead label="Periodo" sortKey="periodo" currentSortKey={sortKey} currentDirection={sortDirection} onSort={handleSort} />
+                  {orderedColumns.map((col) => (
+                    <SortableTableHead
+                      key={col.key}
+                      label={col.label}
+                      sortKey={col.sortKey || col.key}
+                      currentSortKey={sortKey}
+                      currentDirection={sortDirection}
+                      onSort={handleSort}
+                      draggable
+                      onDragStart={(e) => handleDragStart(e as any, col.key)}
+                      onDragOver={(e) => handleDragOver(e as any, col.key)}
+                      onDrop={(e) => handleDrop(e as any, col.key)}
+                      onDragEnd={handleDragEnd}
+                      className={draggedColumn === col.key ? "opacity-50" : ""}
+                    />
+                  ))}
                   <TableHead className="text-right">Acciones</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filtered.length === 0 ? (
-                  <TableRow><TableCell colSpan={10} className="text-center py-8 text-muted-foreground">No hay KPIs registrados.</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={orderedColumns.length + 1} className="text-center py-8 text-muted-foreground">No hay KPIs registrados.</TableCell></TableRow>
                 ) : filtered.map((k) => {
                   const isPlaceholder = k.id.startsWith("placeholder-");
                   return (
                     <TableRow key={k.id} className={isPlaceholder ? "opacity-60 bg-muted/30" : ""}>
-                      <TableCell className="font-medium">
-                        {k.influencer}
-                        {isPlaceholder && <span className="ml-2 text-xs text-amber-600 font-normal">Sin KPI</span>}
-                      </TableCell>
-                      <TableCell>{isPlaceholder ? "—" : k.alcance.toLocaleString()}</TableCell>
-                      <TableCell>{isPlaceholder ? "—" : k.impresiones.toLocaleString()}</TableCell>
-                      <TableCell>{isPlaceholder ? "—" : k.interacciones.toLocaleString()}</TableCell>
-                      <TableCell>{isPlaceholder ? "—" : k.clicks.toLocaleString()}</TableCell>
-                      <TableCell>{isPlaceholder ? "—" : `${k.engagement}%`}</TableCell>
-                      <TableCell>{isPlaceholder ? "—" : `$${k.cpr}`}</TableCell>
-                      <TableCell>{isPlaceholder ? "—" : `$${k.cpc}`}</TableCell>
-                      <TableCell>{isPlaceholder ? "—" : k.periodo}</TableCell>
+                      {orderedColumns.map((col) => (
+                        <TableCell key={col.key}>{col.render(k)}</TableCell>
+                      ))}
                       <TableCell className="text-right">
                         {isPlaceholder ? (
                           <Button variant="outline" size="sm" onClick={() => { setEditing(null); setForm({ ...emptyKPI(), acuerdoId: k.acuerdoId, influencer: k.influencer }); setOpen(true); }}>

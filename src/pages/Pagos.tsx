@@ -15,6 +15,7 @@ import ViewToolbar, { ViewMode, DateRange } from "@/components/ViewToolbar";
 import KanbanBoard, { KanbanColumn } from "@/components/KanbanBoard";
 import ForecastBoard from "@/components/ForecastBoard";
 import SortableTableHead, { SortDirection, useSort } from "@/components/SortableTableHead";
+import { useColumnOrder, ColumnDef } from "@/hooks/useColumnOrder";
 
 const estadoColors: Record<string, string> = {
   Pendiente: "bg-amber-100 text-amber-800",
@@ -80,6 +81,18 @@ export default function PagosPage() {
   const [sortKey, setSortKey] = useState<string | null>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>(null);
   const { sortItems, toggleSort } = useSort<Pago>();
+
+  const pagoColumns: ColumnDef<Pago>[] = [
+    { key: "influencer", label: "Influencer", sortKey: "influencer", render: (p) => <span className="font-medium">{p.influencer}</span> },
+    { key: "concepto", label: "Concepto", sortKey: "concepto", render: (p) => p.concepto },
+    { key: "monto", label: "Monto", sortKey: "monto", render: (p) => `$${p.monto.toLocaleString()}` },
+    { key: "fechaPago", label: "Fecha Pago", sortKey: "fechaPago", render: (p) => p.fechaPago },
+    { key: "fechaVencimiento", label: "Vencimiento", sortKey: "fechaVencimiento", render: (p) => p.fechaVencimiento },
+    { key: "metodoPago", label: "Método", sortKey: "metodoPago", render: (p) => p.metodoPago },
+    { key: "estado", label: "Estado", sortKey: "estado", render: (p) => <Badge variant="secondary" className={estadoColors[p.estado]}>{p.estado}</Badge> },
+  ];
+
+  const { orderedColumns, draggedColumn, handleDragStart, handleDragOver, handleDrop, handleDragEnd } = useColumnOrder(pagoColumns);
 
   const byAcuerdo = filterAcuerdo === "all" ? pagos : pagos.filter((p) => p.acuerdoId === filterAcuerdo);
   const byDate = filterByDateRange(byAcuerdo, dateRange, (p) => [p.fechaPago, p.fechaVencimiento]);
@@ -161,28 +174,33 @@ export default function PagosPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <SortableTableHead label="Influencer" sortKey="influencer" currentSortKey={sortKey} currentDirection={sortDirection} onSort={handleSort} />
-                  <SortableTableHead label="Concepto" sortKey="concepto" currentSortKey={sortKey} currentDirection={sortDirection} onSort={handleSort} />
-                  <SortableTableHead label="Monto" sortKey="monto" currentSortKey={sortKey} currentDirection={sortDirection} onSort={handleSort} />
-                  <SortableTableHead label="Fecha Pago" sortKey="fechaPago" currentSortKey={sortKey} currentDirection={sortDirection} onSort={handleSort} />
-                  <SortableTableHead label="Vencimiento" sortKey="fechaVencimiento" currentSortKey={sortKey} currentDirection={sortDirection} onSort={handleSort} />
-                  <SortableTableHead label="Método" sortKey="metodoPago" currentSortKey={sortKey} currentDirection={sortDirection} onSort={handleSort} />
-                  <SortableTableHead label="Estado" sortKey="estado" currentSortKey={sortKey} currentDirection={sortDirection} onSort={handleSort} />
+                  {orderedColumns.map((col) => (
+                    <SortableTableHead
+                      key={col.key}
+                      label={col.label}
+                      sortKey={col.sortKey || col.key}
+                      currentSortKey={sortKey}
+                      currentDirection={sortDirection}
+                      onSort={handleSort}
+                      draggable
+                      onDragStart={(e) => handleDragStart(e as any, col.key)}
+                      onDragOver={(e) => handleDragOver(e as any, col.key)}
+                      onDrop={(e) => handleDrop(e as any, col.key)}
+                      onDragEnd={handleDragEnd}
+                      className={draggedColumn === col.key ? "opacity-50" : ""}
+                    />
+                  ))}
                   <TableHead className="text-right">Acciones</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filtered.length === 0 ? (
-                  <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">No hay pagos registrados.</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={orderedColumns.length + 1} className="text-center py-8 text-muted-foreground">No hay pagos registrados.</TableCell></TableRow>
                 ) : filtered.map((p) => (
                   <TableRow key={p.id}>
-                    <TableCell className="font-medium">{p.influencer}</TableCell>
-                    <TableCell>{p.concepto}</TableCell>
-                    <TableCell>${p.monto.toLocaleString()}</TableCell>
-                    <TableCell>{p.fechaPago}</TableCell>
-                    <TableCell>{p.fechaVencimiento}</TableCell>
-                    <TableCell>{p.metodoPago}</TableCell>
-                    <TableCell><Badge variant="secondary" className={estadoColors[p.estado]}>{p.estado}</Badge></TableCell>
+                    {orderedColumns.map((col) => (
+                      <TableCell key={col.key}>{col.render(p)}</TableCell>
+                    ))}
                     <TableCell className="text-right">
                       <Button variant="ghost" size="icon" onClick={() => handleOpen(p)}><Pencil className="h-4 w-4" /></Button>
                       <Button variant="ghost" size="icon" onClick={() => handleDelete(p.id)}><Trash2 className="h-4 w-4" /></Button>
