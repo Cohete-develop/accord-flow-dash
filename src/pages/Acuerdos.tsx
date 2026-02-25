@@ -19,6 +19,7 @@ import SortableTableHead, { SortDirection, useSort } from "@/components/Sortable
 import { useColumnOrder, ColumnDef } from "@/hooks/useColumnOrder";
 import { useResizableColumns } from "@/hooks/useResizableColumns";
 import { exportToFile, ExportFormat } from "@/lib/export-utils";
+import { useColumnVisibility } from "@/hooks/useColumnVisibility";
 
 const REDES_SOCIALES = ["Instagram", "TikTok", "YouTube", "Twitter", "Facebook"];
 const TIPOS_CONTENIDO = ["Reel", "Story", "Collab", "UGC"];
@@ -147,7 +148,8 @@ export default function AcuerdosPage() {
 
   const { orderedColumns, draggedColumn, handleDragStart, handleDragOver, handleDrop, handleDragEnd } = useColumnOrder(acuerdoColumns);
   const { columnWidths, handleResizeStart } = useResizableColumns(orderedColumns.map(c => c.key), 110);
-
+  const { isVisible, toggleColumn, showAll } = useColumnVisibility(orderedColumns.map(c => c.key));
+  const visibleColumns = orderedColumns.filter(c => isVisible(c.key));
   const byAcuerdo = filterAcuerdo === "all" ? acuerdos : acuerdos.filter((a) => a.id === filterAcuerdo);
   const byDate = filterByDateRange(byAcuerdo, dateRange, (a) => [a.fechaInicio, a.fechaFin]);
   const filtered = sortItems(byDate, sortKey, sortDirection);
@@ -234,7 +236,7 @@ export default function AcuerdosPage() {
         <Button variant="gradient" onClick={() => handleOpen()}><Plus className="h-4 w-4 mr-2" /> Nuevo Acuerdo</Button>
       </div>
 
-      <ViewToolbar view={view} onViewChange={setView} acuerdos={acuerdos} selectedAcuerdo={filterAcuerdo} onAcuerdoChange={setFilterAcuerdo} dateRange={dateRange} onDateRangeChange={setDateRange} onExport={(fmt) => exportToFile(filtered, orderedColumns.map(c => ({ key: c.key, label: c.label })), fmt, "acuerdos")} />
+      <ViewToolbar view={view} onViewChange={setView} acuerdos={acuerdos} selectedAcuerdo={filterAcuerdo} onAcuerdoChange={setFilterAcuerdo} dateRange={dateRange} onDateRangeChange={setDateRange} onExport={(fmt) => exportToFile(filtered, visibleColumns.map(c => ({ key: c.key, label: c.label })), fmt, "acuerdos")} columns={orderedColumns.map(c => ({ key: c.key, label: c.label }))} isColumnVisible={isVisible} onToggleColumn={toggleColumn} onShowAllColumns={showAll} />
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Total Acuerdos</CardTitle></CardHeader><CardContent><div className="text-2xl font-bold">{filtered.length}</div></CardContent></Card>
@@ -257,7 +259,7 @@ export default function AcuerdosPage() {
             <Table className="table-fixed">
               <TableHeader>
                 <TableRow>
-                  {orderedColumns.map((col) => (
+                  {visibleColumns.map((col) => (
                     <SortableTableHead
                       key={col.key}
                       label={col.label}
@@ -280,10 +282,10 @@ export default function AcuerdosPage() {
               </TableHeader>
               <TableBody>
                 {filtered.length === 0 ? (
-                  <TableRow><TableCell colSpan={orderedColumns.length + 1} className="text-center py-8 text-muted-foreground">No hay acuerdos registrados.</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={visibleColumns.length + 1} className="text-center py-8 text-muted-foreground">No hay acuerdos registrados.</TableCell></TableRow>
                 ) : filtered.map((a) => (
                   <TableRow key={a.id}>
-                    {orderedColumns.map((col) => (
+                    {visibleColumns.map((col) => (
                       <TableCell key={col.key} className="truncate overflow-hidden" style={{ width: `${columnWidths[col.key]}px`, minWidth: `${columnWidths[col.key]}px`, maxWidth: `${columnWidths[col.key]}px` }}>{col.render(a)}</TableCell>
                     ))}
                     <TableCell className="text-right">
