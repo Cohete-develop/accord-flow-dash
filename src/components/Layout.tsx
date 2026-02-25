@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { NavLink } from "@/components/NavLink";
-import { Handshake, CreditCard, Package, BarChart3, LayoutDashboard, LogOut, Settings } from "lucide-react";
+import { Handshake, CreditCard, Package, BarChart3, LayoutDashboard, LogOut, Settings, Crown } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Navigate } from "react-router-dom";
@@ -17,11 +17,16 @@ const navItems = [
 export default function Layout({ children }: { children: React.ReactNode }) {
   const { signOut, user, loading } = useAuth();
   const [isGerencia, setIsGerencia] = useState(false);
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
 
   useEffect(() => {
     if (!user) return;
-    supabase.from('user_roles').select('role').eq('user_id', user.id).eq('role', 'gerencia').maybeSingle()
-      .then(({ data }) => setIsGerencia(!!data));
+    supabase.from('user_roles').select('role').eq('user_id', user.id)
+      .then(({ data }) => {
+        const roles = (data || []).map(r => r.role);
+        setIsGerencia(roles.includes('gerencia'));
+        setIsSuperAdmin(roles.includes('super_admin'));
+      });
   }, [user]);
 
   if (loading) {
@@ -51,17 +56,29 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               {item.label}
             </NavLink>
           ))}
-          {isGerencia && (
+          {(isGerencia || isSuperAdmin) && (
             <>
               <div className="my-2 border-t border-sidebar-border" />
-              <NavLink
-                to="/admin"
-                className="flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-                activeClassName="bg-sidebar-accent text-sidebar-accent-foreground"
-              >
-                <Settings className="h-4 w-4" />
-                Administración
-              </NavLink>
+              {isGerencia && (
+                <NavLink
+                  to="/admin"
+                  className="flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                  activeClassName="bg-sidebar-accent text-sidebar-accent-foreground"
+                >
+                  <Settings className="h-4 w-4" />
+                  Administración
+                </NavLink>
+              )}
+              {isSuperAdmin && (
+                <NavLink
+                  to="/super-admin"
+                  className="flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                  activeClassName="bg-sidebar-accent text-sidebar-accent-foreground"
+                >
+                  <Crown className="h-4 w-4" />
+                  Super Admin
+                </NavLink>
+              )}
             </>
           )}
         </nav>
