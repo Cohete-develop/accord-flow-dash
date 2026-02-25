@@ -1,9 +1,12 @@
 import { useState, useEffect, useMemo } from "react";
 import { Pago, Acuerdo } from "@/types/crm";
 import { useAcuerdos, usePagos } from "@/hooks/useCrmData";
+import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -75,9 +78,8 @@ function filterByDateRange<T>(items: T[], dateRange: DateRange, getDateFields: (
 
 /** Get last business day of a given month (year, month 0-indexed) */
 function getLastBusinessDay(year: number, month: number): string {
-  const lastDay = new Date(year, month + 1, 0); // last day of month
+  const lastDay = new Date(year, month + 1, 0);
   let day = lastDay.getDay();
-  // 0=Sun, 6=Sat
   if (day === 0) lastDay.setDate(lastDay.getDate() - 2);
   else if (day === 6) lastDay.setDate(lastDay.getDate() - 1);
   return lastDay.toISOString().split("T")[0];
@@ -109,6 +111,7 @@ function generatePaymentsForAcuerdo(acuerdo: Acuerdo): Omit<Pago, "id" | "create
 }
 
 export default function PagosPage() {
+  const { user } = useAuth();
   const { acuerdos } = useAcuerdos();
   const { pagos, isLoading, save, remove } = usePagos();
   const [open, setOpen] = useState(false);
@@ -122,6 +125,19 @@ export default function PagosPage() {
   const { sortItems, toggleSort } = useSort<Pago>();
   const [generating, setGenerating] = useState(false);
   const [alertShown, setAlertShown] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [deleting, setDeleting] = useState(false);
+  const [canDelete, setCanDelete] = useState(false);
+
+  // Check if user has gerencia or coordinador role
+  useEffect(() => {
+    if (!user) return;
+    supabase.from("user_roles").select("role").eq("user_id", user.id)
+      .in("role", ["gerencia", "coordinador_mercadeo", "super_admin"])
+      .then(({ data }) => {
+        setCanDelete(!!data && data.length > 0);
+      });
+  }, [user]);
 
   // Alert for payments missing concepto
   useEffect(() => {
@@ -181,6 +197,40 @@ export default function PagosPage() {
     await save({ data: { ...data, estado: newStatus as Pago["estado"] }, id });
   };
 
+  // Selection handlers
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === filtered.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(filtered.map((p) => p.id)));
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.size === 0) return;
+    setDeleting(true);
+    try {
+      for (const id of selectedIds) {
+        await remove(id);
+      }
+      toast.success(`Se eliminaron ${selectedIds.size} pago(s)`);
+      setSelectedIds(new Set());
+    } catch (e: any) {
+      toast.error("Error al eliminar: " + (e?.message || "Error desconocido"));
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   // Auto-generate payments from active agreements
   const handleGeneratePayments = async () => {
     const activeAcuerdos = acuerdos.filter((a) => a.estado === "Activo" || a.estado === "En Negociación");
@@ -193,7 +243,6 @@ export default function PagosPage() {
     let created = 0;
     try {
       for (const acuerdo of activeAcuerdos) {
-        // Check which months already have payments for this agreement
         const existingMonths = new Set(
           pagos.filter((p) => p.acuerdoId === acuerdo.id).map((p) => p.fechaPago?.slice(0, 7))
         );
@@ -246,6 +295,17 @@ export default function PagosPage() {
         </div>
       </div>
 
+      {/* Bulk delete bar */}
+      {canDelete && selectedIds.size > 0 && (
+        <div className="flex items-center gap-3 p-3 rounded-lg border bg-muted/50">
+          <span className="text-sm font-medium">{selectedIds.size} pago(s) seleccionado(s)</span>
+          <Button variant="destructive" size="sm" onClick={handleBulkDelete} disabled={deleting}>
+            <Trash2 className="h-4 w-4 mr-1" /> {deleting ? "Eliminando..." : "Eliminar seleccionados"}
+          </Button>
+          <Button variant="ghost" size="sm" onClick={() => setSelectedIds(new Set())}>Deseleccionar</Button>
+        </div>
+      )}
+
       <ViewToolbar view={view} onViewChange={setView} acuerdos={acuerdos} selectedAcuerdo={filterAcuerdo} onAcuerdoChange={setFilterAcuerdo} dateRange={dateRange} onDateRangeChange={setDateRange} onExport={(fmt) => exportToFile(filtered, visibleColumns.map(c => ({ key: c.key, label: c.label })), fmt, "pagos")} columns={orderedColumns.map(c => ({ key: c.key, label: c.label }))} isColumnVisible={isVisible} onToggleColumn={toggleColumn} onShowAllColumns={showAll} />
 
       {acuerdos.length === 0 && (
@@ -272,6 +332,15 @@ export default function PagosPage() {
             <Table className="table-fixed">
               <TableHeader>
                 <TableRow>
+                  {canDelete && (
+                    <TableHead className="w-10">
+                      <Checkbox
+                        checked={filtered.length > 0 && selectedIds.size === filtered.length}
+                        onCheckedChange={toggleSelectAll}
+                        aria-label="Seleccionar todos"
+                      />
+                    </TableHead>
+                  )}
                   {visibleColumns.map((col) => (
                     <SortableTableHead
                       key={col.key}
@@ -295,15 +364,24 @@ export default function PagosPage() {
               </TableHeader>
               <TableBody>
                 {filtered.length === 0 ? (
-                  <TableRow><TableCell colSpan={visibleColumns.length + 1} className="text-center py-8 text-muted-foreground">No hay pagos registrados.</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={visibleColumns.length + 1 + (canDelete ? 1 : 0)} className="text-center py-8 text-muted-foreground">No hay pagos registrados.</TableCell></TableRow>
                 ) : filtered.map((p) => (
-                  <TableRow key={p.id}>
+                  <TableRow key={p.id} className={selectedIds.has(p.id) ? "bg-muted/40" : ""}>
+                    {canDelete && (
+                      <TableCell className="w-10">
+                        <Checkbox
+                          checked={selectedIds.has(p.id)}
+                          onCheckedChange={() => toggleSelect(p.id)}
+                          aria-label={`Seleccionar pago ${p.influencer}`}
+                        />
+                      </TableCell>
+                    )}
                     {visibleColumns.map((col) => (
                       <TableCell key={col.key} className="truncate overflow-hidden" style={{ width: `${columnWidths[col.key]}px`, minWidth: `${columnWidths[col.key]}px`, maxWidth: `${columnWidths[col.key]}px` }}>{col.render(p)}</TableCell>
                     ))}
                     <TableCell className="text-right">
                       <Button variant="ghost" size="icon" onClick={() => handleOpen(p)}><Pencil className="h-4 w-4" /></Button>
-                      <Button variant="ghost" size="icon" onClick={() => handleDelete(p.id)}><Trash2 className="h-4 w-4" /></Button>
+                      {canDelete && <Button variant="ghost" size="icon" onClick={() => handleDelete(p.id)}><Trash2 className="h-4 w-4" /></Button>}
                     </TableCell>
                   </TableRow>
                 ))}
