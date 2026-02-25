@@ -1,5 +1,6 @@
 import { useState, useCallback } from "react";
 import { useAcuerdos, usePagos, useEntregables, useKPIs } from "@/hooks/useCrmData";
+import ProductFamilyReport from "@/components/ProductFamilyReport";
 import { Acuerdo, Pago, Entregable } from "@/types/crm";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, AreaChart, Area } from "recharts";
@@ -309,6 +310,9 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Product Family Report */}
+      <ProductFamilyReport acuerdos={acuerdos} />
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Alcance Total</CardTitle></CardHeader><CardContent><div className="text-2xl font-bold">{totalAlcance.toLocaleString()}</div></CardContent></Card>
