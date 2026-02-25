@@ -6,30 +6,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, AreaChart, Area } from "recharts";
 import ChartDetailDialog from "@/components/ChartDetailDialog";
 
-const GRADIENT_PAIRS = [
-  { start: "#7030A0", end: "#4318FF" },
-  { start: "#5B21B6", end: "#6366F1" },
-  { start: "#8B5CF6", end: "#3B82F6" },
-  { start: "#A855F7", end: "#2563EB" },
-  { start: "#7C3AED", end: "#0EA5E9" },
-  { start: "#6D28D9", end: "#7C3AED" },
-  { start: "#9333EA", end: "#4F46E5" },
-  { start: "#581C87", end: "#6366F1" },
+const COLORS = [
+  "#7030A0", "#4318FF", "#8B5CF6", "#5B21B6",
+  "#6366F1", "#A855F7", "#7C3AED", "#9333EA",
 ];
-
-const COLORS = GRADIENT_PAIRS.map((_, i) => `url(#grad-${i})`);
-const FLAT_COLORS = GRADIENT_PAIRS.map(g => g.start);
-
-const GradientDefs = () => (
-  <defs>
-    {GRADIENT_PAIRS.map((g, i) => (
-      <linearGradient key={i} id={`grad-${i}`} x1="0" y1="0" x2="1" y2="1">
-        <stop offset="0%" stopColor={g.start} />
-        <stop offset="100%" stopColor={g.end} />
-      </linearGradient>
-    ))}
-  </defs>
-);
 
 const fmtCurrency = (v: number) => {
   if (v >= 1_000_000) return `$${Math.round(v / 1_000_000)}M`;
@@ -191,36 +171,37 @@ export default function DashboardPage() {
         {data.length === 0 ? (
           <p className="text-sm text-muted-foreground text-center py-8">Sin datos</p>
         ) : (
-          <ResponsiveContainer width="100%" height={280}>
-            <PieChart>
-              <GradientDefs />
-              <Pie
-                data={data}
-                cx="50%"
-                cy="50%"
-                outerRadius={70}
-                innerRadius={30}
-                dataKey="value"
-                label={({ name, percent, cx, midAngle, outerRadius: or }) => {
-                  const RADIAN = Math.PI / 180;
-                  const radius = or + 20;
-                  const x = cx + radius * Math.cos(-midAngle * RADIAN);
-                  const y = cx + radius * Math.sin(-midAngle * RADIAN);
-                  return (
-                    <text x={x} y={y} textAnchor={x > cx ? "start" : "end"} dominantBaseline="central" fontSize={10} fill="hsl(224, 30%, 12%)">
-                      {name} {(percent * 100).toFixed(0)}%
-                    </text>
-                  );
-                }}
-                labelLine={true}
-                className="cursor-pointer"
-                onClick={onClick}
-              >
-                {data.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
-              </Pie>
-              <Tooltip />
-            </PieChart>
-          </ResponsiveContainer>
+          <div>
+            <ResponsiveContainer width="100%" height={180}>
+              <PieChart>
+                <Pie
+                  data={data}
+                  cx="50%"
+                  cy="50%"
+                  outerRadius={65}
+                  innerRadius={28}
+                  dataKey="value"
+                  className="cursor-pointer"
+                  onClick={onClick}
+                >
+                  {data.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
+                </Pie>
+                <Tooltip />
+              </PieChart>
+            </ResponsiveContainer>
+            <div className="flex flex-wrap justify-center gap-x-3 gap-y-1 mt-2">
+              {data.map((d, i) => {
+                const total = data.reduce((s, x) => s + x.value, 0);
+                const pct = total > 0 ? Math.round((d.value / total) * 100) : 0;
+                return (
+                  <button key={i} onClick={() => onClick(null, i)} className="flex items-center gap-1.5 text-xs cursor-pointer hover:opacity-70 transition-opacity">
+                    <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: COLORS[i % COLORS.length] }} />
+                    <span>{d.name} {pct}%</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
         )}
       </CardContent>
     </Card>
@@ -258,7 +239,7 @@ export default function DashboardPage() {
           ) : (
             <ResponsiveContainer width="100%" height={300}>
               <BarChart data={moneyBarData} onClick={handleBarClickInfluencer}>
-                <GradientDefs />
+                
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="name" fontSize={12} />
                 <YAxis fontSize={12} tickFormatter={fmtCurrency} />
@@ -281,7 +262,7 @@ export default function DashboardPage() {
             ) : (
               <ResponsiveContainer width="100%" height={280}>
                 <BarChart data={moneyByTipoData} onClick={handleBarClickTipo}>
-                  <GradientDefs />
+                  
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="name" fontSize={12} />
                   <YAxis fontSize={12} tickFormatter={fmtCurrency} />
@@ -302,7 +283,7 @@ export default function DashboardPage() {
             ) : (
               <ResponsiveContainer width="100%" height={280}>
                 <BarChart data={moneyByRedData} onClick={handleBarClickRed}>
-                  <GradientDefs />
+                  
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="name" fontSize={12} />
                   <YAxis fontSize={12} tickFormatter={fmtCurrency} />
@@ -326,7 +307,7 @@ export default function DashboardPage() {
             ) : (
               <ResponsiveContainer width="100%" height={280}>
                 <AreaChart data={forecastData} onClick={handleAreaClickPagos}>
-                  <GradientDefs />
+                  
                   <defs>
                     <linearGradient id="areaGrad1" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="0%" stopColor="#7030A0" stopOpacity={0.4} />
