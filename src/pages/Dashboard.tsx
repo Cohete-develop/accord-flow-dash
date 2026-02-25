@@ -5,11 +5,7 @@ import { Acuerdo, Pago, Entregable } from "@/types/crm";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, AreaChart, Area } from "recharts";
 import ChartDetailDialog from "@/components/ChartDetailDialog";
-
-const COLORS = [
-  "#7030A0", "#4318FF", "#8B5CF6", "#5B21B6",
-  "#6366F1", "#A855F7", "#7C3AED", "#9333EA",
-];
+import { CHART_COLORS as COLORS } from "@/lib/chart-colors";
 
 const fmtCurrency = (v: number) => {
   if (v >= 1_000_000) return `$${Math.round(v / 1_000_000)}M`;
