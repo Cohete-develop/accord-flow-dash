@@ -11,9 +11,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Plus, Pencil, Trash2 } from "lucide-react";
-import ViewToolbar, { ViewMode } from "@/components/ViewToolbar";
+import ViewToolbar, { ViewMode, DateRange } from "@/components/ViewToolbar";
 import KanbanBoard, { KanbanColumn } from "@/components/KanbanBoard";
 import ForecastBoard from "@/components/ForecastBoard";
+import SortableTableHead, { SortDirection, useSort } from "@/components/SortableTableHead";
 
 const estadoColors: Record<string, string> = {
   Pendiente: "bg-amber-100 text-amber-800",
@@ -36,6 +37,23 @@ const emptyEntregable = (): Omit<Entregable, "id" | "createdAt"> => ({
   fechaProgramada: "", fechaEntrega: "", estado: "Pendiente", urlContenido: "", notas: "",
 });
 
+function filterByDateRange<T>(items: T[], dateRange: DateRange, getDateFields: (item: T) => string[]): T[] {
+  if (!dateRange.from && !dateRange.to) return items;
+  return items.filter((item) => {
+    const dates = getDateFields(item).filter(Boolean).map((d) => new Date(d));
+    if (dates.length === 0) return true;
+    return dates.some((d) => {
+      if (dateRange.from && d < dateRange.from) return false;
+      if (dateRange.to) {
+        const endOfDay = new Date(dateRange.to);
+        endOfDay.setHours(23, 59, 59, 999);
+        if (d > endOfDay) return false;
+      }
+      return true;
+    });
+  });
+}
+
 export default function EntregablesPage() {
   const { acuerdos } = useAcuerdos();
   const { entregables, isLoading, save, remove } = useEntregables();
@@ -44,8 +62,20 @@ export default function EntregablesPage() {
   const [form, setForm] = useState(emptyEntregable());
   const [view, setView] = useState<ViewMode>("list");
   const [filterAcuerdo, setFilterAcuerdo] = useState("all");
+  const [dateRange, setDateRange] = useState<DateRange>({});
+  const [sortKey, setSortKey] = useState<string | null>(null);
+  const [sortDirection, setSortDirection] = useState<SortDirection>(null);
+  const { sortItems, toggleSort } = useSort<Entregable>();
 
-  const filtered = filterAcuerdo === "all" ? entregables : entregables.filter((e) => e.acuerdoId === filterAcuerdo);
+  const byAcuerdo = filterAcuerdo === "all" ? entregables : entregables.filter((e) => e.acuerdoId === filterAcuerdo);
+  const byDate = filterByDateRange(byAcuerdo, dateRange, (e) => [e.fechaProgramada, e.fechaEntrega]);
+  const filtered = sortItems(byDate, sortKey, sortDirection);
+
+  const handleSort = (key: string) => {
+    const result = toggleSort(key, sortKey, sortDirection);
+    setSortKey(result.sortKey);
+    setSortDirection(result.sortDirection);
+  };
 
   const handleOpen = (e?: Entregable) => {
     if (e) { setEditing(e); const { id, createdAt, ...rest } = e; setForm(rest); }
@@ -91,7 +121,7 @@ export default function EntregablesPage() {
         <Button variant="gradient" onClick={() => handleOpen()} disabled={acuerdos.length === 0}><Plus className="h-4 w-4 mr-2" /> Nuevo Entregable</Button>
       </div>
 
-      <ViewToolbar view={view} onViewChange={setView} acuerdos={acuerdos} selectedAcuerdo={filterAcuerdo} onAcuerdoChange={setFilterAcuerdo} />
+      <ViewToolbar view={view} onViewChange={setView} acuerdos={acuerdos} selectedAcuerdo={filterAcuerdo} onAcuerdoChange={setFilterAcuerdo} dateRange={dateRange} onDateRangeChange={setDateRange} />
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Total</CardTitle></CardHeader><CardContent><div className="text-2xl font-bold">{filtered.length}</div></CardContent></Card>
@@ -113,9 +143,14 @@ export default function EntregablesPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Influencer</TableHead><TableHead>Tipo</TableHead><TableHead>Descripción</TableHead>
-                  <TableHead>Programada</TableHead><TableHead>Entrega</TableHead><TableHead>Estado</TableHead>
-                  <TableHead>URL</TableHead><TableHead className="text-right">Acciones</TableHead>
+                  <SortableTableHead label="Influencer" sortKey="influencer" currentSortKey={sortKey} currentDirection={sortDirection} onSort={handleSort} />
+                  <SortableTableHead label="Tipo" sortKey="tipoContenido" currentSortKey={sortKey} currentDirection={sortDirection} onSort={handleSort} />
+                  <SortableTableHead label="Descripción" sortKey="descripcion" currentSortKey={sortKey} currentDirection={sortDirection} onSort={handleSort} />
+                  <SortableTableHead label="Programada" sortKey="fechaProgramada" currentSortKey={sortKey} currentDirection={sortDirection} onSort={handleSort} />
+                  <SortableTableHead label="Entrega" sortKey="fechaEntrega" currentSortKey={sortKey} currentDirection={sortDirection} onSort={handleSort} />
+                  <SortableTableHead label="Estado" sortKey="estado" currentSortKey={sortKey} currentDirection={sortDirection} onSort={handleSort} />
+                  <TableHead>URL</TableHead>
+                  <TableHead className="text-right">Acciones</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
