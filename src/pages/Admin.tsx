@@ -14,10 +14,17 @@ import { Users, Shield, ScrollText, UserPlus, Trash2, Pencil, Database } from 'l
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
+import { Navigate } from 'react-router-dom';
 import AdminDataManagement from '@/components/admin/AdminDataManagement';
 
-const ROLES = [
+const ALL_ROLES = [
   { value: 'gerencia', label: 'Gerencia' },
+  { value: 'coordinador_mercadeo', label: 'Coordinador de Mercadeo' },
+  { value: 'admin_contabilidad', label: 'Administración / Contabilidad' },
+];
+
+// Roles that a gerencia user can assign (not gerencia or super_admin)
+const ASSIGNABLE_ROLES = [
   { value: 'coordinador_mercadeo', label: 'Coordinador de Mercadeo' },
   { value: 'admin_contabilidad', label: 'Administración / Contabilidad' },
 ];
@@ -59,8 +66,10 @@ interface AuditEntry {
 }
 
 export default function AdminPage() {
-  const { session } = useAuth();
+  const { session, user } = useAuth();
   const [tab, setTab] = useState('users');
+  const [isAuthorized, setIsAuthorized] = useState<boolean | null>(null);
+  const [callerIsSuperAdmin, setCallerIsSuperAdmin] = useState(false);
 
   // Users state
   const [users, setUsers] = useState<UserRow[]>([]);
@@ -132,7 +141,26 @@ export default function AdminPage() {
     setLoadingAudit(false);
   }
 
-  useEffect(() => { fetchUsers(); fetchPermissions(); fetchAudit(); }, []);
+  useEffect(() => {
+    if (!user) return;
+    supabase.from('user_roles').select('role').eq('user_id', user.id)
+      .in('role', ['gerencia', 'super_admin'])
+      .then(({ data }) => {
+        const roles = (data || []).map(r => r.role);
+        setIsAuthorized(roles.length > 0);
+        setCallerIsSuperAdmin(roles.includes('super_admin'));
+      });
+  }, [user]);
+
+  useEffect(() => { 
+    if (isAuthorized) { fetchUsers(); fetchPermissions(); fetchAudit(); }
+  }, [isAuthorized]);
+
+  // Roles available for assignment - super_admin can assign all, gerencia only non-admin
+  const ROLES = callerIsSuperAdmin ? ALL_ROLES : ASSIGNABLE_ROLES;
+
+  if (isAuthorized === false) return <Navigate to="/dashboard" replace />;
+  if (isAuthorized === null) return <div className="flex items-center justify-center min-h-[50vh]"><p>Verificando permisos...</p></div>;
 
   async function handleCreateUser() {
     if (!newEmail || !newPassword || !newFirstName || !newLastName) { toast.error('Todos los campos son obligatorios'); return; }

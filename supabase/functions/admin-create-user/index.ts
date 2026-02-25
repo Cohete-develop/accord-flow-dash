@@ -54,6 +54,27 @@ Deno.serve(async (req) => {
       });
     }
 
+    const callerRoles = (roleData || []).map((r: any) => r.role);
+    const isSuperAdmin = callerRoles.includes("super_admin");
+
+    // Gerencia can only assign non-admin roles
+    const restrictedRoles = ["gerencia", "super_admin"];
+    if (!isSuperAdmin && restrictedRoles.includes(role)) {
+      return new Response(JSON.stringify({ error: "No tienes permisos para asignar este rol" }), {
+        status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Gerencia must create users in their own company
+    if (!isSuperAdmin) {
+      const { data: callerProfile } = await adminClient.from("profiles").select("company_id").eq("user_id", caller.id).maybeSingle();
+      if (!callerProfile?.company_id || company_id !== callerProfile.company_id) {
+        return new Response(JSON.stringify({ error: "Solo puedes crear usuarios en tu propia empresa" }), {
+          status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    }
+
     // Create user via admin API
     const { data: newUser, error: createError } = await adminClient.auth.admin.createUser({
       email,

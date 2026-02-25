@@ -52,6 +52,28 @@ Deno.serve(async (req) => {
       });
     }
 
+    const callerRoles = (roleData || []).map((r: any) => r.role);
+    const isSuperAdmin = callerRoles.includes("super_admin");
+
+    // Gerencia cannot assign gerencia or super_admin roles
+    const restrictedRoles = ["gerencia", "super_admin"];
+    if (role && !isSuperAdmin && restrictedRoles.includes(role)) {
+      return new Response(JSON.stringify({ error: "No tienes permisos para asignar este rol" }), {
+        status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Gerencia can only edit users in their own company
+    if (!isSuperAdmin) {
+      const { data: callerProfile } = await adminClient.from("profiles").select("company_id").eq("user_id", caller.id).maybeSingle();
+      const { data: targetProfile } = await adminClient.from("profiles").select("company_id").eq("user_id", user_id).maybeSingle();
+      if (!callerProfile?.company_id || callerProfile.company_id !== targetProfile?.company_id) {
+        return new Response(JSON.stringify({ error: "Solo puedes editar usuarios de tu propia empresa" }), {
+          status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    }
+
     // Update auth user
     const updatePayload: Record<string, any> = {};
     if (email) updatePayload.email = email;
