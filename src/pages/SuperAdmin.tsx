@@ -12,6 +12,7 @@ import { Building2, Users, Plus, Pencil, Trash2, UserPlus, Eye, ScrollText } fro
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
+import { Navigate } from 'react-router-dom';
 
 interface Company {
   id: string;
@@ -48,8 +49,9 @@ const ROLES = [
 ];
 
 export default function SuperAdminPage() {
-  const { session } = useAuth();
+  const { session, user } = useAuth();
   const [tab, setTab] = useState('companies');
+  const [isSuperAdmin, setIsSuperAdmin] = useState<boolean | null>(null);
 
   // Companies
   const [companies, setCompanies] = useState<Company[]>([]);
@@ -81,6 +83,12 @@ export default function SuperAdminPage() {
   // Audit
   const [auditLog, setAuditLog] = useState<AuditEntry[]>([]);
   const [loadingAudit, setLoadingAudit] = useState(true);
+
+  useEffect(() => {
+    if (!user) return;
+    supabase.from('user_roles').select('role').eq('user_id', user.id).eq('role', 'super_admin')
+      .then(({ data }) => setIsSuperAdmin((data || []).length > 0));
+  }, [user]);
 
   const fetchCompanies = useCallback(async () => {
     setLoadingCompanies(true);
@@ -129,7 +137,12 @@ export default function SuperAdminPage() {
     setLoadingAudit(false);
   }, []);
 
-  useEffect(() => { fetchCompanies(); fetchAllUsers(); fetchAudit(); }, [fetchCompanies, fetchAllUsers, fetchAudit]);
+  useEffect(() => { 
+    if (isSuperAdmin) { fetchCompanies(); fetchAllUsers(); fetchAudit(); }
+  }, [isSuperAdmin, fetchCompanies, fetchAllUsers, fetchAudit]);
+
+  if (isSuperAdmin === false) return <Navigate to="/dashboard" replace />;
+  if (isSuperAdmin === null) return <div className="flex items-center justify-center min-h-[50vh]"><p>Verificando permisos...</p></div>;
 
   async function fetchCompanyUsers(company: Company) {
     setSelectedCompany(company);
