@@ -19,13 +19,19 @@ export default function ProductFamilyReport({ acuerdos }: Props) {
   const chartData = useMemo(() => {
     const byFamilia: Record<string, { valor: number; count: number }> = {};
     acuerdos.forEach(a => {
-      const fams = a.familiaProducto || [];
-      const share = fams.length > 0 ? a.valorTotal / fams.length : 0;
-      fams.forEach(f => {
-        if (!byFamilia[f]) byFamilia[f] = { valor: 0, count: 0 };
-        byFamilia[f].valor += share;
-        byFamilia[f].count += 1;
-      });
+      const fams = (a.familiaProducto || []).filter(f => f && f.trim() !== '');
+      if (fams.length === 0) {
+        if (!byFamilia['Sin asignar']) byFamilia['Sin asignar'] = { valor: 0, count: 0 };
+        byFamilia['Sin asignar'].valor += a.valorTotal;
+        byFamilia['Sin asignar'].count += 1;
+      } else {
+        const share = a.valorTotal / fams.length;
+        fams.forEach(f => {
+          if (!byFamilia[f]) byFamilia[f] = { valor: 0, count: 0 };
+          byFamilia[f].valor += share;
+          byFamilia[f].count += 1;
+        });
+      }
     });
     return Object.entries(byFamilia)
       .map(([name, d]) => ({ name, valor: Math.round(d.valor), count: d.count }))
