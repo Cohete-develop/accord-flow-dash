@@ -7,9 +7,9 @@ import { Pin, PinOff, Filter, X } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Cell } from "recharts";
 
 const COLORS = [
-  "hsl(250, 60%, 52%)", "hsl(152, 60%, 42%)", "hsl(38, 92%, 50%)",
-  "hsl(0, 72%, 51%)", "hsl(220, 60%, 50%)", "hsl(280, 60%, 50%)",
-  "hsl(340, 60%, 50%)", "hsl(180, 60%, 40%)",
+  "hsl(264, 67%, 40%)", "hsl(250, 100%, 50%)", "hsl(270, 55%, 55%)",
+  "hsl(240, 80%, 60%)", "hsl(280, 50%, 48%)", "hsl(255, 70%, 68%)",
+  "hsl(235, 60%, 45%)", "hsl(290, 45%, 55%)",
 ];
 
 const fmtCurrency = (v: number) => {

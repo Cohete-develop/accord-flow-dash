@@ -7,8 +7,9 @@ import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveCo
 import ChartDetailDialog from "@/components/ChartDetailDialog";
 
 const COLORS = [
-  "hsl(250, 60%, 52%)", "hsl(152, 60%, 42%)", "hsl(38, 92%, 50%)",
-  "hsl(0, 72%, 51%)", "hsl(220, 60%, 50%)", "hsl(280, 60%, 50%)",
+  "hsl(264, 67%, 40%)", "hsl(250, 100%, 50%)", "hsl(270, 55%, 55%)",
+  "hsl(240, 80%, 60%)", "hsl(280, 50%, 48%)", "hsl(255, 70%, 68%)",
+  "hsl(235, 60%, 45%)", "hsl(290, 45%, 55%)",
 ];
 
 const fmtCurrency = (v: number) => {
@@ -285,7 +286,7 @@ export default function DashboardPage() {
                   <XAxis dataKey="month" fontSize={11} />
                   <YAxis fontSize={11} tickFormatter={fmtCurrency} />
                   <Tooltip formatter={(v: number) => fmtTooltip(v)} />
-                  <Area type="monotone" dataKey="monto" stroke="hsl(250, 60%, 52%)" fill="hsl(250, 60%, 52%)" fillOpacity={0.2} name="Monto" className="cursor-pointer" />
+                  <Area type="monotone" dataKey="monto" stroke="hsl(264, 67%, 40%)" fill="hsl(264, 67%, 40%)" fillOpacity={0.2} name="Monto" className="cursor-pointer" />
                 </AreaChart>
               </ResponsiveContainer>
             )}
@@ -303,7 +304,7 @@ export default function DashboardPage() {
                   <XAxis dataKey="month" fontSize={11} />
                   <YAxis fontSize={11} tickFormatter={fmtCurrency} />
                   <Tooltip formatter={(v: number) => fmtTooltip(v)} />
-                  <Area type="monotone" dataKey="valor" stroke="hsl(152, 60%, 42%)" fill="hsl(152, 60%, 42%)" fillOpacity={0.2} name="Valor" className="cursor-pointer" />
+                  <Area type="monotone" dataKey="valor" stroke="hsl(250, 100%, 50%)" fill="hsl(250, 100%, 50%)" fillOpacity={0.2} name="Valor" className="cursor-pointer" />
                 </AreaChart>
               </ResponsiveContainer>
             )}
