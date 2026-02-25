@@ -90,7 +90,7 @@ export default function DashboardPage() {
 
   const pagosByMonth: Record<string, number> = {};
   pagos.forEach((p) => {
-    const key = getMonthKey(p.fechaVencimiento);
+    const key = getMonthKey(p.fechaPago);
     if (key) pagosByMonth[key] = (pagosByMonth[key] || 0) + p.monto;
   });
   const forecastData = Object.entries(pagosByMonth)
@@ -152,7 +152,7 @@ export default function DashboardPage() {
   const handleAreaClickPagos = (data: any) => {
     if (!data?.activePayload?.[0]?.payload?.monthKey) return;
     const mk = data.activePayload[0].payload.monthKey;
-    showDetail(`Pagos — ${data.activePayload[0].payload.month}`, "pagos", { pagos: pagos.filter((p) => getMonthKey(p.fechaVencimiento) === mk) });
+    showDetail(`Pagos — ${data.activePayload[0].payload.month}`, "pagos", { pagos: pagos.filter((p) => getMonthKey(p.fechaPago) === mk) });
   };
   const handleAreaClickAcuerdos = (data: any) => {
     if (!data?.activePayload?.[0]?.payload?.monthKey) return;

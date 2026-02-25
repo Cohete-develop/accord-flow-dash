@@ -58,7 +58,7 @@ export default function ChartDetailDialog({ open, onOpenChange, title, type, acu
                 <TableHead>Concepto</TableHead>
                 <TableHead>Monto</TableHead>
                 <TableHead>Estado</TableHead>
-                <TableHead>Vencimiento</TableHead>
+                <TableHead>Fecha Pago</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -70,7 +70,7 @@ export default function ChartDetailDialog({ open, onOpenChange, title, type, acu
                   <TableCell>{p.concepto}</TableCell>
                   <TableCell>${p.monto.toLocaleString()}</TableCell>
                   <TableCell><Badge variant="secondary">{p.estado}</Badge></TableCell>
-                  <TableCell>{p.fechaVencimiento}</TableCell>
+                  <TableCell>{p.fechaPago}</TableCell>
                 </TableRow>
               ))}
             </TableBody>

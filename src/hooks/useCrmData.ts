@@ -51,7 +51,7 @@ function dbToPago(row: any): Pago {
   return {
     id: row.id, acuerdoId: row.acuerdo_id || "", influencer: row.influencer,
     concepto: row.concepto, monto: Number(row.monto), moneda: row.moneda,
-    fechaPago: row.fecha_pago || "", fechaVencimiento: row.fecha_vencimiento || "",
+    fechaPago: row.fecha_pago || "",
     estado: row.estado, metodoPago: row.metodo_pago, comprobante: row.comprobante,
     notas: row.notas, createdAt: row.created_at,
   };
@@ -62,7 +62,7 @@ function pagoToDb(p: Omit<Pago, "id" | "createdAt">, userId: string, companyId: 
     user_id: userId, company_id: companyId,
     acuerdo_id: p.acuerdoId || null, influencer: p.influencer, concepto: p.concepto,
     monto: p.monto, moneda: p.moneda, fecha_pago: p.fechaPago || null,
-    fecha_vencimiento: p.fechaVencimiento || null, estado: p.estado,
+    estado: p.estado,
     metodo_pago: p.metodoPago, comprobante: p.comprobante, notas: p.notas,
   };
 }
