@@ -289,7 +289,7 @@ export default function KPIsPage() {
         <Button variant="gradient" onClick={() => handleOpen()} disabled={acuerdos.length === 0}><Plus className="h-4 w-4 mr-2" /> Nuevo KPI</Button>
       </div>
 
-      <ViewToolbar view={view} onViewChange={setView} acuerdos={acuerdos} selectedAcuerdo={filterAcuerdo} onAcuerdoChange={setFilterAcuerdo} dateRange={dateRange} onDateRangeChange={setDateRange} onExport={(fmt) => exportToFile(filtered, visibleColumns.map(c => ({ key: c.key, label: c.label })), fmt, "kpis")} columns={orderedColumns.map(c => ({ key: c.key, label: c.label }))} isColumnVisible={isVisible} onToggleColumn={toggleColumn} onShowAllColumns={showAll} />
+      <ViewToolbar view={view} onViewChange={setView} acuerdos={acuerdos} selectedAcuerdo={filterAcuerdo} onAcuerdoChange={setFilterAcuerdo} dateRange={dateRange} onDateRangeChange={setDateRange} onExport={(fmt) => exportToFile(filtered, visibleColumns.map(c => ({ key: c.key, label: c.label })), fmt, "kpis")} columns={orderedColumns.map(c => ({ key: c.key, label: c.label }))} isColumnVisible={isVisible} onToggleColumn={toggleColumn} onShowAllColumns={showAll} showForecast={false} />
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Registros</CardTitle></CardHeader><CardContent><div className="text-2xl font-bold">{realKpis.length}</div></CardContent></Card>
@@ -320,9 +320,6 @@ export default function KPIsPage() {
         <KanbanBoard items={filtered} columns={kanbanColumns} getId={(k) => k.id} getStatus={(k) => k.estado} getValue={(k) => k.alcance} renderCard={renderCard} onStatusChange={handleStatusChange} valuePrefix="" />
       )}
 
-      {view === "forecast" && (
-        <ForecastBoard items={filtered} getDate={(k) => periodoToDate(k.periodo)} getValue={(k) => k.alcance} renderCard={renderCard} getId={(k) => k.id} valuePrefix="" emptyLabel="No hay KPIs con periodo asignado." />
-      )}
 
       {view === "list" && (
         <Card>
