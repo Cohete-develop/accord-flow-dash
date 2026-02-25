@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
 import { Building2, Users, Plus, Pencil, Trash2, UserPlus, Eye, ScrollText } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
@@ -83,6 +84,11 @@ export default function SuperAdminPage() {
   // Audit
   const [auditLog, setAuditLog] = useState<AuditEntry[]>([]);
   const [loadingAudit, setLoadingAudit] = useState(true);
+
+  // Delete company
+  const [showDeleteCompany, setShowDeleteCompany] = useState(false);
+  const [deleteCompanyTarget, setDeleteCompanyTarget] = useState<Company | null>(null);
+  const [deletingCompany, setDeletingCompany] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -220,8 +226,33 @@ export default function SuperAdminPage() {
   const actionLabels: Record<string, string> = {
     create_user: 'Creó usuario', edit_user: 'Editó usuario', deactivate_user: 'Desactivó usuario',
     activate_user: 'Activó usuario', delete_user: 'Eliminó usuario', export_data: 'Exportó datos',
-    bulk_delete: 'Eliminación masiva', create_company: 'Creó empresa',
+    bulk_delete: 'Eliminación masiva', create_company: 'Creó empresa', delete_company: 'Eliminó empresa',
   };
+
+  function confirmDeleteCompany(company: Company) {
+    setDeleteCompanyTarget(company);
+    setShowDeleteCompany(true);
+  }
+
+  async function handleDeleteCompany() {
+    if (!deleteCompanyTarget) return;
+    setDeletingCompany(true);
+    const { data, error } = await supabase.functions.invoke('admin-delete-company', {
+      body: { company_id: deleteCompanyTarget.id },
+    });
+    if (error || data?.error) {
+      toast.error(data?.error || error?.message || 'Error al eliminar empresa');
+      setDeletingCompany(false);
+      return;
+    }
+    toast.success(`Empresa "${deleteCompanyTarget.name}" eliminada con ${data.deleted_users} usuario(s)`);
+    setShowDeleteCompany(false);
+    setDeleteCompanyTarget(null);
+    setDeletingCompany(false);
+    fetchCompanies();
+    fetchAllUsers();
+    fetchAudit();
+  }
 
   return (
     <div className="space-y-6">
@@ -271,7 +302,7 @@ export default function SuperAdminPage() {
                   <p className="text-xs text-muted-foreground">
                     Creada: {new Date(company.created_at).toLocaleDateString('es-CO')}
                   </p>
-                  <div className="flex gap-2 pt-2">
+                  <div className="flex gap-2 pt-2 flex-wrap">
                     <Button variant="outline" size="sm" className="gap-1.5 flex-1" onClick={() => fetchCompanyUsers(company)}>
                       <Eye className="w-3.5 h-3.5" /> Ver Usuarios
                     </Button>
@@ -280,6 +311,9 @@ export default function SuperAdminPage() {
                     </Button>
                     <Button variant="outline" size="sm" onClick={() => toggleCompanyActive(company)}>
                       {company.is_active ? 'Desactivar' : 'Activar'}
+                    </Button>
+                    <Button variant="destructive" size="sm" className="gap-1.5" onClick={() => confirmDeleteCompany(company)}>
+                      <Trash2 className="w-3.5 h-3.5" /> Eliminar
                     </Button>
                   </div>
                 </CardContent>
@@ -456,6 +490,34 @@ export default function SuperAdminPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* DELETE COMPANY CONFIRMATION */}
+      <AlertDialog open={showDeleteCompany} onOpenChange={setShowDeleteCompany}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Eliminar empresa "{deleteCompanyTarget?.name}"?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta acción es <strong>irreversible</strong>. Se eliminarán permanentemente:
+              <ul className="list-disc ml-5 mt-2 space-y-1">
+                <li>Todos los usuarios de la empresa</li>
+                <li>Todos los acuerdos, pagos, entregables y KPIs</li>
+                <li>Todo el historial de auditoría relacionado</li>
+                <li>La empresa misma</li>
+              </ul>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deletingCompany}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteCompany}
+              disabled={deletingCompany}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deletingCompany ? 'Eliminando...' : 'Sí, eliminar todo'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
