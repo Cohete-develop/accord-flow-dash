@@ -180,7 +180,7 @@ export default function AcuerdosPage() {
           <h1 className="text-2xl font-bold tracking-tight">Acuerdos</h1>
           <p className="text-muted-foreground text-sm">Gestión de acuerdos con influencers</p>
         </div>
-        <Button onClick={() => handleOpen()}><Plus className="h-4 w-4 mr-2" /> Nuevo Acuerdo</Button>
+        <Button variant="gradient" onClick={() => handleOpen()}><Plus className="h-4 w-4 mr-2" /> Nuevo Acuerdo</Button>
       </div>
 
       <ViewToolbar view={view} onViewChange={setView} acuerdos={acuerdos} selectedAcuerdo={filterAcuerdo} onAcuerdoChange={setFilterAcuerdo} />
@@ -302,7 +302,7 @@ export default function AcuerdosPage() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
-            <Button onClick={handleSave}>{editing ? "Guardar" : "Crear"}</Button>
+            <Button variant="gradient" onClick={handleSave}>{editing ? "Guardar" : "Crear"}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

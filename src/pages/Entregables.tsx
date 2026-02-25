@@ -88,7 +88,7 @@ export default function EntregablesPage() {
           <h1 className="text-2xl font-bold tracking-tight">Entregables Detalles</h1>
           <p className="text-muted-foreground text-sm">Seguimiento de contenido por influencer</p>
         </div>
-        <Button onClick={() => handleOpen()} disabled={acuerdos.length === 0}><Plus className="h-4 w-4 mr-2" /> Nuevo Entregable</Button>
+        <Button variant="gradient" onClick={() => handleOpen()} disabled={acuerdos.length === 0}><Plus className="h-4 w-4 mr-2" /> Nuevo Entregable</Button>
       </div>
 
       <ViewToolbar view={view} onViewChange={setView} acuerdos={acuerdos} selectedAcuerdo={filterAcuerdo} onAcuerdoChange={setFilterAcuerdo} />
@@ -174,7 +174,7 @@ export default function EntregablesPage() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
-            <Button onClick={handleSave}>{editing ? "Guardar" : "Crear"}</Button>
+            <Button variant="gradient" onClick={handleSave}>{editing ? "Guardar" : "Crear"}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
