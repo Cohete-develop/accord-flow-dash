@@ -17,6 +17,7 @@ import ForecastBoard from "@/components/ForecastBoard";
 import SortableTableHead, { SortDirection, useSort } from "@/components/SortableTableHead";
 import { useColumnOrder, ColumnDef } from "@/hooks/useColumnOrder";
 import { useResizableColumns } from "@/hooks/useResizableColumns";
+import { exportToFile, ExportFormat } from "@/lib/export-utils";
 
 const estadoColors: Record<string, string> = {
   Pendiente: "bg-amber-100 text-amber-800",
@@ -136,7 +137,7 @@ export default function EntregablesPage() {
         <Button variant="gradient" onClick={() => handleOpen()} disabled={acuerdos.length === 0}><Plus className="h-4 w-4 mr-2" /> Nuevo Entregable</Button>
       </div>
 
-      <ViewToolbar view={view} onViewChange={setView} acuerdos={acuerdos} selectedAcuerdo={filterAcuerdo} onAcuerdoChange={setFilterAcuerdo} dateRange={dateRange} onDateRangeChange={setDateRange} />
+      <ViewToolbar view={view} onViewChange={setView} acuerdos={acuerdos} selectedAcuerdo={filterAcuerdo} onAcuerdoChange={setFilterAcuerdo} dateRange={dateRange} onDateRangeChange={setDateRange} onExport={(fmt) => exportToFile(filtered, orderedColumns.map(c => ({ key: c.key, label: c.label })), fmt, "entregables")} />
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Total</CardTitle></CardHeader><CardContent><div className="text-2xl font-bold">{filtered.length}</div></CardContent></Card>

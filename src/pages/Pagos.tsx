@@ -17,6 +17,7 @@ import ForecastBoard from "@/components/ForecastBoard";
 import SortableTableHead, { SortDirection, useSort } from "@/components/SortableTableHead";
 import { useColumnOrder, ColumnDef } from "@/hooks/useColumnOrder";
 import { useResizableColumns } from "@/hooks/useResizableColumns";
+import { exportToFile, ExportFormat } from "@/lib/export-utils";
 
 const estadoColors: Record<string, string> = {
   Pendiente: "bg-amber-100 text-amber-800",
@@ -150,7 +151,7 @@ export default function PagosPage() {
         <Button variant="gradient" onClick={() => handleOpen()} disabled={acuerdos.length === 0}><Plus className="h-4 w-4 mr-2" /> Nuevo Pago</Button>
       </div>
 
-      <ViewToolbar view={view} onViewChange={setView} acuerdos={acuerdos} selectedAcuerdo={filterAcuerdo} onAcuerdoChange={setFilterAcuerdo} dateRange={dateRange} onDateRangeChange={setDateRange} />
+      <ViewToolbar view={view} onViewChange={setView} acuerdos={acuerdos} selectedAcuerdo={filterAcuerdo} onAcuerdoChange={setFilterAcuerdo} dateRange={dateRange} onDateRangeChange={setDateRange} onExport={(fmt) => exportToFile(filtered, orderedColumns.map(c => ({ key: c.key, label: c.label })), fmt, "pagos")} />
 
       {acuerdos.length === 0 && (
         <Card><CardContent className="py-8 text-center text-muted-foreground">Primero debes crear un acuerdo en el módulo de Acuerdos antes de registrar pagos.</CardContent></Card>
