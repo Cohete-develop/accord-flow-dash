@@ -12,7 +12,7 @@ import { Input } from '@/components/ui/input';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
-import * as XLSX from 'xlsx';
+import ExcelJS from 'exceljs';
 
 const DATA_MODULES = [
   { value: 'acuerdos', label: 'Acuerdos', table: 'acuerdos' as const },
@@ -118,10 +118,20 @@ export default function AdminDataManagement() {
     const toExport = selectedIds.size > 0 ? filteredRecords.filter(r => selectedIds.has(r.id)) : filteredRecords;
     if (toExport.length === 0) { toast.error('No hay registros para exportar'); return; }
 
-    const ws = XLSX.utils.json_to_sheet(toExport);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, moduleConfig.label);
-    XLSX.writeFile(wb, `${moduleConfig.label}_${new Date().toISOString().slice(0, 10)}.xlsx`);
+    const wb = new ExcelJS.Workbook();
+    const ws = wb.addWorksheet(moduleConfig.label);
+    if (toExport.length > 0) {
+      ws.columns = Object.keys(toExport[0]).map(key => ({ header: key, key }));
+      toExport.forEach(row => ws.addRow(row));
+    }
+    const buffer = await wb.xlsx.writeBuffer();
+    const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${moduleConfig.label}_${new Date().toISOString().slice(0, 10)}.xlsx`;
+    a.click();
+    URL.revokeObjectURL(url);
     toast.success(`${toExport.length} registros exportados`);
 
     await supabase.from('audit_log').insert({
