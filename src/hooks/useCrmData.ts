@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Acuerdo, Pago, Entregable, KPI } from "@/types/crm";
 import { useState, useEffect } from "react";
+import { toast } from "sonner";
 
 // Hook to get user's company_id
 export function useCompanyId() {
@@ -136,6 +137,7 @@ export function useAcuerdos() {
       }
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["acuerdos"] }),
+    onError: (error: any) => toast.error("Error al guardar acuerdo: " + (error?.message || "Error desconocido")),
   });
 
   const deleteMutation = useMutation({
@@ -144,6 +146,7 @@ export function useAcuerdos() {
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["acuerdos"] }),
+    onError: (error: any) => toast.error("Error al eliminar acuerdo: " + (error?.message || "Error desconocido")),
   });
 
   return { acuerdos: query.data || [], isLoading: query.isLoading, save: saveMutation.mutateAsync, remove: deleteMutation.mutateAsync };
@@ -177,6 +180,7 @@ export function usePagos() {
       }
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["pagos"] }),
+    onError: (error: any) => toast.error("Error al guardar pago: " + (error?.message || "Error desconocido")),
   });
 
   const deleteMutation = useMutation({
@@ -185,6 +189,7 @@ export function usePagos() {
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["pagos"] }),
+    onError: (error: any) => toast.error("Error al eliminar pago: " + (error?.message || "Error desconocido")),
   });
 
   return { pagos: query.data || [], isLoading: query.isLoading, save: saveMutation.mutateAsync, remove: deleteMutation.mutateAsync };
@@ -218,6 +223,7 @@ export function useEntregables() {
       }
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["entregables"] }),
+    onError: (error: any) => toast.error("Error al guardar entregable: " + (error?.message || "Error desconocido")),
   });
 
   const deleteMutation = useMutation({
@@ -226,6 +232,7 @@ export function useEntregables() {
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["entregables"] }),
+    onError: (error: any) => toast.error("Error al eliminar entregable: " + (error?.message || "Error desconocido")),
   });
 
   return { entregables: query.data || [], isLoading: query.isLoading, save: saveMutation.mutateAsync, remove: deleteMutation.mutateAsync };
@@ -259,6 +266,7 @@ export function useKPIs() {
       }
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["kpis"] }),
+    onError: (error: any) => toast.error("Error al guardar KPI: " + (error?.message || "Error desconocido")),
   });
 
   const deleteMutation = useMutation({
@@ -267,6 +275,7 @@ export function useKPIs() {
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["kpis"] }),
+    onError: (error: any) => toast.error("Error al eliminar KPI: " + (error?.message || "Error desconocido")),
   });
 
   return { kpis: query.data || [], isLoading: query.isLoading, save: saveMutation.mutateAsync, remove: deleteMutation.mutateAsync };
