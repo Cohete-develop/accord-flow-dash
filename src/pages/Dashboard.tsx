@@ -252,11 +252,11 @@ export default function DashboardPage() {
 
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         {[
-          <Card key="a"><CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Acuerdos</CardTitle></CardHeader><CardContent><div className="text-2xl font-bold">{acuerdos.length}</div></CardContent></Card>,
-          <Card key="b"><CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Valor Total Acuerdos</CardTitle></CardHeader><CardContent><div className="text-2xl font-bold">${totalValorAcuerdos.toLocaleString()}</div></CardContent></Card>,
-          <Card key="c"><CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Total Pagado</CardTitle></CardHeader><CardContent><div className="text-2xl font-bold text-emerald-600">${totalPagado.toLocaleString()}</div></CardContent></Card>,
-          <Card key="d"><CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Pagos Pendientes</CardTitle></CardHeader><CardContent><div className="text-2xl font-bold text-amber-600">${totalPendiente.toLocaleString()}</div></CardContent></Card>,
-          <Card key="e"><CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Engagement Prom.</CardTitle></CardHeader><CardContent><div className="text-2xl font-bold">{avgEngagement}%</div></CardContent></Card>,
+          <Card key="a" className="overflow-hidden"><CardHeader className="pb-2"><CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground truncate">Acuerdos</CardTitle></CardHeader><CardContent><div className="text-lg sm:text-2xl font-bold truncate">{acuerdos.length}</div></CardContent></Card>,
+          <Card key="b" className="overflow-hidden"><CardHeader className="pb-2"><CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground truncate">Valor Total Acuerdos</CardTitle></CardHeader><CardContent><div className="text-lg sm:text-2xl font-bold truncate">${totalValorAcuerdos.toLocaleString()}</div></CardContent></Card>,
+          <Card key="c" className="overflow-hidden"><CardHeader className="pb-2"><CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground truncate">Total Pagado</CardTitle></CardHeader><CardContent><div className="text-lg sm:text-2xl font-bold text-emerald-600 truncate">${totalPagado.toLocaleString()}</div></CardContent></Card>,
+          <Card key="d" className="overflow-hidden"><CardHeader className="pb-2"><CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground truncate">Pagos Pendientes</CardTitle></CardHeader><CardContent><div className="text-lg sm:text-2xl font-bold text-amber-600 truncate">${totalPendiente.toLocaleString()}</div></CardContent></Card>,
+          <Card key="e" className="overflow-hidden"><CardHeader className="pb-2"><CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground truncate">Engagement Prom.</CardTitle></CardHeader><CardContent><div className="text-lg sm:text-2xl font-bold truncate">{avgEngagement}%</div></CardContent></Card>,
         ].map((card, i) => (
           <div key={i} className="animate-fade-in" style={{ animationDelay: `${i * 80}ms`, animationFillMode: 'backwards' }}>{card}</div>
         ))}
@@ -408,12 +408,12 @@ export default function DashboardPage() {
         <ProductFamilyReport acuerdos={acuerdos} />
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4 animate-fade-in" style={{ animationDelay: '800ms', animationFillMode: 'backwards' }}>
-        <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Alcance Total</CardTitle></CardHeader><CardContent><div className="text-2xl font-bold">{totalAlcance.toLocaleString()}</div></CardContent></Card>
-        <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Clicks Totales</CardTitle></CardHeader><CardContent><div className="text-2xl font-bold">{totalClicks.toLocaleString()}</div></CardContent></Card>
-        <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Entregables</CardTitle></CardHeader><CardContent><div className="text-2xl font-bold">{entregables.length}</div></CardContent></Card>
-        <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">CPR Promedio</CardTitle></CardHeader><CardContent><div className="text-2xl font-bold">{avgCPR > 0 ? fmtCurrency(avgCPR) : "—"}</div></CardContent></Card>
-        <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">CPC Promedio</CardTitle></CardHeader><CardContent><div className="text-2xl font-bold">{avgCPC > 0 ? fmtCurrency(avgCPC) : "—"}</div></CardContent></Card>
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4 animate-fade-in" style={{ animationDelay: '800ms', animationFillMode: 'backwards' }}>
+        <Card className="overflow-hidden"><CardHeader className="pb-2"><CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground truncate">Alcance Total</CardTitle></CardHeader><CardContent><div className="text-lg sm:text-2xl font-bold truncate">{totalAlcance.toLocaleString()}</div></CardContent></Card>
+        <Card className="overflow-hidden"><CardHeader className="pb-2"><CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground truncate">Clicks Totales</CardTitle></CardHeader><CardContent><div className="text-lg sm:text-2xl font-bold truncate">{totalClicks.toLocaleString()}</div></CardContent></Card>
+        <Card className="overflow-hidden"><CardHeader className="pb-2"><CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground truncate">Entregables</CardTitle></CardHeader><CardContent><div className="text-lg sm:text-2xl font-bold truncate">{entregables.length}</div></CardContent></Card>
+        <Card className="overflow-hidden"><CardHeader className="pb-2"><CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground truncate">CPR Promedio</CardTitle></CardHeader><CardContent><div className="text-lg sm:text-2xl font-bold truncate">{avgCPR > 0 ? fmtCurrency(avgCPR) : "—"}</div></CardContent></Card>
+        <Card className="overflow-hidden"><CardHeader className="pb-2"><CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground truncate">CPC Promedio</CardTitle></CardHeader><CardContent><div className="text-lg sm:text-2xl font-bold truncate">{avgCPC > 0 ? fmtCurrency(avgCPC) : "—"}</div></CardContent></Card>
       </div>
 
       {/* KPI CPR/CPC Evolution Chart */}
