@@ -17,18 +17,25 @@ serve(async (req) => {
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
     const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
 
-    // Get user auth token from request
-    const authHeader = req.headers.get("Authorization") || "";
-    const token = authHeader.replace("Bearer ", "");
+    // Get and validate bearer token from request
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+      return new Response(JSON.stringify({ error: "No autorizado" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
-    // Create authenticated supabase client
+    const token = authHeader.slice(7).trim();
+
+    // Create authenticated supabase client with caller context
     const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-      global: { headers: { Authorization: `Bearer ${token}` } },
+      global: { headers: { Authorization: authHeader } },
     });
 
-    // Verify user is authenticated
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
-    if (authError || !user) {
+    // Validate JWT claims (compatible with signing keys in Lovable Cloud)
+    const { data: claimsData, error: authError } = await supabase.auth.getClaims(token);
+    if (authError || !claimsData?.claims?.sub) {
       return new Response(JSON.stringify({ error: "No autorizado" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
