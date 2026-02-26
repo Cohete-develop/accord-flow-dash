@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, AreaChart, Area, LineChart, Line, Legend } from "recharts";
 import ChartDetailDialog from "@/components/ChartDetailDialog";
 import { CHART_COLORS as COLORS } from "@/lib/chart-colors";
+import { SocialIcon } from "@/lib/social-icons";
 
 const fmtCurrency = (v: number) => {
   if (v >= 1_000_000) return `$${Math.round(v / 1_000_000)}M`;
@@ -324,9 +325,22 @@ export default function DashboardPage() {
                 <BarChart data={moneyByRedData} onClick={handleBarClickRed}>
                   
                   <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="name" fontSize={12} />
+                  <XAxis
+                    dataKey="name"
+                    fontSize={12}
+                    tick={({ x, y, payload }: any) => (
+                      <g transform={`translate(${x},${y + 8})`}>
+                        <foreignObject x={-12} y={-6} width={24} height={24}>
+                          <SocialIcon name={payload.value} size={22} />
+                        </foreignObject>
+                      </g>
+                    )}
+                  />
                   <YAxis fontSize={12} tickFormatter={fmtCurrency} />
-                  <Tooltip formatter={(v: number) => fmtTooltip(v)} />
+                  <Tooltip
+                    formatter={(v: number) => fmtTooltip(v)}
+                    labelFormatter={(label: string) => label}
+                  />
                   <Bar dataKey="value" name="Inversión" radius={[4, 4, 0, 0]} className="cursor-pointer">
                     {moneyByRedData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
                   </Bar>
