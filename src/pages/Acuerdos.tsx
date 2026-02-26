@@ -254,9 +254,9 @@ export default function AcuerdosPage() {
       )}
 
       {view === "list" && (
-        <Card>
-          <CardContent className="p-0">
-            <Table className="table-fixed">
+        <Card className="overflow-hidden">
+          <CardContent className="p-0 overflow-x-auto">
+            <Table className="w-full">
               <TableHeader>
                 <TableRow>
                   {visibleColumns.map((col) => (
@@ -286,7 +286,7 @@ export default function AcuerdosPage() {
                 ) : filtered.map((a) => (
                   <TableRow key={a.id}>
                     {visibleColumns.map((col) => (
-                      <TableCell key={col.key} className="truncate overflow-hidden" style={{ width: `${columnWidths[col.key]}px`, minWidth: `${columnWidths[col.key]}px`, maxWidth: `${columnWidths[col.key]}px` }}>{col.render(a)}</TableCell>
+                      <TableCell key={col.key} className="truncate overflow-hidden whitespace-nowrap" style={{ minWidth: `${columnWidths[col.key]}px` }}>{col.render(a)}</TableCell>
                     ))}
                     <TableCell className="text-right">
                       <Button variant="ghost" size="icon" onClick={() => handleOpen(a)}><Pencil className="h-4 w-4" /></Button>
