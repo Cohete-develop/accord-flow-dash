@@ -107,7 +107,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         className="flex-1 overflow-auto bg-cover bg-center bg-no-repeat bg-fixed"
         style={{ backgroundImage: `url(${fondoBg})` }}
       >
-        <div className="p-6 max-w-7xl mx-auto backdrop-blur-sm">{children}</div>
+        <div className="p-6 w-full backdrop-blur-sm">{children}</div>
       </main>
       <AIChatBubble />
     </div>
