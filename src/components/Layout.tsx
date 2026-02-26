@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import companyLogo from "@/assets/company-logo.png";
+import AIChatBubble from "@/components/AIChatBubble";
 import { NavLink } from "@/components/NavLink";
 import { Handshake, CreditCard, Package, BarChart3, LayoutDashboard, LogOut, Settings, Crown } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
@@ -104,6 +105,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       <main className="flex-1 bg-background overflow-auto">
         <div className="p-6 max-w-7xl mx-auto">{children}</div>
       </main>
+      <AIChatBubble />
     </div>
   );
 }
