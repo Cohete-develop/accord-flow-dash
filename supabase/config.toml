@@ -1,16 +1,1 @@
-project_id = "amxbvlezfncikolsqaoo"
-
-[functions.admin-create-user]
-verify_jwt = false
-
-[functions.admin-edit-user]
-verify_jwt = false
-
-[functions.admin-delete-user]
-verify_jwt = false
-
-[functions.admin-delete-company]
-verify_jwt = false
-
-[functions.crm-assistant]
-verify_jwt = false
+project_id = "acysyzpnqjllalbpztxo"
