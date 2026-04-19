@@ -13,6 +13,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Users, Shield, ScrollText, UserPlus, Trash2, Pencil, Database } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { handleEdgeError } from '@/lib/friendly-errors';
 import { useAuth } from '@/hooks/useAuth';
 import { Navigate } from 'react-router-dom';
 import AdminDataManagement from '@/components/admin/AdminDataManagement';
@@ -206,7 +207,7 @@ export default function AdminPage() {
       body: { email: newEmail.trim(), password: newPassword, first_name: newFirstName.trim(), last_name: newLastName.trim(), role: newRole, company_id: profile?.company_id },
     });
 
-    if (error || data?.error) { toast.error(data?.error || error?.message || 'Error al crear usuario'); setCreating(false); return; }
+    if (error || data?.error) { handleEdgeError(data, error); setCreating(false); return; }
     toast.success('Usuario creado exitosamente');
     setShowCreateUser(false);
     setNewEmail(''); setNewPassword(''); setNewFirstName(''); setNewLastName(''); setNewRole('coordinador_mercadeo');
@@ -237,7 +238,7 @@ export default function AdminPage() {
     const { data, error } = await supabase.functions.invoke('admin-edit-user', {
       body: { user_id: editTarget.user_id, email: editEmail.trim(), first_name: editFirstName.trim(), last_name: editLastName.trim(), role: editRole },
     });
-    if (error || data?.error) { toast.error(data?.error || error?.message || 'Error al editar usuario'); setEditing(false); return; }
+    if (error || data?.error) { handleEdgeError(data, error); setEditing(false); return; }
     toast.success('Usuario actualizado');
     setShowEditUser(false); setEditTarget(null); setEditing(false);
     fetchUsers();
@@ -249,7 +250,7 @@ export default function AdminPage() {
     const { data, error } = await supabase.functions.invoke('admin-delete-user', {
       body: { user_id: deleteTarget.user_id, transfer_to_user_id: transferUserId || null },
     });
-    if (error || data?.error) { toast.error(data?.error || error?.message || 'Error al eliminar usuario'); setDeleting(false); return; }
+    if (error || data?.error) { handleEdgeError(data, error); setDeleting(false); return; }
     toast.success('Usuario eliminado');
     setShowDeleteUser(false); setDeleteTarget(null); setDeleting(false);
     fetchUsers();

@@ -12,6 +12,7 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@
 import { Building2, Users, Plus, Pencil, Trash2, UserPlus, Eye, ScrollText } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { handleEdgeError } from '@/lib/friendly-errors';
 import { useAuth } from '@/hooks/useAuth';
 import { Navigate } from 'react-router-dom';
 
@@ -256,7 +257,7 @@ export default function SuperAdminPage() {
       body: { email: newEmail.trim(), password: newPassword, first_name: newFirstName.trim(), last_name: newLastName.trim(), role: newRole, company_id: targetCompany.id },
     });
 
-    if (error || data?.error) { toast.error(data?.error || error?.message || 'Error al crear usuario'); setCreating(false); return; }
+    if (error || data?.error) { handleEdgeError(data, error); setCreating(false); return; }
     toast.success(`Usuario creado para ${targetCompany.name}`);
     setShowCreateUser(false);
     setCreating(false);
@@ -282,11 +283,7 @@ export default function SuperAdminPage() {
     const { data, error } = await supabase.functions.invoke('admin-delete-company', {
       body: { company_id: deleteCompanyTarget.id },
     });
-    if (error || data?.error) {
-      toast.error(data?.error || error?.message || 'Error al eliminar empresa');
-      setDeletingCompany(false);
-      return;
-    }
+    if (error || data?.error) { handleEdgeError(data, error); setDeletingCompany(false); return; }
     toast.success(`Empresa "${deleteCompanyTarget.name}" eliminada con ${data.deleted_users} usuario(s)`);
     setShowDeleteCompany(false);
     setDeleteCompanyTarget(null);
