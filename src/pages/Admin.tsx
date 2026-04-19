@@ -11,12 +11,14 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Users, Shield, ScrollText, UserPlus, Trash2, Pencil, Database } from 'lucide-react';
+import { Send } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { handleEdgeError } from '@/lib/friendly-errors';
 import { useAuth } from '@/hooks/useAuth';
 import { Navigate } from 'react-router-dom';
 import AdminDataManagement from '@/components/admin/AdminDataManagement';
+import InvitationsManager from '@/components/admin/InvitationsManager';
 
 const ALL_ROLES = [
   { value: 'gerencia', label: 'Gerencia' },
