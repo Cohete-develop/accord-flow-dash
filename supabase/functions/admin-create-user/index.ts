@@ -90,6 +90,23 @@ Deno.serve(async (req) => {
         return errResp("DOMAIN_MISMATCH", `El email debe ser del dominio @${targetCompany.domain}`);
       if (role === "super_admin")
         return errResp("SUPER_ADMIN_REQUIRES_PLATFORM_DOMAIN", "El rol super_admin solo se asigna a usuarios del dominio plataforma");
+
+      // === VALIDACIÓN DE LÍMITE DE LICENCIAS (max_seats) ===
+      const { data: seatsCompany } = await adminClient
+        .from("companies").select("max_seats, name").eq("id", company_id).maybeSingle();
+      const maxSeats = seatsCompany?.max_seats ?? 0;
+      const { count: activeCount } = await adminClient
+        .from("profiles")
+        .select("user_id", { count: "exact", head: true })
+        .eq("company_id", company_id)
+        .eq("is_active", true);
+      if (maxSeats > 0 && (activeCount ?? 0) >= maxSeats) {
+        return errResp(
+          "SEATS_LIMIT_REACHED",
+          `La empresa ${seatsCompany?.name || ""} ya alcanzó su límite de ${maxSeats} licencia(s) activas.`,
+          409,
+        );
+      }
     }
 
     // Create user via admin API

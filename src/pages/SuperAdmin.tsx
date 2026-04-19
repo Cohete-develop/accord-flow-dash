@@ -113,6 +113,12 @@ export default function SuperAdminPage() {
   const [deleteUserTarget, setDeleteUserTarget] = useState<CompanyUser | null>(null);
   const [deletingUser, setDeletingUser] = useState(false);
 
+  // Edit licencias (max_seats)
+  const [showEditSeats, setShowEditSeats] = useState(false);
+  const [seatsTarget, setSeatsTarget] = useState<Company | null>(null);
+  const [seatsValue, setSeatsValue] = useState<number>(5);
+  const [savingSeats, setSavingSeats] = useState(false);
+
   useEffect(() => {
     if (!user) return;
     // super_admin must also NOT belong to any company (platform owner only)
@@ -249,6 +255,41 @@ export default function SuperAdminPage() {
     const { error } = await supabase.from('companies').update({ is_active: !company.is_active }).eq('id', company.id);
     if (error) { toast.error('Error al actualizar'); return; }
     toast.success(company.is_active ? 'Empresa desactivada' : 'Empresa activada');
+    fetchCompanies();
+  }
+
+  function openEditSeats(company: Company) {
+    setSeatsTarget(company);
+    setSeatsValue(company.max_seats ?? 5);
+    setShowEditSeats(true);
+  }
+
+  async function handleSaveSeats() {
+    if (!seatsTarget) return;
+    const newSeats = Math.max(1, Math.floor(Number(seatsValue) || 0));
+    if (newSeats < (seatsTarget.active_user_count ?? 0)) {
+      toast.error('Licencias insuficientes', {
+        description: `La empresa tiene ${seatsTarget.active_user_count} usuario(s) activo(s). Desactiva usuarios antes de bajar el límite a ${newSeats}.`,
+      });
+      return;
+    }
+    setSavingSeats(true);
+    const { error } = await supabase.from('companies').update({ max_seats: newSeats }).eq('id', seatsTarget.id);
+    if (error) {
+      toast.error('Error al actualizar licencias', { description: error.message });
+      setSavingSeats(false);
+      return;
+    }
+    await supabase.from('audit_log').insert({
+      user_id: session?.user?.id,
+      user_name: session?.user?.user_metadata?.full_name || session?.user?.email || '',
+      action: 'edit_company_seats',
+      module: 'super_admin',
+      details: { company_id: seatsTarget.id, company_name: seatsTarget.name, previous: seatsTarget.max_seats, new: newSeats },
+    });
+    toast.success(`Licencias actualizadas a ${newSeats} para ${seatsTarget.name}`);
+    setShowEditSeats(false);
+    setSavingSeats(false);
     fetchCompanies();
   }
 
@@ -447,6 +488,9 @@ export default function SuperAdminPage() {
                     </Button>
                     <Button variant="outline" size="sm" onClick={() => toggleCompanyActive(company)}>
                       {company.is_active ? 'Desactivar' : 'Activar'}
+                    </Button>
+                    <Button variant="outline" size="sm" className="gap-1.5" onClick={() => openEditSeats(company)}>
+                      <Pencil className="w-3.5 h-3.5" /> Licencias
                     </Button>
                     <Button variant="destructive" size="sm" className="gap-1.5" onClick={() => confirmDeleteCompany(company)}>
                       <Trash2 className="w-3.5 h-3.5" /> Eliminar
@@ -749,6 +793,42 @@ export default function SuperAdminPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* EDIT LICENCIAS (max_seats) */}
+      <Dialog open={showEditSeats} onOpenChange={setShowEditSeats}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Licencias contratadas</DialogTitle>
+            <DialogDescription>
+              Define cuántos usuarios activos puede tener {seatsTarget?.name}. Al alcanzar el límite, no se podrán crear más usuarios hasta desactivar uno o ampliar el plan.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="rounded-md bg-muted/50 p-3 text-sm space-y-1">
+              <p><span className="text-muted-foreground">Activos actuales:</span> <span className="font-semibold">{seatsTarget?.active_user_count ?? 0}</span></p>
+              <p><span className="text-muted-foreground">Total (incl. inactivos):</span> <span className="font-semibold">{seatsTarget?.user_count ?? 0}</span></p>
+              <p><span className="text-muted-foreground">Límite actual:</span> <span className="font-semibold">{seatsTarget?.max_seats ?? 0}</span></p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="seats">Nuevo límite de licencias</Label>
+              <Input
+                id="seats"
+                type="number"
+                min={Math.max(1, seatsTarget?.active_user_count ?? 1)}
+                value={seatsValue}
+                onChange={e => setSeatsValue(parseInt(e.target.value) || 0)}
+              />
+              <p className="text-xs text-muted-foreground">
+                No puede ser menor a {seatsTarget?.active_user_count ?? 0} (usuarios activos actuales).
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowEditSeats(false)} disabled={savingSeats}>Cancelar</Button>
+            <Button variant="gradient" onClick={handleSaveSeats} disabled={savingSeats}>{savingSeats ? 'Guardando...' : 'Guardar'}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
