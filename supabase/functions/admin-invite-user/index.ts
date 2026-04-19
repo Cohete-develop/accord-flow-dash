@@ -1,8 +1,10 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 
+const ALLOWED_ORIGIN = Deno.env.get("ALLOWED_ORIGIN") || "*";
 const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Origin": ALLOWED_ORIGIN,
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+  "Vary": "Origin",
 };
 
 function errResp(code: string, message: string, status = 400) {
@@ -113,7 +115,8 @@ Deno.serve(async (req) => {
       user_name: `${caller.user_metadata?.first_name || ""} ${caller.user_metadata?.last_name || ""}`.trim() || caller.email,
       action: "invite_user",
       module: "admin",
-      details: { email, role, company_id, invite_id: invite.id },
+      company_id,
+      details: { email, role, invite_id: invite.id },
     });
 
     // El frontend construirá la URL completa con su origin

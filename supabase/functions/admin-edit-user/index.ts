@@ -1,8 +1,10 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 
+const ALLOWED_ORIGIN = Deno.env.get("ALLOWED_ORIGIN") || "*";
 const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Origin": ALLOWED_ORIGIN,
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+  "Vary": "Origin",
 };
 
 Deno.serve(async (req) => {
@@ -141,12 +143,14 @@ Deno.serve(async (req) => {
       await adminClient.from("user_roles").insert({ user_id, role });
     }
 
-    // Audit
+    // Audit (incluir company_id del usuario editado para aislamiento por tenant)
+    const { data: editedProfile } = await adminClient.from("profiles").select("company_id").eq("user_id", user_id).maybeSingle();
     await adminClient.from("audit_log").insert({
       user_id: caller.id,
       user_name: `${caller.user_metadata?.first_name || ""} ${caller.user_metadata?.last_name || ""}`.trim(),
       action: "edit_user",
       module: "admin",
+      company_id: editedProfile?.company_id ?? null,
       details: { edited_user_id: user_id, email, first_name, last_name, role },
     });
 

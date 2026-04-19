@@ -1,8 +1,10 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 
+const ALLOWED_ORIGIN = Deno.env.get("ALLOWED_ORIGIN") || "*";
 const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Origin": ALLOWED_ORIGIN,
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+  "Vary": "Origin",
 };
 
 function errResp(code: string, message: string, status = 400) {
@@ -141,7 +143,8 @@ Deno.serve(async (req) => {
       user_name: `${caller.user_metadata?.first_name || ""} ${caller.user_metadata?.last_name || ""}`.trim(),
       action: "create_user",
       module: "admin",
-      details: { created_email: email, role, company_id },
+      company_id: company_id ?? null,
+      details: { created_email: email, role },
     });
 
     return new Response(JSON.stringify({ success: true, user_id: newUser.user.id }), {
