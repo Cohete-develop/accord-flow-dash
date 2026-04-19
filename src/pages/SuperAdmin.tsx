@@ -793,6 +793,42 @@ export default function SuperAdminPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* EDIT LICENCIAS (max_seats) */}
+      <Dialog open={showEditSeats} onOpenChange={setShowEditSeats}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Licencias contratadas</DialogTitle>
+            <DialogDescription>
+              Define cuántos usuarios activos puede tener {seatsTarget?.name}. Al alcanzar el límite, no se podrán crear más usuarios hasta desactivar uno o ampliar el plan.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="rounded-md bg-muted/50 p-3 text-sm space-y-1">
+              <p><span className="text-muted-foreground">Activos actuales:</span> <span className="font-semibold">{seatsTarget?.active_user_count ?? 0}</span></p>
+              <p><span className="text-muted-foreground">Total (incl. inactivos):</span> <span className="font-semibold">{seatsTarget?.user_count ?? 0}</span></p>
+              <p><span className="text-muted-foreground">Límite actual:</span> <span className="font-semibold">{seatsTarget?.max_seats ?? 0}</span></p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="seats">Nuevo límite de licencias</Label>
+              <Input
+                id="seats"
+                type="number"
+                min={Math.max(1, seatsTarget?.active_user_count ?? 1)}
+                value={seatsValue}
+                onChange={e => setSeatsValue(parseInt(e.target.value) || 0)}
+              />
+              <p className="text-xs text-muted-foreground">
+                No puede ser menor a {seatsTarget?.active_user_count ?? 0} (usuarios activos actuales).
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowEditSeats(false)} disabled={savingSeats}>Cancelar</Button>
+            <Button variant="gradient" onClick={handleSaveSeats} disabled={savingSeats}>{savingSeats ? 'Guardando...' : 'Guardar'}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
