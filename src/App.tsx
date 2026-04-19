@@ -14,6 +14,7 @@ import AdminPage from "./pages/Admin";
 import SuperAdminPage from "./pages/SuperAdmin";
 import AuthPage from "./pages/Auth";
 import ResetPasswordPage from "./pages/ResetPassword";
+import AcceptInvitePage from "./pages/AcceptInvite";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -28,6 +29,7 @@ const App = () => (
           <Routes>
             <Route path="/auth" element={<AuthPage />} />
             <Route path="/reset-password" element={<ResetPasswordPage />} />
+            <Route path="/accept-invite" element={<AcceptInvitePage />} />
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
             <Route path="/dashboard" element={<Layout><DashboardPage /></Layout>} />
             <Route path="/acuerdos" element={<Layout><AcuerdosPage /></Layout>} />
