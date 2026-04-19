@@ -1,8 +1,10 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 
+const ALLOWED_ORIGIN = Deno.env.get("ALLOWED_ORIGIN") || "*";
 const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Origin": ALLOWED_ORIGIN,
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+  "Vary": "Origin",
 };
 
 Deno.serve(async (req) => {
@@ -98,13 +100,15 @@ Deno.serve(async (req) => {
       await adminClient.from("user_roles").delete().in("user_id", userIdsToDelete);
     }
 
-    // Audit log BEFORE deleting users (to avoid FK violation)
+    // Audit log BEFORE deleting users (to avoid FK violation).
+    // Nota: NO seteamos company_id porque la empresa se va a borrar y el FK quedaría dangling (SET NULL).
     await adminClient.from("audit_log").insert({
       user_id: caller.id,
       user_name: `${caller.user_metadata?.first_name || ""} ${caller.user_metadata?.last_name || ""}`.trim(),
       action: "delete_company",
       module: "super_admin",
-      details: { company_name: company.name, deleted_users: userIdsToDelete.length, preserved_super_admins: superAdminIdsInCompany.length },
+      company_id: null,
+      details: { company_id, company_name: company.name, deleted_users: userIdsToDelete.length, preserved_super_admins: superAdminIdsInCompany.length },
     });
 
     // Unlink super_admin profiles from this company (set company_id to null) instead of deleting

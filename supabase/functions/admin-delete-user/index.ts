@@ -1,8 +1,10 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 
+const ALLOWED_ORIGIN = Deno.env.get("ALLOWED_ORIGIN") || "*";
 const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Origin": ALLOWED_ORIGIN,
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+  "Vary": "Origin",
 };
 
 Deno.serve(async (req) => {
@@ -50,6 +52,10 @@ Deno.serve(async (req) => {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
+    // Capturar company_id del usuario a borrar ANTES de eliminarlo (para audit log)
+    const { data: targetProfilePre } = await adminClient.from("profiles").select("company_id").eq("user_id", user_id).maybeSingle();
+    const targetCompanyId = targetProfilePre?.company_id ?? null;
 
     if (user_id === caller.id) {
       return new Response(JSON.stringify({ error: "No puedes eliminarte a ti mismo" }), {
@@ -100,12 +106,13 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Audit
+    // Audit (con company_id del usuario eliminado)
     await adminClient.from("audit_log").insert({
       user_id: caller.id,
       user_name: `${caller.user_metadata?.first_name || ""} ${caller.user_metadata?.last_name || ""}`.trim(),
       action: "delete_user",
       module: "admin",
+      company_id: targetCompanyId,
       details: { deleted_user_id: user_id, transferred_to: transfer_to_user_id || null },
     });
 

@@ -97,6 +97,7 @@ export type Database = {
       audit_log: {
         Row: {
           action: string
+          company_id: string | null
           created_at: string
           details: Json | null
           id: string
@@ -106,6 +107,7 @@ export type Database = {
         }
         Insert: {
           action: string
+          company_id?: string | null
           created_at?: string
           details?: Json | null
           id?: string
@@ -115,6 +117,7 @@ export type Database = {
         }
         Update: {
           action?: string
+          company_id?: string | null
           created_at?: string
           details?: Json | null
           id?: string
@@ -122,7 +125,15 @@ export type Database = {
           user_id?: string | null
           user_name?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "audit_log_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       blocked_domains: {
         Row: {
@@ -142,7 +153,7 @@ export type Database = {
       companies: {
         Row: {
           created_at: string
-          domain: string | null
+          domain: string
           id: string
           is_active: boolean
           logo_url: string | null
@@ -155,7 +166,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
-          domain?: string | null
+          domain: string
           id?: string
           is_active?: boolean
           logo_url?: string | null
@@ -168,7 +179,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
-          domain?: string | null
+          domain?: string
           id?: string
           is_active?: boolean
           logo_url?: string | null
