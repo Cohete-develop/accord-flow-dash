@@ -391,6 +391,11 @@ export default function SuperAdminPage() {
                     <div>
                       <CardTitle className="text-lg">{company.name}</CardTitle>
                       <p className="text-xs text-muted-foreground mt-1">/{company.slug}</p>
+                      {company.domain ? (
+                        <p className="text-xs font-medium text-primary mt-1">@{company.domain}</p>
+                      ) : (
+                        <p className="text-xs text-destructive mt-1">⚠ Sin dominio</p>
+                      )}
                     </div>
                     <Badge className={company.is_active ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800'}>
                       {company.is_active ? 'Activa' : 'Inactiva'}
