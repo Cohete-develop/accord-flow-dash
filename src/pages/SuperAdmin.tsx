@@ -19,6 +19,7 @@ interface Company {
   id: string;
   name: string;
   slug: string;
+  domain: string | null;
   is_active: boolean;
   created_at: string;
   logo_url: string | null;
@@ -63,6 +64,7 @@ export default function SuperAdminPage() {
   const [showCreateCompany, setShowCreateCompany] = useState(false);
   const [newCompanyName, setNewCompanyName] = useState('');
   const [newCompanySlug, setNewCompanySlug] = useState('');
+  const [newCompanyDomain, setNewCompanyDomain] = useState('');
   const [creatingCompany, setCreatingCompany] = useState(false);
 
   // Company users view
