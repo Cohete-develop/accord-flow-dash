@@ -160,7 +160,7 @@ export default function AdminPage() {
       supabase.from('user_roles').select('role').eq('user_id', user.id)
         .in('role', ['gerencia', 'super_admin', 'coordinador_mercadeo']),
       supabase.from('profiles').select('company_id').eq('user_id', user.id).maybeSingle(),
-    ]).then(([rolesRes, profileRes]) => {
+    ]).then(async ([rolesRes, profileRes]) => {
       const roles = (rolesRes.data || []).map(r => r.role);
       const hasNoCompany = !profileRes.data?.company_id;
       // super_admin powers only for platform owners (no company_id)
@@ -169,6 +169,10 @@ export default function AdminPage() {
       setCallerIsSuperAdmin(effectiveSuperAdmin);
       setCallerIsGerencia(roles.includes('gerencia'));
       setCallerIsCoordinador(roles.includes('coordinador_mercadeo'));
+      if (profileRes.data?.company_id) {
+        const { data: c } = await supabase.from('companies').select('id, name, domain').eq('id', profileRes.data.company_id).maybeSingle();
+        if (c) setCallerCompany(c);
+      }
     });
   }, [user]);
 
