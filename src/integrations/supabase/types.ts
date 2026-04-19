@@ -472,6 +472,21 @@ export type Database = {
           },
         ]
       }
+      platform_domains: {
+        Row: {
+          created_at: string
+          domain: string
+        }
+        Insert: {
+          created_at?: string
+          domain: string
+        }
+        Update: {
+          created_at?: string
+          domain?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           company_id: string | null
@@ -560,6 +575,8 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_blocked_domain: { Args: { _domain: string }; Returns: boolean }
+      is_platform_domain: { Args: { _domain: string }; Returns: boolean }
       is_protected_user: { Args: { _user_id: string }; Returns: boolean }
     }
     Enums: {

@@ -19,6 +19,7 @@ interface Company {
   id: string;
   name: string;
   slug: string;
+  domain: string | null;
   is_active: boolean;
   created_at: string;
   logo_url: string | null;
@@ -63,6 +64,7 @@ export default function SuperAdminPage() {
   const [showCreateCompany, setShowCreateCompany] = useState(false);
   const [newCompanyName, setNewCompanyName] = useState('');
   const [newCompanySlug, setNewCompanySlug] = useState('');
+  const [newCompanyDomain, setNewCompanyDomain] = useState('');
   const [creatingCompany, setCreatingCompany] = useState(false);
 
   // Company users view
@@ -201,13 +203,25 @@ export default function SuperAdminPage() {
   }
 
   async function handleCreateCompany() {
-    if (!newCompanyName.trim() || !newCompanySlug.trim()) { toast.error('Nombre y slug son obligatorios'); return; }
+    if (!newCompanyName.trim() || !newCompanySlug.trim() || !newCompanyDomain.trim()) {
+      toast.error('Nombre, slug y dominio son obligatorios');
+      return;
+    }
+    const domain = newCompanyDomain.trim().toLowerCase().replace(/^@/, '').replace(/^https?:\/\//, '').replace(/\/$/, '');
+    if (!/^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$/.test(domain)) {
+      toast.error('Dominio inválido. Ejemplo: empresa.com');
+      return;
+    }
     setCreatingCompany(true);
-    const { error } = await supabase.from('companies').insert({ name: newCompanyName.trim(), slug: newCompanySlug.trim().toLowerCase() });
+    const { error } = await supabase.from('companies').insert({
+      name: newCompanyName.trim(),
+      slug: newCompanySlug.trim().toLowerCase(),
+      domain,
+    });
     if (error) { toast.error(`Error: ${error.message}`); setCreatingCompany(false); return; }
     toast.success('Empresa creada exitosamente');
     setShowCreateCompany(false);
-    setNewCompanyName(''); setNewCompanySlug('');
+    setNewCompanyName(''); setNewCompanySlug(''); setNewCompanyDomain('');
     setCreatingCompany(false);
     fetchCompanies();
 
@@ -216,7 +230,7 @@ export default function SuperAdminPage() {
       user_name: session?.user?.user_metadata?.full_name || session?.user?.email || '',
       action: 'create_company',
       module: 'super_admin',
-      details: { company_name: newCompanyName.trim() },
+      details: { company_name: newCompanyName.trim(), domain },
     });
   }
 
@@ -377,6 +391,11 @@ export default function SuperAdminPage() {
                     <div>
                       <CardTitle className="text-lg">{company.name}</CardTitle>
                       <p className="text-xs text-muted-foreground mt-1">/{company.slug}</p>
+                      {company.domain ? (
+                        <p className="text-xs font-medium text-primary mt-1">@{company.domain}</p>
+                      ) : (
+                        <p className="text-xs text-destructive mt-1">⚠ Sin dominio</p>
+                      )}
                     </div>
                     <Badge className={company.is_active ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800'}>
                       {company.is_active ? 'Activa' : 'Inactiva'}
@@ -553,7 +572,10 @@ export default function SuperAdminPage() {
       {/* CREATE COMPANY DIALOG */}
       <Dialog open={showCreateCompany} onOpenChange={setShowCreateCompany}>
         <DialogContent className="max-w-md">
-          <DialogHeader><DialogTitle>Nueva Empresa Cliente</DialogTitle></DialogHeader>
+          <DialogHeader>
+            <DialogTitle>Nueva Empresa Cliente</DialogTitle>
+            <DialogDescription>El dominio corporativo es la clave del aislamiento entre empresas. Solo usuarios con email de ese dominio podrán pertenecer a esta empresa.</DialogDescription>
+          </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
               <Label>Nombre de la empresa</Label>
@@ -562,6 +584,15 @@ export default function SuperAdminPage() {
             <div className="space-y-2">
               <Label>Slug (identificador URL)</Label>
               <Input value={newCompanySlug} onChange={e => setNewCompanySlug(e.target.value)} placeholder="japani-racer" />
+            </div>
+            <div className="space-y-2">
+              <Label>Dominio corporativo <span className="text-destructive">*</span></Label>
+              <Input
+                value={newCompanyDomain}
+                onChange={e => setNewCompanyDomain(e.target.value)}
+                placeholder="japaniracer.com"
+              />
+              <p className="text-xs text-muted-foreground">Sin @ ni https://. Ej: <code className="text-xs bg-muted px-1 rounded">groupeseb.com</code>. No se permiten dominios públicos (gmail, hotmail, etc.) ni el dominio de la plataforma.</p>
             </div>
           </div>
           <DialogFooter>
@@ -576,14 +607,27 @@ export default function SuperAdminPage() {
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>Nuevo Usuario para {targetCompany?.name}</DialogTitle>
-            <DialogDescription>Crea el primer usuario (gerencia) o agrega más usuarios a esta empresa.</DialogDescription>
+            <DialogDescription>
+              {targetCompany?.domain
+                ? <>El email debe ser del dominio <strong>@{targetCompany.domain}</strong>.</>
+                : <span className="text-destructive">⚠ Esta empresa no tiene dominio configurado. Edítala primero.</span>}
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2"><Label>Nombre <span className="text-destructive">*</span></Label><Input value={newFirstName} onChange={e => setNewFirstName(e.target.value)} required placeholder="Nombre" /></div>
               <div className="space-y-2"><Label>Apellido <span className="text-destructive">*</span></Label><Input value={newLastName} onChange={e => setNewLastName(e.target.value)} required placeholder="Apellido" /></div>
             </div>
-            <div className="space-y-2"><Label>Email <span className="text-destructive">*</span></Label><Input type="email" value={newEmail} onChange={e => setNewEmail(e.target.value)} required placeholder="correo@ejemplo.com" /></div>
+            <div className="space-y-2">
+              <Label>Email <span className="text-destructive">*</span></Label>
+              <Input
+                type="email"
+                value={newEmail}
+                onChange={e => setNewEmail(e.target.value)}
+                required
+                placeholder={targetCompany?.domain ? `nombre@${targetCompany.domain}` : 'correo@empresa.com'}
+              />
+            </div>
             <div className="space-y-2"><Label>Contraseña <span className="text-destructive">*</span></Label><Input type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} required placeholder="Mínimo 6 caracteres" /></div>
             <div className="space-y-2">
               <Label>Rol</Label>

@@ -75,6 +75,67 @@ Deno.serve(async (req) => {
       }
     }
 
+    // === VALIDACIÓN DE DOMINIO ===
+    const emailDomain = (email.split("@")[1] || "").toLowerCase().trim();
+    if (!emailDomain) {
+      return new Response(JSON.stringify({ error: "Email inválido" }), {
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Bloquear dominios públicos siempre
+    const { data: blocked } = await adminClient.from("blocked_domains").select("domain").eq("domain", emailDomain).maybeSingle();
+    if (blocked) {
+      return new Response(JSON.stringify({ error: `El dominio ${emailDomain} es público y no se permite. Usa un correo corporativo.` }), {
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const { data: platform } = await adminClient.from("platform_domains").select("domain").eq("domain", emailDomain).maybeSingle();
+    const isPlatformDomain = !!platform;
+
+    if (isPlatformDomain) {
+      // Solo super_admin puede crear usuarios con dominio de plataforma, y deben ser super_admin sin company
+      if (!isSuperAdmin) {
+        return new Response(JSON.stringify({ error: `El dominio ${emailDomain} está reservado para la plataforma` }), {
+          status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      if (role !== "super_admin") {
+        return new Response(JSON.stringify({ error: `Los usuarios con dominio ${emailDomain} deben tener rol super_admin` }), {
+          status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      if (company_id) {
+        return new Response(JSON.stringify({ error: "Los super_admin no pueden estar asociados a una empresa" }), {
+          status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    } else {
+      // Dominio normal: debe coincidir con el domain de la company destino
+      if (!company_id) {
+        return new Response(JSON.stringify({ error: "Debes especificar la empresa para este usuario" }), {
+          status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      const { data: targetCompany } = await adminClient.from("companies").select("domain").eq("id", company_id).maybeSingle();
+      if (!targetCompany?.domain) {
+        return new Response(JSON.stringify({ error: "La empresa destino no tiene dominio configurado" }), {
+          status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      if (targetCompany.domain.toLowerCase() !== emailDomain) {
+        return new Response(JSON.stringify({ error: `El email debe ser del dominio @${targetCompany.domain}` }), {
+          status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      if (role === "super_admin") {
+        return new Response(JSON.stringify({ error: "El rol super_admin solo se asigna a usuarios del dominio plataforma" }), {
+          status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    }
+
     // Create user via admin API
     const { data: newUser, error: createError } = await adminClient.auth.admin.createUser({
       email,
