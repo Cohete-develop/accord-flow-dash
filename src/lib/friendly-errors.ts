@@ -60,6 +60,10 @@ const FRIENDLY_MAP: Record<string, FriendlyEntry> = {
     title: "Este dominio requiere rol super_admin",
     hint: "Cambia el rol a super_admin para correos del dominio plataforma.",
   },
+  SEATS_LIMIT_REACHED: {
+    title: "Límite de licencias alcanzado",
+    hint: "Esta empresa ya alcanzó el máximo de usuarios permitidos por su plan. Desactiva un usuario o aumenta el límite (max_seats) desde Super Admin.",
+  },
   UNKNOWN: {
     title: "Ocurrió un error inesperado",
     hint: "Intenta nuevamente. Si persiste, contacta a soporte.",
