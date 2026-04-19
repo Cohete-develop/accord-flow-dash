@@ -258,6 +258,41 @@ export default function SuperAdminPage() {
     fetchCompanies();
   }
 
+  function openEditSeats(company: Company) {
+    setSeatsTarget(company);
+    setSeatsValue(company.max_seats ?? 5);
+    setShowEditSeats(true);
+  }
+
+  async function handleSaveSeats() {
+    if (!seatsTarget) return;
+    const newSeats = Math.max(1, Math.floor(Number(seatsValue) || 0));
+    if (newSeats < (seatsTarget.active_user_count ?? 0)) {
+      toast.error('Licencias insuficientes', {
+        description: `La empresa tiene ${seatsTarget.active_user_count} usuario(s) activo(s). Desactiva usuarios antes de bajar el límite a ${newSeats}.`,
+      });
+      return;
+    }
+    setSavingSeats(true);
+    const { error } = await supabase.from('companies').update({ max_seats: newSeats }).eq('id', seatsTarget.id);
+    if (error) {
+      toast.error('Error al actualizar licencias', { description: error.message });
+      setSavingSeats(false);
+      return;
+    }
+    await supabase.from('audit_log').insert({
+      user_id: session?.user?.id,
+      user_name: session?.user?.user_metadata?.full_name || session?.user?.email || '',
+      action: 'edit_company_seats',
+      module: 'super_admin',
+      details: { company_id: seatsTarget.id, company_name: seatsTarget.name, previous: seatsTarget.max_seats, new: newSeats },
+    });
+    toast.success(`Licencias actualizadas a ${newSeats} para ${seatsTarget.name}`);
+    setShowEditSeats(false);
+    setSavingSeats(false);
+    fetchCompanies();
+  }
+
   function openCreateUserForCompany(company: Company) {
     setTargetCompany(company);
     setNewEmail(''); setNewPassword(''); setNewFirstName(''); setNewLastName(''); setNewRole('gerencia');
