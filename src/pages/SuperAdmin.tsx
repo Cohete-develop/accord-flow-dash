@@ -203,13 +203,25 @@ export default function SuperAdminPage() {
   }
 
   async function handleCreateCompany() {
-    if (!newCompanyName.trim() || !newCompanySlug.trim()) { toast.error('Nombre y slug son obligatorios'); return; }
+    if (!newCompanyName.trim() || !newCompanySlug.trim() || !newCompanyDomain.trim()) {
+      toast.error('Nombre, slug y dominio son obligatorios');
+      return;
+    }
+    const domain = newCompanyDomain.trim().toLowerCase().replace(/^@/, '').replace(/^https?:\/\//, '').replace(/\/$/, '');
+    if (!/^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$/.test(domain)) {
+      toast.error('Dominio inválido. Ejemplo: empresa.com');
+      return;
+    }
     setCreatingCompany(true);
-    const { error } = await supabase.from('companies').insert({ name: newCompanyName.trim(), slug: newCompanySlug.trim().toLowerCase() });
+    const { error } = await supabase.from('companies').insert({
+      name: newCompanyName.trim(),
+      slug: newCompanySlug.trim().toLowerCase(),
+      domain,
+    });
     if (error) { toast.error(`Error: ${error.message}`); setCreatingCompany(false); return; }
     toast.success('Empresa creada exitosamente');
     setShowCreateCompany(false);
-    setNewCompanyName(''); setNewCompanySlug('');
+    setNewCompanyName(''); setNewCompanySlug(''); setNewCompanyDomain('');
     setCreatingCompany(false);
     fetchCompanies();
 
@@ -218,7 +230,7 @@ export default function SuperAdminPage() {
       user_name: session?.user?.user_metadata?.full_name || session?.user?.email || '',
       action: 'create_company',
       module: 'super_admin',
-      details: { company_name: newCompanyName.trim() },
+      details: { company_name: newCompanyName.trim(), domain },
     });
   }
 
