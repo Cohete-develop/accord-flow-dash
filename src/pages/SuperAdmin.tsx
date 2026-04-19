@@ -26,6 +26,8 @@ interface Company {
   created_at: string;
   logo_url: string | null;
   user_count?: number;
+  active_user_count?: number;
+  max_seats?: number;
 }
 
 interface CompanyUser {
