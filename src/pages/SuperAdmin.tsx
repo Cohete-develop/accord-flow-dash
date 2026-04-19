@@ -10,7 +10,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
 import { Building2, Users, Plus, Pencil, Trash2, UserPlus, Eye, ScrollText } from 'lucide-react';
+import { Send } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
+import InvitationsManager from '@/components/admin/InvitationsManager';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { handleEdgeError } from '@/lib/friendly-errors';
