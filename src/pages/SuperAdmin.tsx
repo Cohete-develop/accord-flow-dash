@@ -611,6 +611,16 @@ export default function SuperAdminPage() {
           </Card>
         </TabsContent>
 
+        {/* INVITATIONS TAB */}
+        <TabsContent value="invitations" className="space-y-4">
+          <Card className="p-4">
+            <InvitationsManager
+              companies={companies.filter(c => c.domain).map(c => ({ id: c.id, name: c.name, domain: c.domain }))}
+              availableRoles={ROLES}
+            />
+          </Card>
+        </TabsContent>
+
         {/* AUDIT TAB */}
         <TabsContent value="audit" className="space-y-4">
           <Card>
