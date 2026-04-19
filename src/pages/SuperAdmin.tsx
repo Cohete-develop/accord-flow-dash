@@ -129,14 +129,21 @@ export default function SuperAdminPage() {
   const fetchCompanies = useCallback(async () => {
     setLoadingCompanies(true);
     const { data: companiesData } = await supabase.from('companies').select('*').order('created_at', { ascending: false });
-    const { data: profilesData } = await supabase.from('profiles').select('company_id');
-    
+    const { data: profilesData } = await supabase.from('profiles').select('company_id, is_active');
+
     const countMap: Record<string, number> = {};
+    const activeMap: Record<string, number> = {};
     (profilesData || []).forEach(p => {
-      if (p.company_id) countMap[p.company_id] = (countMap[p.company_id] || 0) + 1;
+      if (!p.company_id) return;
+      countMap[p.company_id] = (countMap[p.company_id] || 0) + 1;
+      if (p.is_active) activeMap[p.company_id] = (activeMap[p.company_id] || 0) + 1;
     });
 
-    setCompanies((companiesData || []).map(c => ({ ...c, user_count: countMap[c.id] || 0 })));
+    setCompanies((companiesData || []).map(c => ({
+      ...c,
+      user_count: countMap[c.id] || 0,
+      active_user_count: activeMap[c.id] || 0,
+    })));
     setLoadingCompanies(false);
   }, []);
 
