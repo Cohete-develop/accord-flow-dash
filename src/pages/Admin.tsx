@@ -379,6 +379,19 @@ export default function AdminPage() {
           </Card>
         </TabsContent>
 
+        {/* INVITATIONS TAB */}
+        {canCreateUsers && callerCompany && (
+          <TabsContent value="invitations" className="space-y-4">
+            <Card className="p-4">
+              <InvitationsManager
+                companies={[callerCompany]}
+                fixedCompanyId={callerCompany.id}
+                availableRoles={ROLES}
+              />
+            </Card>
+          </TabsContent>
+        )}
+
         {/* PERMISSIONS TAB */}
         <TabsContent value="permissions" className="space-y-4">
           <div className="flex items-center gap-3">
