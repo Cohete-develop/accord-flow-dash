@@ -11,12 +11,14 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Users, Shield, ScrollText, UserPlus, Trash2, Pencil, Database } from 'lucide-react';
+import { Send } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { handleEdgeError } from '@/lib/friendly-errors';
 import { useAuth } from '@/hooks/useAuth';
 import { Navigate } from 'react-router-dom';
 import AdminDataManagement from '@/components/admin/AdminDataManagement';
+import InvitationsManager from '@/components/admin/InvitationsManager';
 
 const ALL_ROLES = [
   { value: 'gerencia', label: 'Gerencia' },
@@ -80,6 +82,7 @@ export default function AdminPage() {
   const [callerIsSuperAdmin, setCallerIsSuperAdmin] = useState(false);
   const [callerIsGerencia, setCallerIsGerencia] = useState(false);
   const [callerIsCoordinador, setCallerIsCoordinador] = useState(false);
+  const [callerCompany, setCallerCompany] = useState<{ id: string; name: string; domain: string | null } | null>(null);
 
   // Users state
   const [users, setUsers] = useState<UserRow[]>([]);
@@ -157,7 +160,7 @@ export default function AdminPage() {
       supabase.from('user_roles').select('role').eq('user_id', user.id)
         .in('role', ['gerencia', 'super_admin', 'coordinador_mercadeo']),
       supabase.from('profiles').select('company_id').eq('user_id', user.id).maybeSingle(),
-    ]).then(([rolesRes, profileRes]) => {
+    ]).then(async ([rolesRes, profileRes]) => {
       const roles = (rolesRes.data || []).map(r => r.role);
       const hasNoCompany = !profileRes.data?.company_id;
       // super_admin powers only for platform owners (no company_id)
@@ -166,6 +169,10 @@ export default function AdminPage() {
       setCallerIsSuperAdmin(effectiveSuperAdmin);
       setCallerIsGerencia(roles.includes('gerencia'));
       setCallerIsCoordinador(roles.includes('coordinador_mercadeo'));
+      if (profileRes.data?.company_id) {
+        const { data: c } = await supabase.from('companies').select('id, name, domain').eq('id', profileRes.data.company_id).maybeSingle();
+        if (c) setCallerCompany(c);
+      }
     });
   }, [user]);
 
@@ -283,6 +290,9 @@ export default function AdminPage() {
       <Tabs value={tab} onValueChange={setTab}>
         <TabsList>
           <TabsTrigger value="users" className="gap-1.5"><Users className="w-4 h-4" /> Usuarios</TabsTrigger>
+          {canCreateUsers && callerCompany && (
+            <TabsTrigger value="invitations" className="gap-1.5"><Send className="w-4 h-4" /> Invitaciones</TabsTrigger>
+          )}
           <TabsTrigger value="permissions" className="gap-1.5"><Shield className="w-4 h-4" /> Permisos</TabsTrigger>
           <TabsTrigger value="audit" className="gap-1.5"><ScrollText className="w-4 h-4" /> Auditoría</TabsTrigger>
           <TabsTrigger value="data" className="gap-1.5"><Database className="w-4 h-4" /> Gestión de Datos</TabsTrigger>
@@ -368,6 +378,19 @@ export default function AdminPage() {
             </Table>
           </Card>
         </TabsContent>
+
+        {/* INVITATIONS TAB */}
+        {canCreateUsers && callerCompany && (
+          <TabsContent value="invitations" className="space-y-4">
+            <Card className="p-4">
+              <InvitationsManager
+                companies={[callerCompany]}
+                fixedCompanyId={callerCompany.id}
+                availableRoles={ROLES}
+              />
+            </Card>
+          </TabsContent>
+        )}
 
         {/* PERMISSIONS TAB */}
         <TabsContent value="permissions" className="space-y-4">

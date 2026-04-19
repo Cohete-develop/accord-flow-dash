@@ -64,6 +64,30 @@ const FRIENDLY_MAP: Record<string, FriendlyEntry> = {
     title: "Límite de licencias alcanzado",
     hint: "Esta empresa ya alcanzó el máximo de usuarios permitidos por su plan. Desactiva un usuario o aumenta el límite (max_seats) desde Super Admin.",
   },
+  INVITE_ALREADY_PENDING: {
+    title: "Ya hay una invitación pendiente",
+    hint: "Revoca la invitación previa desde la lista de invitaciones antes de crear una nueva para este correo.",
+  },
+  INVITE_NOT_FOUND: {
+    title: "Invitación no encontrada",
+    hint: "El link puede ser incorrecto. Solicita una nueva invitación a tu administrador.",
+  },
+  INVITE_REVOKED: {
+    title: "Invitación revocada",
+    hint: "Esta invitación fue cancelada. Solicita una nueva a tu administrador.",
+  },
+  INVITE_ALREADY_ACCEPTED: {
+    title: "Esta invitación ya fue usada",
+    hint: "Tu cuenta ya fue activada. Inicia sesión normalmente.",
+  },
+  INVITE_EXPIRED: {
+    title: "La invitación expiró",
+    hint: "Las invitaciones duran 7 días. Solicita una nueva a tu administrador.",
+  },
+  COMPANY_NOT_FOUND: {
+    title: "Empresa no encontrada",
+    hint: "Verifica que la empresa exista y esté activa.",
+  },
   UNKNOWN: {
     title: "Ocurrió un error inesperado",
     hint: "Intenta nuevamente. Si persiste, contacta a soporte.",

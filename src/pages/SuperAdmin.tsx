@@ -10,7 +10,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
 import { Building2, Users, Plus, Pencil, Trash2, UserPlus, Eye, ScrollText } from 'lucide-react';
+import { Send } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
+import InvitationsManager from '@/components/admin/InvitationsManager';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { handleEdgeError } from '@/lib/friendly-errors';
@@ -416,6 +418,7 @@ export default function SuperAdminPage() {
         <TabsList>
           <TabsTrigger value="companies" className="gap-1.5"><Building2 className="w-4 h-4" /> Empresas</TabsTrigger>
           <TabsTrigger value="all-users" className="gap-1.5"><Users className="w-4 h-4" /> Todos los Usuarios</TabsTrigger>
+          <TabsTrigger value="invitations" className="gap-1.5"><Send className="w-4 h-4" /> Invitaciones</TabsTrigger>
           <TabsTrigger value="audit" className="gap-1.5"><ScrollText className="w-4 h-4" /> Auditoría Global</TabsTrigger>
         </TabsList>
 
@@ -605,6 +608,16 @@ export default function SuperAdminPage() {
                 ))}
               </TableBody>
             </Table>
+          </Card>
+        </TabsContent>
+
+        {/* INVITATIONS TAB */}
+        <TabsContent value="invitations" className="space-y-4">
+          <Card className="p-4">
+            <InvitationsManager
+              companies={companies.filter(c => c.domain).map(c => ({ id: c.id, name: c.name, domain: c.domain }))}
+              availableRoles={ROLES}
+            />
           </Card>
         </TabsContent>
 

@@ -251,8 +251,11 @@ export type Database = {
           created_at: string
           email: string
           expires_at: string
+          first_name: string
           id: string
           invited_by: string | null
+          last_name: string
+          revoked_at: string | null
           role: string
           token: string
         }
@@ -262,8 +265,11 @@ export type Database = {
           created_at?: string
           email: string
           expires_at?: string
+          first_name?: string
           id?: string
           invited_by?: string | null
+          last_name?: string
+          revoked_at?: string | null
           role?: string
           token?: string
         }
@@ -273,8 +279,11 @@ export type Database = {
           created_at?: string
           email?: string
           expires_at?: string
+          first_name?: string
           id?: string
           invited_by?: string | null
+          last_name?: string
+          revoked_at?: string | null
           role?: string
           token?: string
         }
