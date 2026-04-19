@@ -489,6 +489,9 @@ export default function SuperAdminPage() {
                     <Button variant="outline" size="sm" onClick={() => toggleCompanyActive(company)}>
                       {company.is_active ? 'Desactivar' : 'Activar'}
                     </Button>
+                    <Button variant="outline" size="sm" className="gap-1.5" onClick={() => openEditSeats(company)}>
+                      <Pencil className="w-3.5 h-3.5" /> Licencias
+                    </Button>
                     <Button variant="destructive" size="sm" className="gap-1.5" onClick={() => confirmDeleteCompany(company)}>
                       <Trash2 className="w-3.5 h-3.5" /> Eliminar
                     </Button>
