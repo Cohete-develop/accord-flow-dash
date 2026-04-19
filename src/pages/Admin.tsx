@@ -290,6 +290,9 @@ export default function AdminPage() {
       <Tabs value={tab} onValueChange={setTab}>
         <TabsList>
           <TabsTrigger value="users" className="gap-1.5"><Users className="w-4 h-4" /> Usuarios</TabsTrigger>
+          {canCreateUsers && callerCompany && (
+            <TabsTrigger value="invitations" className="gap-1.5"><Send className="w-4 h-4" /> Invitaciones</TabsTrigger>
+          )}
           <TabsTrigger value="permissions" className="gap-1.5"><Shield className="w-4 h-4" /> Permisos</TabsTrigger>
           <TabsTrigger value="audit" className="gap-1.5"><ScrollText className="w-4 h-4" /> Auditoría</TabsTrigger>
           <TabsTrigger value="data" className="gap-1.5"><Database className="w-4 h-4" /> Gestión de Datos</TabsTrigger>
