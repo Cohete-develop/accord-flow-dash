@@ -113,6 +113,12 @@ export default function SuperAdminPage() {
   const [deleteUserTarget, setDeleteUserTarget] = useState<CompanyUser | null>(null);
   const [deletingUser, setDeletingUser] = useState(false);
 
+  // Edit licencias (max_seats)
+  const [showEditSeats, setShowEditSeats] = useState(false);
+  const [seatsTarget, setSeatsTarget] = useState<Company | null>(null);
+  const [seatsValue, setSeatsValue] = useState<number>(5);
+  const [savingSeats, setSavingSeats] = useState(false);
+
   useEffect(() => {
     if (!user) return;
     // super_admin must also NOT belong to any company (platform owner only)
