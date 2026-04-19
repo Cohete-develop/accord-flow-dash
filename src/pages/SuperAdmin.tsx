@@ -572,7 +572,10 @@ export default function SuperAdminPage() {
       {/* CREATE COMPANY DIALOG */}
       <Dialog open={showCreateCompany} onOpenChange={setShowCreateCompany}>
         <DialogContent className="max-w-md">
-          <DialogHeader><DialogTitle>Nueva Empresa Cliente</DialogTitle></DialogHeader>
+          <DialogHeader>
+            <DialogTitle>Nueva Empresa Cliente</DialogTitle>
+            <DialogDescription>El dominio corporativo es la clave del aislamiento entre empresas. Solo usuarios con email de ese dominio podrán pertenecer a esta empresa.</DialogDescription>
+          </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
               <Label>Nombre de la empresa</Label>
@@ -581,6 +584,15 @@ export default function SuperAdminPage() {
             <div className="space-y-2">
               <Label>Slug (identificador URL)</Label>
               <Input value={newCompanySlug} onChange={e => setNewCompanySlug(e.target.value)} placeholder="japani-racer" />
+            </div>
+            <div className="space-y-2">
+              <Label>Dominio corporativo <span className="text-destructive">*</span></Label>
+              <Input
+                value={newCompanyDomain}
+                onChange={e => setNewCompanyDomain(e.target.value)}
+                placeholder="japaniracer.com"
+              />
+              <p className="text-xs text-muted-foreground">Sin @ ni https://. Ej: <code className="text-xs bg-muted px-1 rounded">groupeseb.com</code>. No se permiten dominios públicos (gmail, hotmail, etc.) ni el dominio de la plataforma.</p>
             </div>
           </div>
           <DialogFooter>
