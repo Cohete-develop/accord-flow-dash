@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
 import { Building2, Users, Plus, Pencil, Trash2, UserPlus, Eye, ScrollText } from 'lucide-react';
+import { Progress } from '@/components/ui/progress';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { handleEdgeError } from '@/lib/friendly-errors';
@@ -25,6 +26,8 @@ interface Company {
   created_at: string;
   logo_url: string | null;
   user_count?: number;
+  active_user_count?: number;
+  max_seats?: number;
 }
 
 interface CompanyUser {
@@ -126,14 +129,21 @@ export default function SuperAdminPage() {
   const fetchCompanies = useCallback(async () => {
     setLoadingCompanies(true);
     const { data: companiesData } = await supabase.from('companies').select('*').order('created_at', { ascending: false });
-    const { data: profilesData } = await supabase.from('profiles').select('company_id');
-    
+    const { data: profilesData } = await supabase.from('profiles').select('company_id, is_active');
+
     const countMap: Record<string, number> = {};
+    const activeMap: Record<string, number> = {};
     (profilesData || []).forEach(p => {
-      if (p.company_id) countMap[p.company_id] = (countMap[p.company_id] || 0) + 1;
+      if (!p.company_id) return;
+      countMap[p.company_id] = (countMap[p.company_id] || 0) + 1;
+      if (p.is_active) activeMap[p.company_id] = (activeMap[p.company_id] || 0) + 1;
     });
 
-    setCompanies((companiesData || []).map(c => ({ ...c, user_count: countMap[c.id] || 0 })));
+    setCompanies((companiesData || []).map(c => ({
+      ...c,
+      user_count: countMap[c.id] || 0,
+      active_user_count: activeMap[c.id] || 0,
+    })));
     setLoadingCompanies(false);
   }, []);
 
@@ -400,10 +410,31 @@ export default function SuperAdminPage() {
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-3">
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Users className="w-4 h-4" />
-                    <span>{company.user_count} usuario(s)</span>
-                  </div>
+                  {(() => {
+                    const active = company.active_user_count ?? 0;
+                    const total = company.user_count ?? 0;
+                    const seats = company.max_seats ?? 0;
+                    const pct = seats > 0 ? Math.min(100, (active / seats) * 100) : 0;
+                    const nearLimit = seats > 0 && active / seats >= 0.8;
+                    const atLimit = seats > 0 && active >= seats;
+                    return (
+                      <div className="space-y-1.5">
+                        <div className="flex items-center justify-between text-sm">
+                          <div className="flex items-center gap-2 text-muted-foreground">
+                            <Users className="w-4 h-4" />
+                            <span>Usuarios activos</span>
+                          </div>
+                          <span className={`font-semibold tabular-nums ${atLimit ? 'text-destructive' : nearLimit ? 'text-amber-600' : 'text-foreground'}`}>
+                            {active} / {seats}
+                          </span>
+                        </div>
+                        <Progress value={pct} className={`h-2 ${atLimit ? '[&>div]:bg-destructive' : nearLimit ? '[&>div]:bg-amber-500' : ''}`} />
+                        {total > active && (
+                          <p className="text-xs text-muted-foreground">{total - active} inactivo(s) · {total} total</p>
+                        )}
+                      </div>
+                    );
+                  })()}
                   <p className="text-xs text-muted-foreground">
                     Creada: {new Date(company.created_at).toLocaleDateString('es-CO')}
                   </p>
