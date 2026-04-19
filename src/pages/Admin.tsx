@@ -82,6 +82,7 @@ export default function AdminPage() {
   const [callerIsSuperAdmin, setCallerIsSuperAdmin] = useState(false);
   const [callerIsGerencia, setCallerIsGerencia] = useState(false);
   const [callerIsCoordinador, setCallerIsCoordinador] = useState(false);
+  const [callerCompany, setCallerCompany] = useState<{ id: string; name: string; domain: string | null } | null>(null);
 
   // Users state
   const [users, setUsers] = useState<UserRow[]>([]);
