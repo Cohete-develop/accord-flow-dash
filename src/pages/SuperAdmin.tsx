@@ -410,10 +410,31 @@ export default function SuperAdminPage() {
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-3">
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Users className="w-4 h-4" />
-                    <span>{company.user_count} usuario(s)</span>
-                  </div>
+                  {(() => {
+                    const active = company.active_user_count ?? 0;
+                    const total = company.user_count ?? 0;
+                    const seats = company.max_seats ?? 0;
+                    const pct = seats > 0 ? Math.min(100, (active / seats) * 100) : 0;
+                    const nearLimit = seats > 0 && active / seats >= 0.8;
+                    const atLimit = seats > 0 && active >= seats;
+                    return (
+                      <div className="space-y-1.5">
+                        <div className="flex items-center justify-between text-sm">
+                          <div className="flex items-center gap-2 text-muted-foreground">
+                            <Users className="w-4 h-4" />
+                            <span>Usuarios activos</span>
+                          </div>
+                          <span className={`font-semibold tabular-nums ${atLimit ? 'text-destructive' : nearLimit ? 'text-amber-600' : 'text-foreground'}`}>
+                            {active} / {seats}
+                          </span>
+                        </div>
+                        <Progress value={pct} className={`h-2 ${atLimit ? '[&>div]:bg-destructive' : nearLimit ? '[&>div]:bg-amber-500' : ''}`} />
+                        {total > active && (
+                          <p className="text-xs text-muted-foreground">{total - active} inactivo(s) · {total} total</p>
+                        )}
+                      </div>
+                    );
+                  })()}
                   <p className="text-xs text-muted-foreground">
                     Creada: {new Date(company.created_at).toLocaleDateString('es-CO')}
                   </p>
