@@ -124,31 +124,58 @@ export type Database = {
         }
         Relationships: []
       }
+      blocked_domains: {
+        Row: {
+          created_at: string
+          domain: string
+        }
+        Insert: {
+          created_at?: string
+          domain: string
+        }
+        Update: {
+          created_at?: string
+          domain?: string
+        }
+        Relationships: []
+      }
       companies: {
         Row: {
           created_at: string
+          domain: string | null
           id: string
           is_active: boolean
           logo_url: string | null
+          max_seats: number
           name: string
+          plan: string
+          settings: Json
           slug: string
           updated_at: string
         }
         Insert: {
           created_at?: string
+          domain?: string | null
           id?: string
           is_active?: boolean
           logo_url?: string | null
+          max_seats?: number
           name: string
+          plan?: string
+          settings?: Json
           slug: string
           updated_at?: string
         }
         Update: {
           created_at?: string
+          domain?: string | null
           id?: string
           is_active?: boolean
           logo_url?: string | null
+          max_seats?: number
           name?: string
+          plan?: string
+          settings?: Json
           slug?: string
           updated_at?: string
         }
@@ -210,6 +237,50 @@ export type Database = {
           },
           {
             foreignKeyName: "entregables_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      invitations: {
+        Row: {
+          accepted_at: string | null
+          company_id: string
+          created_at: string
+          email: string
+          expires_at: string
+          id: string
+          invited_by: string | null
+          role: string
+          token: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          company_id: string
+          created_at?: string
+          email: string
+          expires_at?: string
+          id?: string
+          invited_by?: string | null
+          role?: string
+          token?: string
+        }
+        Update: {
+          accepted_at?: string | null
+          company_id?: string
+          created_at?: string
+          email?: string
+          expires_at?: string
+          id?: string
+          invited_by?: string | null
+          role?: string
+          token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invitations_company_id_fkey"
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
@@ -411,6 +482,8 @@ export type Database = {
           id: string
           is_active: boolean
           last_name: string
+          member_role: string
+          member_status: string
           updated_at: string
           user_id: string
         }
@@ -423,6 +496,8 @@ export type Database = {
           id?: string
           is_active?: boolean
           last_name?: string
+          member_role?: string
+          member_status?: string
           updated_at?: string
           user_id: string
         }
@@ -435,6 +510,8 @@ export type Database = {
           id?: string
           is_active?: boolean
           last_name?: string
+          member_role?: string
+          member_status?: string
           updated_at?: string
           user_id?: string
         }
@@ -475,6 +552,7 @@ export type Database = {
     }
     Functions: {
       get_user_company_id: { Args: { _user_id: string }; Returns: string }
+      get_user_email_domain: { Args: never; Returns: string }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
