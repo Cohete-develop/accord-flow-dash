@@ -607,14 +607,27 @@ export default function SuperAdminPage() {
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>Nuevo Usuario para {targetCompany?.name}</DialogTitle>
-            <DialogDescription>Crea el primer usuario (gerencia) o agrega más usuarios a esta empresa.</DialogDescription>
+            <DialogDescription>
+              {targetCompany?.domain
+                ? <>El email debe ser del dominio <strong>@{targetCompany.domain}</strong>.</>
+                : <span className="text-destructive">⚠ Esta empresa no tiene dominio configurado. Edítala primero.</span>}
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2"><Label>Nombre <span className="text-destructive">*</span></Label><Input value={newFirstName} onChange={e => setNewFirstName(e.target.value)} required placeholder="Nombre" /></div>
               <div className="space-y-2"><Label>Apellido <span className="text-destructive">*</span></Label><Input value={newLastName} onChange={e => setNewLastName(e.target.value)} required placeholder="Apellido" /></div>
             </div>
-            <div className="space-y-2"><Label>Email <span className="text-destructive">*</span></Label><Input type="email" value={newEmail} onChange={e => setNewEmail(e.target.value)} required placeholder="correo@ejemplo.com" /></div>
+            <div className="space-y-2">
+              <Label>Email <span className="text-destructive">*</span></Label>
+              <Input
+                type="email"
+                value={newEmail}
+                onChange={e => setNewEmail(e.target.value)}
+                required
+                placeholder={targetCompany?.domain ? `nombre@${targetCompany.domain}` : 'correo@empresa.com'}
+              />
+            </div>
             <div className="space-y-2"><Label>Contraseña <span className="text-destructive">*</span></Label><Input type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} required placeholder="Mínimo 6 caracteres" /></div>
             <div className="space-y-2">
               <Label>Rol</Label>
