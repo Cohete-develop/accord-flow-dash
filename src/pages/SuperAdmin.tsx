@@ -222,6 +222,17 @@ export default function SuperAdminPage() {
     if (isSuperAdmin) { fetchCompanies(); fetchAllUsers(); fetchAudit(); }
   }, [isSuperAdmin, fetchCompanies, fetchAllUsers, fetchAudit]);
 
+  useEffect(() => {
+    if (!isSuperAdmin) return;
+    supabase.from('plan_definitions')
+      .select('*')
+      .eq('is_active', true)
+      .order('sort_order', { ascending: true })
+      .then(({ data }) => {
+        setPlanDefinitions((data as PlanDefinition[]) || []);
+      });
+  }, [isSuperAdmin]);
+
   if (isSuperAdmin === false) return <Navigate to="/dashboard" replace />;
   if (isSuperAdmin === null) return <div className="flex items-center justify-center min-h-[50vh]"><p>Verificando permisos...</p></div>;
 
