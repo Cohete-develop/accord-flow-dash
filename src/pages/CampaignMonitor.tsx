@@ -790,3 +790,38 @@ export default function CampaignMonitorPage() {
     </div>
   );
 }
+
+function AnalisisTab() {
+  const { data: campaigns = [] } = useCampaigns();
+  const { data: metrics = [] } = useCampaignMetrics(undefined, 30);
+  const { data: keywords = [] } = useCampaignKeywords();
+  const [range, setRange] = useState("30");
+
+  const filtered = useMemo(() => {
+    const days = parseInt(range, 10);
+    const since = new Date();
+    since.setDate(since.getDate() - days);
+    const cutoff = since.toISOString().slice(0, 10);
+    return metrics.filter((m) => m.date >= cutoff);
+  }, [metrics, range]);
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center gap-2">
+        <Label>Rango:</Label>
+        <Select value={range} onValueChange={setRange}>
+          <SelectTrigger className="w-[140px]"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="7">Últimos 7 días</SelectItem>
+            <SelectItem value="14">Últimos 14 días</SelectItem>
+            <SelectItem value="30">Últimos 30 días</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      <CpaEfficiencyChart metrics={filtered} campaigns={campaigns} />
+      <HourlyHeatmap metrics={filtered} />
+      <AutoInsights metrics={filtered} campaigns={campaigns} keywords={keywords} />
+    </div>
+  );
+}
