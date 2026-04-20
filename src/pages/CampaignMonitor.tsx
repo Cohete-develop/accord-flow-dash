@@ -205,14 +205,16 @@ function ResumenTab() {
         )}
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-        <SummaryCard label="Gasto" value={fmtMoney(totals.cost)} />
-        <SummaryCard label="Impresiones" value={fmtNum(totals.impressions)} />
-        <SummaryCard label="Clicks" value={fmtNum(totals.clicks)} />
-        <SummaryCard label="CTR" value={fmtPct(ctr)} />
-        <SummaryCard label="Conversiones" value={fmtNum(totals.conversions)} />
-        <SummaryCard label="ROAS" value={`${roas.toFixed(2)}x`} />
-      </div>
+      <TooltipProvider delayDuration={150}>
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+          <SummaryCard label="Gasto" value={fmtMoney(totals.cost)} raw={totals.cost} />
+          <SummaryCard label="Impresiones" value={fmtNum(totals.impressions)} raw={totals.impressions} />
+          <SummaryCard label="Clicks" value={fmtNum(totals.clicks)} raw={totals.clicks} />
+          <SummaryCard label="CTR" value={fmtPct(ctr)} raw={ctr} />
+          <SummaryCard label="Conversiones" value={fmtNum(totals.conversions)} raw={totals.conversions} />
+          <SummaryCard label="ROAS" value={`${roas.toFixed(2)}x`} raw={roas} />
+        </div>
+      </TooltipProvider>
 
       <Card>
         <CardHeader>
@@ -283,11 +285,40 @@ function ResumenTab() {
   );
 }
 
-function SummaryCard({ label, value }: { label: string; value: string }) {
+function SummaryCard({ label, value, raw }: { label: string; value: string; raw?: number }) {
+  const info = KPI_INFO[label];
+  const interpretation = info && raw !== undefined ? info.interpret(raw) : null;
+  const toneClass = interpretation
+    ? interpretation.tone === "good"
+      ? "text-green-600 dark:text-green-400"
+      : interpretation.tone === "warn"
+      ? "text-amber-600 dark:text-amber-400"
+      : interpretation.tone === "bad"
+      ? "text-destructive"
+      : "text-foreground"
+    : "";
   return (
     <Card>
       <CardContent className="pt-6">
-        <p className="text-xs text-muted-foreground uppercase tracking-wide">{label}</p>
+        <div className="flex items-center gap-1.5">
+          <p className="text-xs text-muted-foreground uppercase tracking-wide">{label}</p>
+          {info && (
+            <UITooltip>
+              <TooltipTrigger asChild>
+                <button type="button" className="text-muted-foreground hover:text-foreground transition-colors">
+                  <Info className="h-3 w-3" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="top" className="max-w-xs">
+                <p className="font-semibold mb-1">{label}</p>
+                <p className="text-xs mb-2">{info.desc}</p>
+                {interpretation && (
+                  <p className={`text-xs font-medium ${toneClass}`}>{interpretation.text}</p>
+                )}
+              </TooltipContent>
+            </UITooltip>
+          )}
+        </div>
         <p className="text-2xl font-bold mt-1">{value}</p>
       </CardContent>
     </Card>
