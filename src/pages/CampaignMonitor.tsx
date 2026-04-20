@@ -756,8 +756,6 @@ function ConexionesTab() {
 }
 
 export default function CampaignMonitorPage() {
-  return null as any; // placeholder, overwritten below
-}
   const { isPremium, plan, loading } = useIsPremium();
 
   if (loading) {
