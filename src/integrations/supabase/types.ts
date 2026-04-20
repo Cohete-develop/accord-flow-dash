@@ -581,7 +581,15 @@ export type Database = {
           slug?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "companies_plan_fkey"
+            columns: ["plan"]
+            isOneToOne: false
+            referencedRelation: "plan_definitions"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       entregables: {
         Row: {
@@ -883,6 +891,51 @@ export type Database = {
           },
         ]
       }
+      plan_definitions: {
+        Row: {
+          created_at: string | null
+          display_name: string
+          features: Json
+          id: string
+          is_active: boolean | null
+          max_ad_connections: number | null
+          max_campaigns_sync: number | null
+          max_seats: number
+          modules_included: string[]
+          monthly_price_usd: number | null
+          sort_order: number | null
+          sync_interval_minutes: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          display_name: string
+          features?: Json
+          id: string
+          is_active?: boolean | null
+          max_ad_connections?: number | null
+          max_campaigns_sync?: number | null
+          max_seats?: number
+          modules_included?: string[]
+          monthly_price_usd?: number | null
+          sort_order?: number | null
+          sync_interval_minutes?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          display_name?: string
+          features?: Json
+          id?: string
+          is_active?: boolean | null
+          max_ad_connections?: number | null
+          max_campaigns_sync?: number | null
+          max_seats?: number
+          modules_included?: string[]
+          monthly_price_usd?: number | null
+          sort_order?: number | null
+          sync_interval_minutes?: number | null
+        }
+        Relationships: []
+      }
       platform_domains: {
         Row: {
           created_at: string
@@ -1026,6 +1079,17 @@ export type Database = {
       }
     }
     Functions: {
+      get_company_plan_limits: {
+        Args: { _company_id: string }
+        Returns: {
+          max_ad_connections: number
+          max_campaigns_sync: number
+          max_seats: number
+          modules_included: string[]
+          plan_id: string
+          sync_interval_minutes: number
+        }[]
+      }
       get_user_company_id: { Args: { _user_id: string }; Returns: string }
       get_user_email_domain: { Args: never; Returns: string }
       has_premium_plan: { Args: { _company_id: string }; Returns: boolean }
