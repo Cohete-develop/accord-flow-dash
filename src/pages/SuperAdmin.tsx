@@ -938,6 +938,119 @@ export default function SuperAdminPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* CHANGE PLAN DIALOG */}
+      <Dialog open={showPlanDialog} onOpenChange={setShowPlanDialog}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Crown className="w-5 h-5" /> Cambiar Plan — {planTarget?.name}
+            </DialogTitle>
+            <DialogDescription>
+              Selecciona el plan que aplicará a esta empresa. Al guardar, también se actualizará el número de licencias incluidas en el plan.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 py-2">
+            {planDefinitions.map(plan => {
+              const isCurrent = plan.id === (planTarget?.plan || 'trial');
+              const isSelected = plan.id === selectedPlanId;
+              const activeUsers = planTarget?.active_user_count ?? 0;
+              const exceedsSeats = activeUsers > plan.max_seats;
+              const includesCm = plan.modules_included.includes('campaign_monitor');
+              return (
+                <button
+                  key={plan.id}
+                  type="button"
+                  onClick={() => setSelectedPlanId(plan.id)}
+                  className={`text-left rounded-lg border p-4 transition-all ${
+                    isSelected
+                      ? 'border-primary ring-2 ring-primary/30 bg-primary/5'
+                      : 'border-border hover:border-primary/50'
+                  }`}
+                >
+                  <div className="flex items-start justify-between mb-2">
+                    <div>
+                      <div className="flex items-center gap-2 mb-1">
+                        <h3 className="font-semibold text-base">{plan.display_name}</h3>
+                        {isCurrent && <Badge variant="outline" className="text-[10px]">Plan actual</Badge>}
+                      </div>
+                      <p className="text-2xl font-bold">${plan.monthly_price_usd}<span className="text-xs font-normal text-muted-foreground">/mes USD</span></p>
+                    </div>
+                    <Badge className={`${PLAN_BADGE_CLASSES[plan.id] || PLAN_BADGE_CLASSES.trial}`}>
+                      <Crown className="w-3 h-3" />
+                    </Badge>
+                  </div>
+
+                  <div className="text-xs text-muted-foreground mb-3 space-y-0.5">
+                    <p><strong className="text-foreground">{plan.max_seats}</strong> usuarios incluidos</p>
+                    {includesCm ? (
+                      <p>Campaign Monitor: <strong className="text-foreground">{plan.max_ad_connections}</strong> conexiones, <strong className="text-foreground">{plan.max_campaigns_sync}</strong> campañas</p>
+                    ) : (
+                      <p>Campaign Monitor: no incluido</p>
+                    )}
+                  </div>
+
+                  <ul className="space-y-1 text-xs">
+                    {(plan.features || []).map((f, i) => (
+                      <li key={i} className="flex items-start gap-1.5">
+                        <span className="text-primary mt-0.5">✓</span>
+                        <span>{f}</span>
+                      </li>
+                    ))}
+                  </ul>
+
+                  {exceedsSeats && isSelected && (
+                    <div className="mt-3 rounded bg-destructive/10 border border-destructive/30 p-2 text-xs text-destructive">
+                      Esta empresa tiene {activeUsers} usuarios activos. Este plan permite máximo {plan.max_seats}.
+                    </div>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+
+          {(() => {
+            const newPlanDef = planDefinitions.find(p => p.id === selectedPlanId);
+            const currentPlanDef = planDefinitions.find(p => p.id === (planTarget?.plan || 'trial'));
+            if (!newPlanDef || !currentPlanDef) return null;
+            const losingCm = currentPlanDef.modules_included.includes('campaign_monitor')
+              && !newPlanDef.modules_included.includes('campaign_monitor');
+            const activeUsers = planTarget?.active_user_count ?? 0;
+            const exceedsSeats = activeUsers > newPlanDef.max_seats;
+
+            return (
+              <div className="space-y-2">
+                {exceedsSeats && (
+                  <div className="rounded bg-destructive/10 border border-destructive/30 p-3 text-sm text-destructive">
+                    Esta empresa tiene {activeUsers} usuarios activos. El plan seleccionado permite máximo {newPlanDef.max_seats}. Deberás desactivar usuarios antes de aplicar este plan.
+                  </div>
+                )}
+                {losingCm && !exceedsSeats && (
+                  <div className="rounded bg-amber-50 border border-amber-200 p-3 text-sm text-amber-800">
+                    Se desactivará el acceso a Campaign Monitor. Los datos de campañas se conservarán pero no serán accesibles hasta que se reactive un plan con este módulo.
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowPlanDialog(false)} disabled={savingPlan}>Cancelar</Button>
+            <Button
+              variant="gradient"
+              onClick={handleSavePlan}
+              disabled={
+                savingPlan ||
+                !selectedPlanId ||
+                (planDefinitions.find(p => p.id === selectedPlanId)?.max_seats ?? 0) < (planTarget?.active_user_count ?? 0)
+              }
+            >
+              {savingPlan ? 'Guardando...' : 'Guardar Cambios'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
