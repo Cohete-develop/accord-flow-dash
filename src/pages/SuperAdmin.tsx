@@ -340,6 +340,54 @@ export default function SuperAdminPage() {
     setShowCreateUser(true);
   }
 
+  function openPlanDialog(company: Company) {
+    setPlanTarget(company);
+    setSelectedPlanId(company.plan || 'trial');
+    setShowPlanDialog(true);
+  }
+
+  async function handleSavePlan() {
+    if (!planTarget) return;
+    const newPlanDef = planDefinitions.find(p => p.id === selectedPlanId);
+    if (!newPlanDef) { toast.error('Plan no válido'); return; }
+    const previousPlan = planTarget.plan || 'trial';
+    if (newPlanDef.id === previousPlan) { setShowPlanDialog(false); return; }
+
+    const activeUsers = planTarget.active_user_count ?? 0;
+    if (activeUsers > newPlanDef.max_seats) {
+      toast.error('No se puede aplicar el plan', {
+        description: `La empresa tiene ${activeUsers} usuarios activos. Desactiva usuarios antes de bajar el límite a ${newPlanDef.max_seats}.`,
+      });
+      return;
+    }
+
+    setSavingPlan(true);
+    const { error } = await supabase.from('companies')
+      .update({ plan: newPlanDef.id, max_seats: newPlanDef.max_seats })
+      .eq('id', planTarget.id);
+    if (error) {
+      toast.error('Error al cambiar el plan', { description: error.message });
+      setSavingPlan(false);
+      return;
+    }
+    await supabase.from('audit_log').insert({
+      user_id: session?.user?.id,
+      user_name: session?.user?.user_metadata?.full_name || session?.user?.email || '',
+      action: 'change_plan',
+      module: 'super_admin',
+      details: {
+        company_id: planTarget.id,
+        company_name: planTarget.name,
+        previous_plan: previousPlan,
+        new_plan: newPlanDef.id,
+      },
+    });
+    toast.success(`Plan actualizado a ${newPlanDef.display_name} para ${planTarget.name}`);
+    setShowPlanDialog(false);
+    setSavingPlan(false);
+    fetchCompanies();
+  }
+
   async function handleCreateUser() {
     if (!newEmail || !newPassword || !newFirstName || !newLastName || !targetCompany) { toast.error('Todos los campos son obligatorios'); return; }
     if (newPassword.length < 6) { toast.error('La contraseña debe tener al menos 6 caracteres'); return; }
