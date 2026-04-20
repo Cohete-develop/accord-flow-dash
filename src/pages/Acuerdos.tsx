@@ -20,10 +20,10 @@ import { useColumnOrder, ColumnDef } from "@/hooks/useColumnOrder";
 import { useResizableColumns } from "@/hooks/useResizableColumns";
 import { exportToFile, ExportFormat } from "@/lib/export-utils";
 import { useColumnVisibility } from "@/hooks/useColumnVisibility";
+import { supabase } from "@/integrations/supabase/client";
 
 const REDES_SOCIALES = ["Instagram", "TikTok", "YouTube", "Twitter", "Facebook"];
 const TIPOS_CONTENIDO = ["Reel", "Story", "Collab", "UGC"];
-const FAMILIAS_PRODUCTO = ["Lubricantes", "Llantas", "Transmisión", "Frenos", "Luces/Iluminación", "Baterías"];
 
 const emptyAcuerdo = (): Omit<Acuerdo, "id" | "createdAt"> => ({
   influencer: "", redSocial: [], seguidores: 0, plataforma: "", tipoContenido: [],
@@ -130,6 +130,18 @@ export default function AcuerdosPage() {
   const [sortKey, setSortKey] = useState<string | null>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>(null);
   const { sortItems, toggleSort } = useSort<Acuerdo>();
+  const [familias, setFamilias] = useState<string[]>([]);
+
+  useEffect(() => {
+    supabase
+      .from("product_families")
+      .select("name")
+      .eq("is_active", true)
+      .order("sort_order", { ascending: true })
+      .then(({ data }) => {
+        setFamilias((data || []).map((f) => f.name));
+      });
+  }, []);
 
   const acuerdoColumns: ColumnDef<Acuerdo>[] = [
     { key: "influencer", label: "Influencer", sortKey: "influencer", render: (a) => <span className="font-medium">{a.influencer}</span> },
@@ -353,12 +365,18 @@ export default function AcuerdosPage() {
             <div className="space-y-2">
               <Label>Familias de productos</Label>
               <div className="flex flex-wrap gap-3 pt-1">
-                {FAMILIAS_PRODUCTO.map((f) => (
-                  <label key={f} className="flex items-center gap-1.5 text-sm cursor-pointer">
-                    <Checkbox checked={(form.familiaProducto || []).includes(f)} onCheckedChange={() => toggleFamiliaProducto(f)} />
-                    {f}
-                  </label>
-                ))}
+                {familias.length === 0 ? (
+                  <p className="text-xs text-muted-foreground">
+                    Sin familias de producto configuradas. Configúralas en Administración.
+                  </p>
+                ) : (
+                  familias.map((f) => (
+                    <label key={f} className="flex items-center gap-1.5 text-sm cursor-pointer">
+                      <Checkbox checked={(form.familiaProducto || []).includes(f)} onCheckedChange={() => toggleFamiliaProducto(f)} />
+                      {f}
+                    </label>
+                  ))
+                )}
               </div>
             </div>
             <div className="col-span-2 space-y-2"><FieldLabel field="notas">Notas</FieldLabel><Textarea value={form.notas} onChange={(e) => update("notas", e.target.value)} /></div>

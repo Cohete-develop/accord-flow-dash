@@ -10,7 +10,7 @@ import { Switch } from '@/components/ui/switch';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Users, Shield, ScrollText, UserPlus, Trash2, Pencil, Database, Crown } from 'lucide-react';
+import { Users, Shield, ScrollText, UserPlus, Trash2, Pencil, Database, Crown, Package } from 'lucide-react';
 import { Send } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -19,6 +19,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { Navigate } from 'react-router-dom';
 import AdminDataManagement from '@/components/admin/AdminDataManagement';
 import InvitationsManager from '@/components/admin/InvitationsManager';
+import ProductFamiliesManager from '@/components/admin/ProductFamiliesManager';
 
 const ALL_ROLES = [
   { value: 'gerencia', label: 'Gerencia' },
@@ -388,6 +389,9 @@ export default function AdminPage() {
             <TabsTrigger value="invitations" className="gap-1.5"><Send className="w-4 h-4" /> Invitaciones</TabsTrigger>
           )}
           <TabsTrigger value="permissions" className="gap-1.5"><Shield className="w-4 h-4" /> Permisos</TabsTrigger>
+          {(callerIsGerencia || callerIsCoordinador) && callerCompany && (
+            <TabsTrigger value="families" className="gap-1.5"><Package className="w-4 h-4" /> Familias de Producto</TabsTrigger>
+          )}
           <TabsTrigger value="audit" className="gap-1.5"><ScrollText className="w-4 h-4" /> Auditoría</TabsTrigger>
           <TabsTrigger value="data" className="gap-1.5"><Database className="w-4 h-4" /> Gestión de Datos</TabsTrigger>
         </TabsList>
@@ -527,6 +531,13 @@ export default function AdminPage() {
             </Table>
           </Card>
         </TabsContent>
+
+        {/* PRODUCT FAMILIES TAB */}
+        {(callerIsGerencia || callerIsCoordinador) && callerCompany && (
+          <TabsContent value="families" className="space-y-4">
+            <ProductFamiliesManager companyId={callerCompany.id} canDelete={callerIsGerencia} />
+          </TabsContent>
+        )}
 
         {/* AUDIT TAB */}
         <TabsContent value="audit" className="space-y-4">
