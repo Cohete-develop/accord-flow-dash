@@ -20,10 +20,10 @@ import { useColumnOrder, ColumnDef } from "@/hooks/useColumnOrder";
 import { useResizableColumns } from "@/hooks/useResizableColumns";
 import { exportToFile, ExportFormat } from "@/lib/export-utils";
 import { useColumnVisibility } from "@/hooks/useColumnVisibility";
+import { supabase } from "@/integrations/supabase/client";
 
 const REDES_SOCIALES = ["Instagram", "TikTok", "YouTube", "Twitter", "Facebook"];
 const TIPOS_CONTENIDO = ["Reel", "Story", "Collab", "UGC"];
-const FAMILIAS_PRODUCTO = ["Lubricantes", "Llantas", "Transmisión", "Frenos", "Luces/Iluminación", "Baterías"];
 
 const emptyAcuerdo = (): Omit<Acuerdo, "id" | "createdAt"> => ({
   influencer: "", redSocial: [], seguidores: 0, plataforma: "", tipoContenido: [],
