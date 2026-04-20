@@ -163,7 +163,8 @@ export function useCampaignMetrics(campaignId?: string, daysBack = 30) {
         .gte("date", since.toISOString().slice(0, 10))
         .order("date", { ascending: true });
       if (campaignId) q = q.eq("campaign_sync_id", campaignId);
-      const { data, error } = await q;
+      // Necesario porque tenemos datos horarios (hasta ~1440 filas/campaña en 30d)
+      const { data, error } = await q.limit(50000);
       if (error) throw error;
       return (data || []) as CampaignMetric[];
     },
