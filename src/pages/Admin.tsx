@@ -10,7 +10,7 @@ import { Switch } from '@/components/ui/switch';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Users, Shield, ScrollText, UserPlus, Trash2, Pencil, Database, Crown } from 'lucide-react';
+import { Users, Shield, ScrollText, UserPlus, Trash2, Pencil, Database, Crown, Package } from 'lucide-react';
 import { Send } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -19,6 +19,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { Navigate } from 'react-router-dom';
 import AdminDataManagement from '@/components/admin/AdminDataManagement';
 import InvitationsManager from '@/components/admin/InvitationsManager';
+import ProductFamiliesManager from '@/components/admin/ProductFamiliesManager';
 
 const ALL_ROLES = [
   { value: 'gerencia', label: 'Gerencia' },
