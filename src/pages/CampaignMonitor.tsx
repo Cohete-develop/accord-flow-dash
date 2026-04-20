@@ -19,6 +19,16 @@ import { Link } from "react-router-dom";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from "recharts";
 import { Tooltip as UITooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Info } from "lucide-react";
+import { SpendByPlatformCard } from "@/components/campaign-monitor/SpendByPlatformCard";
+import { PlatformComparisonCard } from "@/components/campaign-monitor/PlatformComparisonCard";
+import { TopBottomCampaignsCard } from "@/components/campaign-monitor/TopBottomCampaignsCard";
+import { PeriodComparisonCard } from "@/components/campaign-monitor/PeriodComparisonCard";
+import { BudgetPacingCard } from "@/components/campaign-monitor/BudgetPacingCard";
+import { CampaignFunnel } from "@/components/campaign-monitor/CampaignFunnel";
+import { EfficiencyChart } from "@/components/campaign-monitor/EfficiencyChart";
+import { CpaEfficiencyChart } from "@/components/campaign-monitor/CpaEfficiencyChart";
+import { HourlyHeatmap } from "@/components/campaign-monitor/HourlyHeatmap";
+import { AutoInsights } from "@/components/campaign-monitor/AutoInsights";
 
 const PLATFORM_LABELS: Record<Platform, string> = {
   google_ads: "Google Ads",
@@ -236,6 +246,17 @@ function ResumenTab() {
         </CardContent>
       </Card>
 
+      <PeriodComparisonCard metrics={metrics} days={parseInt(range, 10)} />
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <SpendByPlatformCard metrics={filtered} campaigns={campaigns} />
+        <PlatformComparisonCard metrics={filtered} campaigns={campaigns} />
+      </div>
+
+      <TopBottomCampaignsCard metrics={filtered} campaigns={campaigns} />
+
+      <BudgetPacingCard metrics={filtered} campaigns={campaigns} daysSelected={parseInt(range, 10)} />
+
       <Card>
         <CardHeader>
           <CardTitle>Campañas activas</CardTitle>
@@ -448,6 +469,15 @@ function CampaignDetailDialog({ campaign, open, onClose }: any) {
             </CardContent>
           </Card>
 
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <EfficiencyChart metrics={metrics} />
+            <CampaignFunnel
+              impressions={metrics.reduce((s, m) => s + Number(m.impressions), 0)}
+              clicks={metrics.reduce((s, m) => s + Number(m.clicks), 0)}
+              conversions={metrics.reduce((s, m) => s + Number(m.conversions), 0)}
+            />
+          </div>
+
           {campaign.platform === "google_ads" && keywords.length > 0 && (
             <Card>
               <CardHeader><CardTitle className="text-sm">Keywords (Top 20)</CardTitle></CardHeader>
@@ -465,17 +495,32 @@ function CampaignDetailDialog({ campaign, open, onClose }: any) {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {keywords.slice(0, 20).map((k) => (
+                    {[...keywords]
+                      .sort((a, b) => (a.quality_score ?? 99) - (b.quality_score ?? 99))
+                      .slice(0, 20)
+                      .map((k) => {
+                      const qs = k.quality_score ?? 0;
+                      const qsCls =
+                        qs >= 7 ? "bg-green-600 text-white"
+                        : qs >= 4 ? "bg-amber-500 text-white"
+                        : qs > 0 ? "bg-destructive text-destructive-foreground"
+                        : "bg-muted";
+                      return (
                       <TableRow key={k.id}>
                         <TableCell className="font-medium">{k.keyword}</TableCell>
                         <TableCell><Badge variant="outline">{k.match_type}</Badge></TableCell>
-                        <TableCell>{k.quality_score ?? "—"}</TableCell>
+                        <TableCell>
+                          {k.quality_score
+                            ? <Badge className={qsCls}>{qs}</Badge>
+                            : "—"}
+                        </TableCell>
                         <TableCell className="text-right">{fmtNum(k.impressions)}</TableCell>
                         <TableCell className="text-right">{fmtNum(k.clicks)}</TableCell>
                         <TableCell className="text-right">{fmtPct(Number(k.ctr))}</TableCell>
                         <TableCell className="text-right">{fmtMoney(Number(k.cpc))}</TableCell>
                       </TableRow>
-                    ))}
+                      );
+                    })}
                   </TableBody>
                 </Table>
               </CardContent>
@@ -732,14 +777,51 @@ export default function CampaignMonitorPage() {
         <TabsList>
           <TabsTrigger value="resumen">Resumen</TabsTrigger>
           <TabsTrigger value="campanas">Campañas</TabsTrigger>
+          <TabsTrigger value="analisis">Análisis</TabsTrigger>
           <TabsTrigger value="alertas">Alertas</TabsTrigger>
           <TabsTrigger value="conexiones">Conexiones</TabsTrigger>
         </TabsList>
         <TabsContent value="resumen" className="mt-4"><ResumenTab /></TabsContent>
         <TabsContent value="campanas" className="mt-4"><CampanasTab /></TabsContent>
+        <TabsContent value="analisis" className="mt-4"><AnalisisTab /></TabsContent>
         <TabsContent value="alertas" className="mt-4"><AlertasTab /></TabsContent>
         <TabsContent value="conexiones" className="mt-4"><ConexionesTab /></TabsContent>
       </Tabs>
+    </div>
+  );
+}
+
+function AnalisisTab() {
+  const { data: campaigns = [] } = useCampaigns();
+  const { data: metrics = [] } = useCampaignMetrics(undefined, 30);
+  const { data: keywords = [] } = useCampaignKeywords();
+  const [range, setRange] = useState("30");
+
+  const filtered = useMemo(() => {
+    const days = parseInt(range, 10);
+    const since = new Date();
+    since.setDate(since.getDate() - days);
+    const cutoff = since.toISOString().slice(0, 10);
+    return metrics.filter((m) => m.date >= cutoff);
+  }, [metrics, range]);
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center gap-2">
+        <Label>Rango:</Label>
+        <Select value={range} onValueChange={setRange}>
+          <SelectTrigger className="w-[140px]"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="7">Últimos 7 días</SelectItem>
+            <SelectItem value="14">Últimos 14 días</SelectItem>
+            <SelectItem value="30">Últimos 30 días</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      <CpaEfficiencyChart metrics={filtered} campaigns={campaigns} />
+      <HourlyHeatmap metrics={filtered} />
+      <AutoInsights metrics={filtered} campaigns={campaigns} keywords={keywords} />
     </div>
   );
 }
