@@ -469,6 +469,15 @@ function CampaignDetailDialog({ campaign, open, onClose }: any) {
             </CardContent>
           </Card>
 
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <EfficiencyChart metrics={metrics} />
+            <CampaignFunnel
+              impressions={metrics.reduce((s, m) => s + Number(m.impressions), 0)}
+              clicks={metrics.reduce((s, m) => s + Number(m.clicks), 0)}
+              conversions={metrics.reduce((s, m) => s + Number(m.conversions), 0)}
+            />
+          </div>
+
           {campaign.platform === "google_ads" && keywords.length > 0 && (
             <Card>
               <CardHeader><CardTitle className="text-sm">Keywords (Top 20)</CardTitle></CardHeader>
@@ -486,17 +495,32 @@ function CampaignDetailDialog({ campaign, open, onClose }: any) {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {keywords.slice(0, 20).map((k) => (
+                    {[...keywords]
+                      .sort((a, b) => (a.quality_score ?? 99) - (b.quality_score ?? 99))
+                      .slice(0, 20)
+                      .map((k) => {
+                      const qs = k.quality_score ?? 0;
+                      const qsCls =
+                        qs >= 7 ? "bg-green-600 text-white"
+                        : qs >= 4 ? "bg-amber-500 text-white"
+                        : qs > 0 ? "bg-destructive text-destructive-foreground"
+                        : "bg-muted";
+                      return (
                       <TableRow key={k.id}>
                         <TableCell className="font-medium">{k.keyword}</TableCell>
                         <TableCell><Badge variant="outline">{k.match_type}</Badge></TableCell>
-                        <TableCell>{k.quality_score ?? "—"}</TableCell>
+                        <TableCell>
+                          {k.quality_score
+                            ? <Badge className={qsCls}>{qs}</Badge>
+                            : "—"}
+                        </TableCell>
                         <TableCell className="text-right">{fmtNum(k.impressions)}</TableCell>
                         <TableCell className="text-right">{fmtNum(k.clicks)}</TableCell>
                         <TableCell className="text-right">{fmtPct(Number(k.ctr))}</TableCell>
                         <TableCell className="text-right">{fmtMoney(Number(k.cpc))}</TableCell>
                       </TableRow>
-                    ))}
+                      );
+                    })}
                   </TableBody>
                 </Table>
               </CardContent>
@@ -732,6 +756,8 @@ function ConexionesTab() {
 }
 
 export default function CampaignMonitorPage() {
+  return null as any; // placeholder, overwritten below
+}
   const { isPremium, plan, loading } = useIsPremium();
 
   if (loading) {
@@ -753,11 +779,13 @@ export default function CampaignMonitorPage() {
         <TabsList>
           <TabsTrigger value="resumen">Resumen</TabsTrigger>
           <TabsTrigger value="campanas">Campañas</TabsTrigger>
+          <TabsTrigger value="analisis">Análisis</TabsTrigger>
           <TabsTrigger value="alertas">Alertas</TabsTrigger>
           <TabsTrigger value="conexiones">Conexiones</TabsTrigger>
         </TabsList>
         <TabsContent value="resumen" className="mt-4"><ResumenTab /></TabsContent>
         <TabsContent value="campanas" className="mt-4"><CampanasTab /></TabsContent>
+        <TabsContent value="analisis" className="mt-4"><AnalisisTab /></TabsContent>
         <TabsContent value="alertas" className="mt-4"><AlertasTab /></TabsContent>
         <TabsContent value="conexiones" className="mt-4"><ConexionesTab /></TabsContent>
       </Tabs>
