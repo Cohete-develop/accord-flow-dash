@@ -389,6 +389,9 @@ export default function AdminPage() {
             <TabsTrigger value="invitations" className="gap-1.5"><Send className="w-4 h-4" /> Invitaciones</TabsTrigger>
           )}
           <TabsTrigger value="permissions" className="gap-1.5"><Shield className="w-4 h-4" /> Permisos</TabsTrigger>
+          {(callerIsGerencia || callerIsCoordinador) && callerCompany && (
+            <TabsTrigger value="families" className="gap-1.5"><Package className="w-4 h-4" /> Familias de Producto</TabsTrigger>
+          )}
           <TabsTrigger value="audit" className="gap-1.5"><ScrollText className="w-4 h-4" /> Auditoría</TabsTrigger>
           <TabsTrigger value="data" className="gap-1.5"><Database className="w-4 h-4" /> Gestión de Datos</TabsTrigger>
         </TabsList>
