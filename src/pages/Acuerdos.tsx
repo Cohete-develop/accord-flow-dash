@@ -365,12 +365,18 @@ export default function AcuerdosPage() {
             <div className="space-y-2">
               <Label>Familias de productos</Label>
               <div className="flex flex-wrap gap-3 pt-1">
-                {FAMILIAS_PRODUCTO.map((f) => (
-                  <label key={f} className="flex items-center gap-1.5 text-sm cursor-pointer">
-                    <Checkbox checked={(form.familiaProducto || []).includes(f)} onCheckedChange={() => toggleFamiliaProducto(f)} />
-                    {f}
-                  </label>
-                ))}
+                {familias.length === 0 ? (
+                  <p className="text-xs text-muted-foreground">
+                    Sin familias de producto configuradas. Configúralas en Administración.
+                  </p>
+                ) : (
+                  familias.map((f) => (
+                    <label key={f} className="flex items-center gap-1.5 text-sm cursor-pointer">
+                      <Checkbox checked={(form.familiaProducto || []).includes(f)} onCheckedChange={() => toggleFamiliaProducto(f)} />
+                      {f}
+                    </label>
+                  ))
+                )}
               </div>
             </div>
             <div className="col-span-2 space-y-2"><FieldLabel field="notas">Notas</FieldLabel><Textarea value={form.notas} onChange={(e) => update("notas", e.target.value)} /></div>
