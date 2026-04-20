@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
-import { Building2, Users, Plus, Pencil, Trash2, UserPlus, Eye, ScrollText } from 'lucide-react';
+import { Building2, Users, Plus, Pencil, Trash2, UserPlus, Eye, ScrollText, Crown } from 'lucide-react';
 import { Send } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import InvitationsManager from '@/components/admin/InvitationsManager';
@@ -30,7 +30,28 @@ interface Company {
   user_count?: number;
   active_user_count?: number;
   max_seats?: number;
+  plan?: string;
 }
+
+interface PlanDefinition {
+  id: string;
+  display_name: string;
+  max_seats: number;
+  monthly_price_usd: number;
+  features: string[];
+  modules_included: string[];
+  max_ad_connections: number;
+  max_campaigns_sync: number;
+  sync_interval_minutes: number;
+  sort_order: number;
+}
+
+const PLAN_BADGE_CLASSES: Record<string, string> = {
+  trial: 'bg-muted text-muted-foreground border border-border',
+  starter: 'bg-blue-100 text-blue-800 border border-blue-200',
+  pro: 'bg-purple-100 text-purple-800 border border-purple-200',
+  enterprise: 'bg-amber-100 text-amber-800 border border-amber-200',
+};
 
 interface CompanyUser {
   user_id: string;
