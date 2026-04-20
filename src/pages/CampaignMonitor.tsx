@@ -139,10 +139,6 @@ function ResumenTab() {
   const [range, setRange] = useState("7");
   const isLoading = loadingCampaigns || loadingMetrics || loadingHistory;
 
-  if (isLoading) {
-    return <div className="flex items-center justify-center min-h-[40vh] text-muted-foreground">Cargando datos de campañas...</div>;
-  }
-
   const filtered = useMemo(() => {
     const days = parseInt(range, 10);
     const since = new Date();
@@ -198,6 +194,10 @@ function ResumenTab() {
       return { ...c, ...t, cpa, light: status };
     });
   }, [filtered, campaigns]);
+
+  if (isLoading) {
+    return <div className="flex items-center justify-center min-h-[40vh] text-muted-foreground">Cargando datos de campañas...</div>;
+  }
 
   return (
     <div className="space-y-6">
@@ -803,10 +803,6 @@ function AnalisisTab() {
   const [range, setRange] = useState("30");
   const isLoading = loadingCampaigns || loadingMetrics || loadingKeywords;
 
-  if (isLoading) {
-    return <div className="flex items-center justify-center min-h-[40vh] text-muted-foreground">Cargando análisis...</div>;
-  }
-
   const filtered = useMemo(() => {
     const days = parseInt(range, 10);
     const since = new Date();
@@ -814,6 +810,10 @@ function AnalisisTab() {
     const cutoff = since.toISOString().slice(0, 10);
     return metrics.filter((m) => m.date >= cutoff);
   }, [metrics, range]);
+
+  if (isLoading) {
+    return <div className="flex items-center justify-center min-h-[40vh] text-muted-foreground">Cargando análisis...</div>;
+  }
 
   return (
     <div className="space-y-6">
