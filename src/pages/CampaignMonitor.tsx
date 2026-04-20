@@ -19,6 +19,16 @@ import { Link } from "react-router-dom";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from "recharts";
 import { Tooltip as UITooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Info } from "lucide-react";
+import { SpendByPlatformCard } from "@/components/campaign-monitor/SpendByPlatformCard";
+import { PlatformComparisonCard } from "@/components/campaign-monitor/PlatformComparisonCard";
+import { TopBottomCampaignsCard } from "@/components/campaign-monitor/TopBottomCampaignsCard";
+import { PeriodComparisonCard } from "@/components/campaign-monitor/PeriodComparisonCard";
+import { BudgetPacingCard } from "@/components/campaign-monitor/BudgetPacingCard";
+import { CampaignFunnel } from "@/components/campaign-monitor/CampaignFunnel";
+import { EfficiencyChart } from "@/components/campaign-monitor/EfficiencyChart";
+import { CpaEfficiencyChart } from "@/components/campaign-monitor/CpaEfficiencyChart";
+import { HourlyHeatmap } from "@/components/campaign-monitor/HourlyHeatmap";
+import { AutoInsights } from "@/components/campaign-monitor/AutoInsights";
 
 const PLATFORM_LABELS: Record<Platform, string> = {
   google_ads: "Google Ads",
