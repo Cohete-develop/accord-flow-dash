@@ -94,6 +94,120 @@ export type Database = {
           },
         ]
       }
+      ad_platform_connections: {
+        Row: {
+          account_id: string
+          account_name: string
+          company_id: string
+          connected_by: string | null
+          created_at: string
+          credentials_vault_id: string | null
+          id: string
+          last_sync_at: string | null
+          platform: string
+          status: string
+          sync_interval_minutes: number
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          account_name?: string
+          company_id: string
+          connected_by?: string | null
+          created_at?: string
+          credentials_vault_id?: string | null
+          id?: string
+          last_sync_at?: string | null
+          platform: string
+          status?: string
+          sync_interval_minutes?: number
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          account_name?: string
+          company_id?: string
+          connected_by?: string | null
+          created_at?: string
+          credentials_vault_id?: string | null
+          id?: string
+          last_sync_at?: string | null
+          platform?: string
+          status?: string
+          sync_interval_minutes?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ad_platform_connections_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      alert_history: {
+        Row: {
+          acknowledged_at: string | null
+          acknowledged_by: string | null
+          alert_id: string
+          campaign_sync_id: string | null
+          company_id: string
+          id: string
+          message: string
+          metric_value: number
+          threshold_value: number
+          triggered_at: string
+        }
+        Insert: {
+          acknowledged_at?: string | null
+          acknowledged_by?: string | null
+          alert_id: string
+          campaign_sync_id?: string | null
+          company_id: string
+          id?: string
+          message: string
+          metric_value: number
+          threshold_value: number
+          triggered_at?: string
+        }
+        Update: {
+          acknowledged_at?: string | null
+          acknowledged_by?: string | null
+          alert_id?: string
+          campaign_sync_id?: string | null
+          company_id?: string
+          id?: string
+          message?: string
+          metric_value?: number
+          threshold_value?: number
+          triggered_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "alert_history_alert_id_fkey"
+            columns: ["alert_id"]
+            isOneToOne: false
+            referencedRelation: "campaign_alerts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "alert_history_campaign_sync_id_fkey"
+            columns: ["campaign_sync_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns_sync"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "alert_history_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       audit_log: {
         Row: {
           action: string
@@ -149,6 +263,283 @@ export type Database = {
           domain?: string
         }
         Relationships: []
+      }
+      campaign_alerts: {
+        Row: {
+          campaign_sync_id: string | null
+          company_id: string
+          condition: string
+          created_at: string
+          created_by: string
+          id: string
+          is_active: boolean
+          last_triggered_at: string | null
+          metric: string
+          notify_channels: Json
+          threshold: number
+          window_minutes: number
+        }
+        Insert: {
+          campaign_sync_id?: string | null
+          company_id: string
+          condition: string
+          created_at?: string
+          created_by: string
+          id?: string
+          is_active?: boolean
+          last_triggered_at?: string | null
+          metric: string
+          notify_channels?: Json
+          threshold: number
+          window_minutes?: number
+        }
+        Update: {
+          campaign_sync_id?: string | null
+          company_id?: string
+          condition?: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          is_active?: boolean
+          last_triggered_at?: string | null
+          metric?: string
+          notify_channels?: Json
+          threshold?: number
+          window_minutes?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaign_alerts_campaign_sync_id_fkey"
+            columns: ["campaign_sync_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns_sync"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_alerts_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      campaign_keywords: {
+        Row: {
+          campaign_sync_id: string
+          clicks: number
+          company_id: string
+          conversions: number
+          cost: number
+          cpc: number
+          created_at: string
+          ctr: number
+          date: string
+          id: string
+          impressions: number
+          keyword: string
+          match_type: string
+          quality_score: number | null
+          status: string
+        }
+        Insert: {
+          campaign_sync_id: string
+          clicks?: number
+          company_id: string
+          conversions?: number
+          cost?: number
+          cpc?: number
+          created_at?: string
+          ctr?: number
+          date: string
+          id?: string
+          impressions?: number
+          keyword: string
+          match_type?: string
+          quality_score?: number | null
+          status?: string
+        }
+        Update: {
+          campaign_sync_id?: string
+          clicks?: number
+          company_id?: string
+          conversions?: number
+          cost?: number
+          cpc?: number
+          created_at?: string
+          ctr?: number
+          date?: string
+          id?: string
+          impressions?: number
+          keyword?: string
+          match_type?: string
+          quality_score?: number | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaign_keywords_campaign_sync_id_fkey"
+            columns: ["campaign_sync_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns_sync"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_keywords_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      campaign_metrics: {
+        Row: {
+          campaign_sync_id: string
+          clicks: number
+          company_id: string
+          conversion_value: number
+          conversions: number
+          cost: number
+          cpa: number
+          cpc: number
+          created_at: string
+          ctr: number
+          date: string
+          hour: number | null
+          id: string
+          impressions: number
+          platform_data: Json
+          roas: number
+        }
+        Insert: {
+          campaign_sync_id: string
+          clicks?: number
+          company_id: string
+          conversion_value?: number
+          conversions?: number
+          cost?: number
+          cpa?: number
+          cpc?: number
+          created_at?: string
+          ctr?: number
+          date: string
+          hour?: number | null
+          id?: string
+          impressions?: number
+          platform_data?: Json
+          roas?: number
+        }
+        Update: {
+          campaign_sync_id?: string
+          clicks?: number
+          company_id?: string
+          conversion_value?: number
+          conversions?: number
+          cost?: number
+          cpa?: number
+          cpc?: number
+          created_at?: string
+          ctr?: number
+          date?: string
+          hour?: number | null
+          id?: string
+          impressions?: number
+          platform_data?: Json
+          roas?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaign_metrics_campaign_sync_id_fkey"
+            columns: ["campaign_sync_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns_sync"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_metrics_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      campaigns_sync: {
+        Row: {
+          campaign_name: string
+          company_id: string
+          connection_id: string
+          created_at: string
+          currency: string
+          daily_budget: number
+          end_date: string | null
+          external_campaign_id: string
+          id: string
+          last_sync_at: string | null
+          platform: string
+          start_date: string | null
+          status: string
+          total_budget: number
+          updated_at: string
+        }
+        Insert: {
+          campaign_name: string
+          company_id: string
+          connection_id: string
+          created_at?: string
+          currency?: string
+          daily_budget?: number
+          end_date?: string | null
+          external_campaign_id: string
+          id?: string
+          last_sync_at?: string | null
+          platform: string
+          start_date?: string | null
+          status?: string
+          total_budget?: number
+          updated_at?: string
+        }
+        Update: {
+          campaign_name?: string
+          company_id?: string
+          connection_id?: string
+          created_at?: string
+          currency?: string
+          daily_budget?: number
+          end_date?: string | null
+          external_campaign_id?: string
+          id?: string
+          last_sync_at?: string | null
+          platform?: string
+          start_date?: string | null
+          status?: string
+          total_budget?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaigns_sync_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaigns_sync_connection_id_fkey"
+            columns: ["connection_id"]
+            isOneToOne: false
+            referencedRelation: "ad_connections_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaigns_sync_connection_id_fkey"
+            columns: ["connection_id"]
+            isOneToOne: false
+            referencedRelation: "ad_platform_connections"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       companies: {
         Row: {
@@ -583,11 +974,61 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      ad_connections_safe: {
+        Row: {
+          account_id: string | null
+          account_name: string | null
+          company_id: string | null
+          connected_by: string | null
+          created_at: string | null
+          id: string | null
+          last_sync_at: string | null
+          platform: string | null
+          status: string | null
+          sync_interval_minutes: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          account_id?: string | null
+          account_name?: string | null
+          company_id?: string | null
+          connected_by?: string | null
+          created_at?: string | null
+          id?: string | null
+          last_sync_at?: string | null
+          platform?: string | null
+          status?: string | null
+          sync_interval_minutes?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          account_id?: string | null
+          account_name?: string | null
+          company_id?: string | null
+          connected_by?: string | null
+          created_at?: string | null
+          id?: string | null
+          last_sync_at?: string | null
+          platform?: string | null
+          status?: string | null
+          sync_interval_minutes?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ad_platform_connections_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       get_user_company_id: { Args: { _user_id: string }; Returns: string }
       get_user_email_domain: { Args: never; Returns: string }
+      has_premium_plan: { Args: { _company_id: string }; Returns: boolean }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

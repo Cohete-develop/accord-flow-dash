@@ -2,3 +2,6 @@ project_id = "acysyzpnqjllalbpztxo"
 
 [functions.accept-invite]
 verify_jwt = false
+
+[functions.campaign-webhook-ingest]
+verify_jwt = false
