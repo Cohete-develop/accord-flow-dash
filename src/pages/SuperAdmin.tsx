@@ -142,6 +142,13 @@ export default function SuperAdminPage() {
   const [seatsValue, setSeatsValue] = useState<number>(5);
   const [savingSeats, setSavingSeats] = useState(false);
 
+  // Plans
+  const [planDefinitions, setPlanDefinitions] = useState<PlanDefinition[]>([]);
+  const [showPlanDialog, setShowPlanDialog] = useState(false);
+  const [planTarget, setPlanTarget] = useState<Company | null>(null);
+  const [selectedPlanId, setSelectedPlanId] = useState<string>('');
+  const [savingPlan, setSavingPlan] = useState(false);
+
   useEffect(() => {
     if (!user) return;
     // super_admin must also NOT belong to any company (platform owner only)
