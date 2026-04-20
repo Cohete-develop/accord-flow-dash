@@ -74,6 +74,16 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               {item.label}
             </NavLink>
           ))}
+          {isPremium && (
+            <NavLink
+              to="/campaign-monitor"
+              className="flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+              activeClassName="bg-sidebar-accent text-sidebar-accent-foreground"
+            >
+              <Activity className="h-4 w-4" />
+              Campaign Monitor
+            </NavLink>
+          )}
           {(isGerencia || isSuperAdmin || isCoordinador) && (
             <>
               <div className="my-2 border-t border-sidebar-border" />
