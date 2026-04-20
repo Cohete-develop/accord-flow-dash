@@ -39,10 +39,30 @@ Deno.serve(async (req) => {
     const { data: profile } = await admin.from("profiles").select("company_id").eq("user_id", caller.id).maybeSingle();
     if (!profile?.company_id) return err("NO_COMPANY", "Usuario sin empresa asociada", 403);
 
-    // Validar plan premium
-    const { data: company } = await admin.from("companies").select("plan").eq("id", profile.company_id).maybeSingle();
-    if (!["pro", "enterprise"].includes(company?.plan || "")) {
-      return err("PLAN_REQUIRED", "Campaign Monitor requiere plan Pro o Enterprise", 403);
+    // Validar plan premium y límites de campañas sincronizadas
+    const { data: limits } = await admin.rpc("get_company_plan_limits", { _company_id: profile.company_id });
+    if (!limits || limits.length === 0) return err("NO_PLAN", "Plan no configurado para esta empresa", 400);
+    const planLimits = limits[0] as {
+      plan_id: string;
+      max_campaigns_sync: number;
+      modules_included: string[];
+    };
+    if (!planLimits.modules_included?.includes("campaign_monitor")) {
+      return err("PLAN_REQUIRED", "Campaign Monitor no está incluido en tu plan actual", 403);
+    }
+
+    const { count: syncedCampaigns } = await admin
+      .from("campaigns_sync")
+      .select("id", { count: "exact", head: true })
+      .eq("company_id", profile.company_id)
+      .eq("status", "active");
+
+    if ((syncedCampaigns ?? 0) > (planLimits.max_campaigns_sync ?? 0)) {
+      return err(
+        "CAMPAIGN_LIMIT",
+        `Tu plan ${planLimits.plan_id} permite máximo ${planLimits.max_campaigns_sync} campañas sincronizadas (actualmente ${syncedCampaigns}). Actualiza tu plan o pausa campañas.`,
+        403
+      );
     }
 
     let body: any = {};
