@@ -164,17 +164,29 @@ export function useCampaignMetrics(campaignId?: string, daysBack = 30) {
     queryFn: async () => {
       const since = new Date();
       since.setDate(since.getDate() - daysBack);
-      let q = supabase
-        .from("campaign_metrics")
-        .select("*")
-        .eq("company_id", companyId)
-        .gte("date", since.toISOString().slice(0, 10))
-        .order("date", { ascending: true });
-      if (campaignId) q = q.eq("campaign_sync_id", campaignId);
-      // Necesario porque tenemos datos horarios (hasta ~1440 filas/campaña en 30d)
-      const { data, error } = await q.limit(50000);
-      if (error) throw error;
-      return (data || []) as CampaignMetric[];
+      const sinceStr = since.toISOString().slice(0, 10);
+      // PostgREST aplica un cap (~1000) por request, así que paginamos para soportar datos horarios.
+      const PAGE = 1000;
+      const all: CampaignMetric[] = [];
+      let from = 0;
+      // Hard cap defensivo (50k filas máx) para no entrar en loop infinito.
+      while (from < 50000) {
+        let q = supabase
+          .from("campaign_metrics")
+          .select("*")
+          .eq("company_id", companyId)
+          .gte("date", sinceStr)
+          .order("date", { ascending: true })
+          .range(from, from + PAGE - 1);
+        if (campaignId) q = q.eq("campaign_sync_id", campaignId);
+        const { data, error } = await q;
+        if (error) throw error;
+        const batch = (data || []) as CampaignMetric[];
+        all.push(...batch);
+        if (batch.length < PAGE) break;
+        from += PAGE;
+      }
+      return all;
     },
     enabled: !!user && !!companyId && !authLoading && !companyLoading,
   });
