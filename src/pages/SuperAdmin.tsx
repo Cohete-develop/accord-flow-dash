@@ -535,9 +535,15 @@ export default function SuperAdminPage() {
                         <p className="text-xs text-destructive mt-1">⚠ Sin dominio</p>
                       )}
                     </div>
-                    <Badge className={company.is_active ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800'}>
-                      {company.is_active ? 'Activa' : 'Inactiva'}
-                    </Badge>
+                    <div className="flex flex-col items-end gap-1.5">
+                      <Badge className={company.is_active ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800'}>
+                        {company.is_active ? 'Activa' : 'Inactiva'}
+                      </Badge>
+                      <Badge className={`${PLAN_BADGE_CLASSES[company.plan || 'trial'] || PLAN_BADGE_CLASSES.trial} capitalize gap-1`}>
+                        <Crown className="w-3 h-3" />
+                        {planDefinitions.find(p => p.id === company.plan)?.display_name || company.plan || 'Trial'}
+                      </Badge>
+                    </div>
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-3">
