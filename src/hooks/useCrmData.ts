@@ -6,17 +6,51 @@ import { useState, useEffect } from "react";
 import { toast } from "sonner";
 
 // Hook to get user's company_id
-export function useCompanyId() {
-  const { user } = useAuth();
+export function useCompanyContext() {
+  const { user, loading: authLoading } = useAuth();
   const [companyId, setCompanyId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!user) return;
-    supabase.from("profiles").select("company_id").eq("user_id", user.id).maybeSingle()
-      .then(({ data }) => setCompanyId(data?.company_id || null));
-  }, [user]);
+    let cancelled = false;
+    const loadCompany = async () => {
+      const { data } = await supabase
+        .from("profiles")
+        .select("company_id")
+        .eq("user_id", user.id)
+        .maybeSingle();
 
-  return companyId;
+      if (cancelled) return;
+      setCompanyId(data?.company_id || null);
+      setLoading(false);
+    };
+
+    if (authLoading) return;
+
+    if (!user) {
+      setCompanyId(null);
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
+
+    loadCompany().catch(() => {
+      if (cancelled) return;
+      setCompanyId(null);
+      setLoading(false);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [user, authLoading]);
+
+  return { companyId, loading };
+}
+
+export function useCompanyId() {
+  return useCompanyContext().companyId;
 }
 
 // ---- Mappers: DB (snake_case) <-> App (camelCase) ----
