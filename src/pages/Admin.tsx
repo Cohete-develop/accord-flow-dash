@@ -182,6 +182,32 @@ export default function AdminPage() {
       if (profileRes.data?.company_id) {
         const { data: c } = await supabase.from('companies').select('id, name, domain').eq('id', profileRes.data.company_id).maybeSingle();
         if (c) setCallerCompany(c);
+
+        // Cargar plan de la empresa + conteo de usuarios activos
+        const [{ data: companyData }, { data: profilesData }] = await Promise.all([
+          supabase.from('companies').select('plan').eq('id', profileRes.data.company_id).maybeSingle(),
+          supabase.from('profiles').select('is_active').eq('company_id', profileRes.data.company_id),
+        ]);
+        if (companyData?.plan) {
+          const { data: planDef } = await supabase
+            .from('plan_definitions')
+            .select('*')
+            .eq('id', companyData.plan)
+            .maybeSingle();
+          if (planDef) {
+            const activeCount = (profilesData || []).filter(p => p.is_active).length;
+            setCompanyPlan({
+              plan_id: planDef.id,
+              display_name: planDef.display_name,
+              max_seats: planDef.max_seats,
+              features: (planDef.features as string[]) || [],
+              modules_included: planDef.modules_included || [],
+              max_ad_connections: planDef.max_ad_connections || 0,
+              sync_interval_minutes: planDef.sync_interval_minutes || 0,
+              active_user_count: activeCount,
+            });
+          }
+        }
       }
     });
   }, [user]);
