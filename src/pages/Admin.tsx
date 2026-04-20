@@ -532,6 +532,13 @@ export default function AdminPage() {
           </Card>
         </TabsContent>
 
+        {/* PRODUCT FAMILIES TAB */}
+        {(callerIsGerencia || callerIsCoordinador) && callerCompany && (
+          <TabsContent value="families" className="space-y-4">
+            <ProductFamiliesManager companyId={callerCompany.id} canDelete={callerIsGerencia} />
+          </TabsContent>
+        )}
+
         {/* AUDIT TAB */}
         <TabsContent value="audit" className="space-y-4">
           <Card>
