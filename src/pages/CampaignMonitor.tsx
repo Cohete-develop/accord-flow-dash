@@ -133,10 +133,15 @@ function UpgradeScreen({ plan }: { plan: string }) {
 }
 
 function ResumenTab() {
-  const { data: campaigns = [] } = useCampaigns();
-  const { data: metrics = [] } = useCampaignMetrics(undefined, 30);
-  const { data: history = [] } = useAlertHistory();
+  const { data: campaigns = [], isLoading: loadingCampaigns } = useCampaigns();
+  const { data: metrics = [], isLoading: loadingMetrics } = useCampaignMetrics(undefined, 30);
+  const { data: history = [], isLoading: loadingHistory } = useAlertHistory();
   const [range, setRange] = useState("7");
+  const isLoading = loadingCampaigns || loadingMetrics || loadingHistory;
+
+  if (isLoading) {
+    return <div className="flex items-center justify-center min-h-[40vh] text-muted-foreground">Cargando datos de campañas...</div>;
+  }
 
   const filtered = useMemo(() => {
     const days = parseInt(range, 10);
@@ -792,10 +797,15 @@ export default function CampaignMonitorPage() {
 }
 
 function AnalisisTab() {
-  const { data: campaigns = [] } = useCampaigns();
-  const { data: metrics = [] } = useCampaignMetrics(undefined, 30);
-  const { data: keywords = [] } = useCampaignKeywords();
+  const { data: campaigns = [], isLoading: loadingCampaigns } = useCampaigns();
+  const { data: metrics = [], isLoading: loadingMetrics } = useCampaignMetrics(undefined, 30);
+  const { data: keywords = [], isLoading: loadingKeywords } = useCampaignKeywords();
   const [range, setRange] = useState("30");
+  const isLoading = loadingCampaigns || loadingMetrics || loadingKeywords;
+
+  if (isLoading) {
+    return <div className="flex items-center justify-center min-h-[40vh] text-muted-foreground">Cargando análisis...</div>;
+  }
 
   const filtered = useMemo(() => {
     const days = parseInt(range, 10);

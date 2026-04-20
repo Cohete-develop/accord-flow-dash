@@ -13,6 +13,17 @@ export function useCompanyContext() {
 
   useEffect(() => {
     let cancelled = false;
+    const loadCompany = async () => {
+      const { data } = await supabase
+        .from("profiles")
+        .select("company_id")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (cancelled) return;
+      setCompanyId(data?.company_id || null);
+      setLoading(false);
+    };
 
     if (authLoading) return;
 
@@ -24,21 +35,11 @@ export function useCompanyContext() {
 
     setLoading(true);
 
-    supabase
-      .from("profiles")
-      .select("company_id")
-      .eq("user_id", user.id)
-      .maybeSingle()
-      .then(({ data }) => {
-        if (cancelled) return;
-        setCompanyId(data?.company_id || null);
-        setLoading(false);
-      })
-      .catch(() => {
-        if (cancelled) return;
-        setCompanyId(null);
-        setLoading(false);
-      });
+    loadCompany().catch(() => {
+      if (cancelled) return;
+      setCompanyId(null);
+      setLoading(false);
+    });
 
     return () => {
       cancelled = true;

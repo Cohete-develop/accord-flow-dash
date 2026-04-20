@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { useCompanyId } from "@/hooks/useCrmData";
+import { useCompanyContext, useCompanyId } from "@/hooks/useCrmData";
 import { toast } from "sonner";
 import { useEffect, useState } from "react";
 
@@ -98,12 +98,14 @@ export interface AlertHistoryItem {
 
 // Premium plan check
 export function useIsPremium() {
-  const companyId = useCompanyId();
+  const { companyId, loading: companyLoading } = useCompanyContext();
   const [isPremium, setIsPremium] = useState<boolean | null>(null);
   const [plan, setPlan] = useState<string>("");
 
   useEffect(() => {
+    if (companyLoading) return;
     if (!companyId) {
+      setPlan("");
       setIsPremium(false);
       return;
     }
@@ -113,53 +115,59 @@ export function useIsPremium() {
         setPlan(p);
         setIsPremium(["pro", "enterprise"].includes(p));
       });
-  }, [companyId]);
+  }, [companyId, companyLoading]);
 
-  return { isPremium, plan, loading: isPremium === null };
+  return { isPremium, plan, loading: companyLoading || isPremium === null };
 }
 
 export function useAdConnections() {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
+  const { companyId, loading: companyLoading } = useCompanyContext();
   return useQuery({
-    queryKey: ["ad_connections"],
+    queryKey: ["ad_connections", companyId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("ad_connections_safe")
         .select("*")
+        .eq("company_id", companyId)
         .order("created_at", { ascending: false });
       if (error) throw error;
       return (data || []) as AdConnection[];
     },
-    enabled: !!user,
+    enabled: !!user && !!companyId && !authLoading && !companyLoading,
   });
 }
 
 export function useCampaigns() {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
+  const { companyId, loading: companyLoading } = useCompanyContext();
   return useQuery({
-    queryKey: ["campaigns_sync"],
+    queryKey: ["campaigns_sync", companyId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("campaigns_sync")
         .select("*")
+        .eq("company_id", companyId)
         .order("campaign_name");
       if (error) throw error;
       return (data || []) as CampaignSync[];
     },
-    enabled: !!user,
+    enabled: !!user && !!companyId && !authLoading && !companyLoading,
   });
 }
 
 export function useCampaignMetrics(campaignId?: string, daysBack = 30) {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
+  const { companyId, loading: companyLoading } = useCompanyContext();
   return useQuery({
-    queryKey: ["campaign_metrics", campaignId, daysBack],
+    queryKey: ["campaign_metrics", companyId, campaignId, daysBack],
     queryFn: async () => {
       const since = new Date();
       since.setDate(since.getDate() - daysBack);
       let q = supabase
         .from("campaign_metrics")
         .select("*")
+        .eq("company_id", companyId)
         .gte("date", since.toISOString().slice(0, 10))
         .order("date", { ascending: true });
       if (campaignId) q = q.eq("campaign_sync_id", campaignId);
@@ -168,36 +176,38 @@ export function useCampaignMetrics(campaignId?: string, daysBack = 30) {
       if (error) throw error;
       return (data || []) as CampaignMetric[];
     },
-    enabled: !!user,
+    enabled: !!user && !!companyId && !authLoading && !companyLoading,
   });
 }
 
 export function useCampaignKeywords(campaignId?: string) {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
+  const { companyId, loading: companyLoading } = useCompanyContext();
   return useQuery({
-    queryKey: ["campaign_keywords", campaignId],
+    queryKey: ["campaign_keywords", companyId, campaignId],
     queryFn: async () => {
-      let q = supabase.from("campaign_keywords").select("*").order("clicks", { ascending: false });
+      let q = supabase.from("campaign_keywords").select("*").eq("company_id", companyId).order("clicks", { ascending: false });
       if (campaignId) q = q.eq("campaign_sync_id", campaignId);
       const { data, error } = await q.limit(200);
       if (error) throw error;
       return (data || []) as CampaignKeyword[];
     },
-    enabled: !!user,
+    enabled: !!user && !!companyId && !authLoading && !companyLoading,
   });
 }
 
 export function useCampaignAlerts() {
-  const { user } = useAuth();
-  const companyId = useCompanyId();
+  const { user, loading: authLoading } = useAuth();
+  const { companyId, loading: companyLoading } = useCompanyContext();
   const qc = useQueryClient();
 
   const query = useQuery({
-    queryKey: ["campaign_alerts"],
+    queryKey: ["campaign_alerts", companyId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("campaign_alerts")
         .select("*")
+        .eq("company_id", companyId)
         .order("created_at", { ascending: false });
       if (error) throw error;
       return (data || []).map((r: any) => ({
@@ -205,7 +215,7 @@ export function useCampaignAlerts() {
         notify_channels: Array.isArray(r.notify_channels) ? r.notify_channels : ["in_app"],
       })) as CampaignAlert[];
     },
-    enabled: !!user,
+    enabled: !!user && !!companyId && !authLoading && !companyLoading,
   });
 
   const save = useMutation({
@@ -260,21 +270,23 @@ export function useCampaignAlerts() {
 }
 
 export function useAlertHistory() {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
+  const { companyId, loading: companyLoading } = useCompanyContext();
   const qc = useQueryClient();
 
   const query = useQuery({
-    queryKey: ["alert_history"],
+    queryKey: ["alert_history", companyId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("alert_history")
         .select("*")
+        .eq("company_id", companyId)
         .order("triggered_at", { ascending: false })
         .limit(100);
       if (error) throw error;
       return (data || []) as AlertHistoryItem[];
     },
-    enabled: !!user,
+    enabled: !!user && !!companyId && !authLoading && !companyLoading,
   });
 
   const acknowledge = useMutation({
