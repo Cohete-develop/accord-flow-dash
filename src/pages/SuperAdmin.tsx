@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
-import { Building2, Users, Plus, Pencil, Trash2, UserPlus, Eye, ScrollText } from 'lucide-react';
+import { Building2, Users, Plus, Pencil, Trash2, UserPlus, Eye, ScrollText, Crown } from 'lucide-react';
 import { Send } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import InvitationsManager from '@/components/admin/InvitationsManager';
@@ -30,7 +30,28 @@ interface Company {
   user_count?: number;
   active_user_count?: number;
   max_seats?: number;
+  plan?: string;
 }
+
+interface PlanDefinition {
+  id: string;
+  display_name: string;
+  max_seats: number;
+  monthly_price_usd: number;
+  features: string[];
+  modules_included: string[];
+  max_ad_connections: number;
+  max_campaigns_sync: number;
+  sync_interval_minutes: number;
+  sort_order: number;
+}
+
+const PLAN_BADGE_CLASSES: Record<string, string> = {
+  trial: 'bg-muted text-muted-foreground border border-border',
+  starter: 'bg-blue-100 text-blue-800 border border-blue-200',
+  pro: 'bg-purple-100 text-purple-800 border border-purple-200',
+  enterprise: 'bg-amber-100 text-amber-800 border border-amber-200',
+};
 
 interface CompanyUser {
   user_id: string;
@@ -121,6 +142,13 @@ export default function SuperAdminPage() {
   const [seatsValue, setSeatsValue] = useState<number>(5);
   const [savingSeats, setSavingSeats] = useState(false);
 
+  // Plans
+  const [planDefinitions, setPlanDefinitions] = useState<PlanDefinition[]>([]);
+  const [showPlanDialog, setShowPlanDialog] = useState(false);
+  const [planTarget, setPlanTarget] = useState<Company | null>(null);
+  const [selectedPlanId, setSelectedPlanId] = useState<string>('');
+  const [savingPlan, setSavingPlan] = useState(false);
+
   useEffect(() => {
     if (!user) return;
     // super_admin must also NOT belong to any company (platform owner only)
@@ -193,6 +221,17 @@ export default function SuperAdminPage() {
   useEffect(() => { 
     if (isSuperAdmin) { fetchCompanies(); fetchAllUsers(); fetchAudit(); }
   }, [isSuperAdmin, fetchCompanies, fetchAllUsers, fetchAudit]);
+
+  useEffect(() => {
+    if (!isSuperAdmin) return;
+    supabase.from('plan_definitions')
+      .select('*')
+      .eq('is_active', true)
+      .order('sort_order', { ascending: true })
+      .then(({ data }) => {
+        setPlanDefinitions((data as PlanDefinition[]) || []);
+      });
+  }, [isSuperAdmin]);
 
   if (isSuperAdmin === false) return <Navigate to="/dashboard" replace />;
   if (isSuperAdmin === null) return <div className="flex items-center justify-center min-h-[50vh]"><p>Verificando permisos...</p></div>;
@@ -299,6 +338,54 @@ export default function SuperAdminPage() {
     setTargetCompany(company);
     setNewEmail(''); setNewPassword(''); setNewFirstName(''); setNewLastName(''); setNewRole('gerencia');
     setShowCreateUser(true);
+  }
+
+  function openPlanDialog(company: Company) {
+    setPlanTarget(company);
+    setSelectedPlanId(company.plan || 'trial');
+    setShowPlanDialog(true);
+  }
+
+  async function handleSavePlan() {
+    if (!planTarget) return;
+    const newPlanDef = planDefinitions.find(p => p.id === selectedPlanId);
+    if (!newPlanDef) { toast.error('Plan no válido'); return; }
+    const previousPlan = planTarget.plan || 'trial';
+    if (newPlanDef.id === previousPlan) { setShowPlanDialog(false); return; }
+
+    const activeUsers = planTarget.active_user_count ?? 0;
+    if (activeUsers > newPlanDef.max_seats) {
+      toast.error('No se puede aplicar el plan', {
+        description: `La empresa tiene ${activeUsers} usuarios activos. Desactiva usuarios antes de bajar el límite a ${newPlanDef.max_seats}.`,
+      });
+      return;
+    }
+
+    setSavingPlan(true);
+    const { error } = await supabase.from('companies')
+      .update({ plan: newPlanDef.id, max_seats: newPlanDef.max_seats })
+      .eq('id', planTarget.id);
+    if (error) {
+      toast.error('Error al cambiar el plan', { description: error.message });
+      setSavingPlan(false);
+      return;
+    }
+    await supabase.from('audit_log').insert({
+      user_id: session?.user?.id,
+      user_name: session?.user?.user_metadata?.full_name || session?.user?.email || '',
+      action: 'change_plan',
+      module: 'super_admin',
+      details: {
+        company_id: planTarget.id,
+        company_name: planTarget.name,
+        previous_plan: previousPlan,
+        new_plan: newPlanDef.id,
+      },
+    });
+    toast.success(`Plan actualizado a ${newPlanDef.display_name} para ${planTarget.name}`);
+    setShowPlanDialog(false);
+    setSavingPlan(false);
+    fetchCompanies();
   }
 
   async function handleCreateUser() {
@@ -448,9 +535,15 @@ export default function SuperAdminPage() {
                         <p className="text-xs text-destructive mt-1">⚠ Sin dominio</p>
                       )}
                     </div>
-                    <Badge className={company.is_active ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800'}>
-                      {company.is_active ? 'Activa' : 'Inactiva'}
-                    </Badge>
+                    <div className="flex flex-col items-end gap-1.5">
+                      <Badge className={company.is_active ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800'}>
+                        {company.is_active ? 'Activa' : 'Inactiva'}
+                      </Badge>
+                      <Badge className={`${PLAN_BADGE_CLASSES[company.plan || 'trial'] || PLAN_BADGE_CLASSES.trial} capitalize gap-1`}>
+                        <Crown className="w-3 h-3" />
+                        {planDefinitions.find(p => p.id === company.plan)?.display_name || company.plan || 'Trial'}
+                      </Badge>
+                    </div>
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-3">
@@ -494,6 +587,9 @@ export default function SuperAdminPage() {
                     </Button>
                     <Button variant="outline" size="sm" className="gap-1.5" onClick={() => openEditSeats(company)}>
                       <Pencil className="w-3.5 h-3.5" /> Licencias
+                    </Button>
+                    <Button variant="outline" size="sm" className="gap-1.5" onClick={() => openPlanDialog(company)}>
+                      <Crown className="w-3.5 h-3.5" /> Plan
                     </Button>
                     <Button variant="destructive" size="sm" className="gap-1.5" onClick={() => confirmDeleteCompany(company)}>
                       <Trash2 className="w-3.5 h-3.5" /> Eliminar
@@ -839,6 +935,119 @@ export default function SuperAdminPage() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowEditSeats(false)} disabled={savingSeats}>Cancelar</Button>
             <Button variant="gradient" onClick={handleSaveSeats} disabled={savingSeats}>{savingSeats ? 'Guardando...' : 'Guardar'}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* CHANGE PLAN DIALOG */}
+      <Dialog open={showPlanDialog} onOpenChange={setShowPlanDialog}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Crown className="w-5 h-5" /> Cambiar Plan — {planTarget?.name}
+            </DialogTitle>
+            <DialogDescription>
+              Selecciona el plan que aplicará a esta empresa. Al guardar, también se actualizará el número de licencias incluidas en el plan.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 py-2">
+            {planDefinitions.map(plan => {
+              const isCurrent = plan.id === (planTarget?.plan || 'trial');
+              const isSelected = plan.id === selectedPlanId;
+              const activeUsers = planTarget?.active_user_count ?? 0;
+              const exceedsSeats = activeUsers > plan.max_seats;
+              const includesCm = plan.modules_included.includes('campaign_monitor');
+              return (
+                <button
+                  key={plan.id}
+                  type="button"
+                  onClick={() => setSelectedPlanId(plan.id)}
+                  className={`text-left rounded-lg border p-4 transition-all ${
+                    isSelected
+                      ? 'border-primary ring-2 ring-primary/30 bg-primary/5'
+                      : 'border-border hover:border-primary/50'
+                  }`}
+                >
+                  <div className="flex items-start justify-between mb-2">
+                    <div>
+                      <div className="flex items-center gap-2 mb-1">
+                        <h3 className="font-semibold text-base">{plan.display_name}</h3>
+                        {isCurrent && <Badge variant="outline" className="text-[10px]">Plan actual</Badge>}
+                      </div>
+                      <p className="text-2xl font-bold">${plan.monthly_price_usd}<span className="text-xs font-normal text-muted-foreground">/mes USD</span></p>
+                    </div>
+                    <Badge className={`${PLAN_BADGE_CLASSES[plan.id] || PLAN_BADGE_CLASSES.trial}`}>
+                      <Crown className="w-3 h-3" />
+                    </Badge>
+                  </div>
+
+                  <div className="text-xs text-muted-foreground mb-3 space-y-0.5">
+                    <p><strong className="text-foreground">{plan.max_seats}</strong> usuarios incluidos</p>
+                    {includesCm ? (
+                      <p>Campaign Monitor: <strong className="text-foreground">{plan.max_ad_connections}</strong> conexiones, <strong className="text-foreground">{plan.max_campaigns_sync}</strong> campañas</p>
+                    ) : (
+                      <p>Campaign Monitor: no incluido</p>
+                    )}
+                  </div>
+
+                  <ul className="space-y-1 text-xs">
+                    {(plan.features || []).map((f, i) => (
+                      <li key={i} className="flex items-start gap-1.5">
+                        <span className="text-primary mt-0.5">✓</span>
+                        <span>{f}</span>
+                      </li>
+                    ))}
+                  </ul>
+
+                  {exceedsSeats && isSelected && (
+                    <div className="mt-3 rounded bg-destructive/10 border border-destructive/30 p-2 text-xs text-destructive">
+                      Esta empresa tiene {activeUsers} usuarios activos. Este plan permite máximo {plan.max_seats}.
+                    </div>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+
+          {(() => {
+            const newPlanDef = planDefinitions.find(p => p.id === selectedPlanId);
+            const currentPlanDef = planDefinitions.find(p => p.id === (planTarget?.plan || 'trial'));
+            if (!newPlanDef || !currentPlanDef) return null;
+            const losingCm = currentPlanDef.modules_included.includes('campaign_monitor')
+              && !newPlanDef.modules_included.includes('campaign_monitor');
+            const activeUsers = planTarget?.active_user_count ?? 0;
+            const exceedsSeats = activeUsers > newPlanDef.max_seats;
+
+            return (
+              <div className="space-y-2">
+                {exceedsSeats && (
+                  <div className="rounded bg-destructive/10 border border-destructive/30 p-3 text-sm text-destructive">
+                    Esta empresa tiene {activeUsers} usuarios activos. El plan seleccionado permite máximo {newPlanDef.max_seats}. Deberás desactivar usuarios antes de aplicar este plan.
+                  </div>
+                )}
+                {losingCm && !exceedsSeats && (
+                  <div className="rounded bg-amber-50 border border-amber-200 p-3 text-sm text-amber-800">
+                    Se desactivará el acceso a Campaign Monitor. Los datos de campañas se conservarán pero no serán accesibles hasta que se reactive un plan con este módulo.
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowPlanDialog(false)} disabled={savingPlan}>Cancelar</Button>
+            <Button
+              variant="gradient"
+              onClick={handleSavePlan}
+              disabled={
+                savingPlan ||
+                !selectedPlanId ||
+                (planDefinitions.find(p => p.id === selectedPlanId)?.max_seats ?? 0) < (planTarget?.active_user_count ?? 0)
+              }
+            >
+              {savingPlan ? 'Guardando...' : 'Guardar Cambios'}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

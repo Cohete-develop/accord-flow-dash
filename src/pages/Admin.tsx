@@ -10,7 +10,7 @@ import { Switch } from '@/components/ui/switch';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Users, Shield, ScrollText, UserPlus, Trash2, Pencil, Database } from 'lucide-react';
+import { Users, Shield, ScrollText, UserPlus, Trash2, Pencil, Database, Crown } from 'lucide-react';
 import { Send } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -83,6 +83,16 @@ export default function AdminPage() {
   const [callerIsGerencia, setCallerIsGerencia] = useState(false);
   const [callerIsCoordinador, setCallerIsCoordinador] = useState(false);
   const [callerCompany, setCallerCompany] = useState<{ id: string; name: string; domain: string | null } | null>(null);
+  const [companyPlan, setCompanyPlan] = useState<{
+    plan_id: string;
+    display_name: string;
+    max_seats: number;
+    features: string[];
+    modules_included: string[];
+    max_ad_connections: number;
+    sync_interval_minutes: number;
+    active_user_count: number;
+  } | null>(null);
 
   // Users state
   const [users, setUsers] = useState<UserRow[]>([]);
@@ -172,6 +182,32 @@ export default function AdminPage() {
       if (profileRes.data?.company_id) {
         const { data: c } = await supabase.from('companies').select('id, name, domain').eq('id', profileRes.data.company_id).maybeSingle();
         if (c) setCallerCompany(c);
+
+        // Cargar plan de la empresa + conteo de usuarios activos
+        const [{ data: companyData }, { data: profilesData }] = await Promise.all([
+          supabase.from('companies').select('plan').eq('id', profileRes.data.company_id).maybeSingle(),
+          supabase.from('profiles').select('is_active').eq('company_id', profileRes.data.company_id),
+        ]);
+        if (companyData?.plan) {
+          const { data: planDef } = await supabase
+            .from('plan_definitions')
+            .select('*')
+            .eq('id', companyData.plan)
+            .maybeSingle();
+          if (planDef) {
+            const activeCount = (profilesData || []).filter(p => p.is_active).length;
+            setCompanyPlan({
+              plan_id: planDef.id,
+              display_name: planDef.display_name,
+              max_seats: planDef.max_seats,
+              features: (planDef.features as string[]) || [],
+              modules_included: planDef.modules_included || [],
+              max_ad_connections: planDef.max_ad_connections || 0,
+              sync_interval_minutes: planDef.sync_interval_minutes || 0,
+              active_user_count: activeCount,
+            });
+          }
+        }
       }
     });
   }, [user]);
@@ -286,6 +322,64 @@ export default function AdminPage() {
         <h1 className="text-2xl font-bold">Administración</h1>
         <p className="text-sm text-muted-foreground">Gestión de usuarios, permisos y auditoría</p>
       </div>
+
+      {companyPlan && (
+        <Card>
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Crown className="w-5 h-5" /> Tu Plan
+              </CardTitle>
+              <Badge
+                className={`${
+                  companyPlan.plan_id === 'enterprise' ? 'bg-amber-100 text-amber-800 border border-amber-200' :
+                  companyPlan.plan_id === 'pro' ? 'bg-purple-100 text-purple-800 border border-purple-200' :
+                  companyPlan.plan_id === 'starter' ? 'bg-blue-100 text-blue-800 border border-blue-200' :
+                  'bg-muted text-muted-foreground border border-border'
+                } gap-1`}
+              >
+                <Crown className="w-3 h-3" /> {companyPlan.display_name}
+              </Badge>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid gap-4 md:grid-cols-2">
+              <div>
+                <h4 className="text-sm font-semibold mb-2">Incluye</h4>
+                <ul className="space-y-1 text-sm text-muted-foreground">
+                  {companyPlan.features.map((f, i) => (
+                    <li key={i} className="flex items-start gap-2">
+                      <span className="text-primary mt-0.5">✓</span>
+                      <span>{f}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <div className="space-y-3 text-sm">
+                <div className="rounded-md bg-muted/50 p-3">
+                  <p className="text-xs text-muted-foreground mb-1">Usuarios</p>
+                  <p className="font-semibold">
+                    {companyPlan.active_user_count} de {companyPlan.max_seats} incluidos en tu plan
+                  </p>
+                </div>
+                <div className="rounded-md bg-muted/50 p-3">
+                  <p className="text-xs text-muted-foreground mb-1">Campaign Monitor</p>
+                  {companyPlan.modules_included.includes('campaign_monitor') ? (
+                    <p className="font-semibold">
+                      Hasta {companyPlan.max_ad_connections} conexiones, sync cada {companyPlan.sync_interval_minutes} min
+                    </p>
+                  ) : (
+                    <p className="font-semibold text-muted-foreground">No incluido en tu plan</p>
+                  )}
+                </div>
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground border-t pt-3">
+              Para cambiar de plan, contacta a Cohete en <a href="mailto:soporte@cohete-it.com" className="text-primary font-medium hover:underline">soporte@cohete-it.com</a>
+            </p>
+          </CardContent>
+        </Card>
+      )}
 
       <Tabs value={tab} onValueChange={setTab}>
         <TabsList>
