@@ -3,7 +3,7 @@ import companyLogo from "@/assets/company-logo.png";
 import fondoBg from "@/assets/Fondo_2026.png";
 import AIChatBubble from "@/components/AIChatBubble";
 import { NavLink } from "@/components/NavLink";
-import { Handshake, CreditCard, Package, BarChart3, LayoutDashboard, LogOut, Settings, Crown } from "lucide-react";
+import { Handshake, CreditCard, Package, BarChart3, LayoutDashboard, LogOut, Settings, Crown, Activity } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Navigate } from "react-router-dom";
@@ -22,6 +22,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const [isGerencia, setIsGerencia] = useState(false);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [isCoordinador, setIsCoordinador] = useState(false);
+  const [isPremium, setIsPremium] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -35,6 +36,11 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       // super_admin link only for platform owners (no company)
       setIsSuperAdmin(roles.includes('super_admin') && hasNoCompany);
       setIsCoordinador(roles.includes('coordinador_mercadeo'));
+      const cid = profileRes.data?.company_id;
+      if (cid) {
+        supabase.from('companies').select('plan').eq('id', cid).maybeSingle()
+          .then(({ data }) => setIsPremium(['pro', 'enterprise'].includes(data?.plan || '')));
+      }
     });
   }, [user]);
 
@@ -68,6 +74,16 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               {item.label}
             </NavLink>
           ))}
+          {isPremium && (
+            <NavLink
+              to="/campaign-monitor"
+              className="flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+              activeClassName="bg-sidebar-accent text-sidebar-accent-foreground"
+            >
+              <Activity className="h-4 w-4" />
+              Campaign Monitor
+            </NavLink>
+          )}
           {(isGerencia || isSuperAdmin || isCoordinador) && (
             <>
               <div className="my-2 border-t border-sidebar-border" />

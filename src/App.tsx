@@ -12,6 +12,7 @@ import EntregablesPage from "./pages/Entregables";
 import KPIsPage from "./pages/KPIs";
 import AdminPage from "./pages/Admin";
 import SuperAdminPage from "./pages/SuperAdmin";
+import CampaignMonitorPage from "./pages/CampaignMonitor";
 import AuthPage from "./pages/Auth";
 import ResetPasswordPage from "./pages/ResetPassword";
 import AcceptInvitePage from "./pages/AcceptInvite";
@@ -38,6 +39,7 @@ const App = () => (
             <Route path="/kpis" element={<Layout><KPIsPage /></Layout>} />
             <Route path="/admin" element={<Layout><AdminPage /></Layout>} />
             <Route path="/super-admin" element={<Layout><SuperAdminPage /></Layout>} />
+            <Route path="/campaign-monitor" element={<Layout><CampaignMonitorPage /></Layout>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>

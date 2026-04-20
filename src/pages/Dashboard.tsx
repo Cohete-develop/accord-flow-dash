@@ -8,6 +8,8 @@ import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveCo
 import ChartDetailDialog from "@/components/ChartDetailDialog";
 import { CHART_COLORS as COLORS } from "@/lib/chart-colors";
 import { SocialIcon } from "@/lib/social-icons";
+import { useIsPremium } from "@/hooks/useCampaignMonitor";
+import { CampaignMonitorWidget } from "@/components/campaign-monitor/CampaignMonitorWidget";
 
 const fmtCurrency = (v: number) => {
   if (v >= 1_000_000) return `$${Math.round(v / 1_000_000)}M`;
@@ -42,6 +44,7 @@ type DetailState = {
 export default function DashboardPage() {
   const { acuerdos, isLoading: loadingA } = useAcuerdos();
   const { pagos, isLoading: loadingP } = usePagos();
+  const { isPremium } = useIsPremium();
   const { entregables, isLoading: loadingE } = useEntregables();
   const { kpis, isLoading: loadingK } = useKPIs();
 
@@ -249,6 +252,8 @@ export default function DashboardPage() {
         <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
         <p className="text-muted-foreground text-sm">Resumen general de todos los módulos</p>
       </div>
+
+      {isPremium && <CampaignMonitorWidget />}
 
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         {[
