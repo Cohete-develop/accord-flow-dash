@@ -17,6 +17,8 @@ import {
 import { Activity, AlertTriangle, CheckCircle2, Crown, Plug, RefreshCw, TrendingDown, TrendingUp, Zap } from "lucide-react";
 import { Link } from "react-router-dom";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from "recharts";
+import { Tooltip as UITooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Info } from "lucide-react";
 
 const PLATFORM_LABELS: Record<Platform, string> = {
   google_ads: "Google Ads",
@@ -28,6 +30,66 @@ const PLATFORM_LABELS: Record<Platform, string> = {
 const fmtMoney = (n: number) => `$${(n || 0).toLocaleString("en-US", { maximumFractionDigits: 0 })}`;
 const fmtNum = (n: number) => (n || 0).toLocaleString("en-US");
 const fmtPct = (n: number) => `${(n || 0).toFixed(2)}%`;
+
+// KPI definitions + dynamic interpretation based on current value
+const KPI_INFO: Record<string, { desc: string; interpret: (v: number) => { text: string; tone: "good" | "warn" | "bad" | "neutral" } }> = {
+  Gasto: {
+    desc: "Total invertido en pauta durante el período seleccionado.",
+    interpret: (v) => ({
+      text: v === 0 ? "Aún no hay inversión registrada en este rango." : `Has invertido $${v.toLocaleString("en-US", { maximumFractionDigits: 0 })} en este período.`,
+      tone: "neutral",
+    }),
+  },
+  Impresiones: {
+    desc: "Veces que tus anuncios aparecieron frente a usuarios. Mide alcance bruto.",
+    interpret: (v) => ({
+      text: v < 1000 ? "Volumen muy bajo: revisa presupuesto o segmentación." : v < 50000 ? "Alcance moderado." : "Alcance alto, buena visibilidad.",
+      tone: v < 1000 ? "bad" : v < 50000 ? "warn" : "good",
+    }),
+  },
+  Clicks: {
+    desc: "Cantidad de personas que hicieron clic en tus anuncios.",
+    interpret: (v) => ({
+      text: v < 50 ? "Tráfico bajo: el anuncio puede no ser atractivo o la segmentación es muy estrecha." : "Volumen de tráfico saludable.",
+      tone: v < 50 ? "warn" : "good",
+    }),
+  },
+  CTR: {
+    desc: "Click-Through Rate: % de impresiones que generaron clic. Mide qué tan relevante es tu anuncio.",
+    interpret: (v) => ({
+      text: v < 1 ? "CTR bajo (<1%): mejora el creativo, copy o segmentación." : v < 2 ? "CTR aceptable (1–2%): hay espacio para optimizar." : "CTR excelente (>2%): tu anuncio resuena bien.",
+      tone: v < 1 ? "bad" : v < 2 ? "warn" : "good",
+    }),
+  },
+  Conversiones: {
+    desc: "Acciones valiosas completadas tras el clic (compras, leads, registros).",
+    interpret: (v) => ({
+      text: v === 0 ? "Sin conversiones: revisa el funnel o el seguimiento de eventos." : v < 10 ? "Volumen bajo de conversiones." : "Buen volumen de conversiones.",
+      tone: v === 0 ? "bad" : v < 10 ? "warn" : "good",
+    }),
+  },
+  ROAS: {
+    desc: "Return on Ad Spend: ingresos generados por cada $1 invertido. ROAS 3x = $3 de retorno por $1 gastado.",
+    interpret: (v) => ({
+      text: v === 0 ? "Sin retorno medible aún. Verifica que el conversion_value esté configurado." : v < 1 ? `ROAS ${v.toFixed(2)}x: estás perdiendo dinero (gastas más de lo que generas).` : v < 2 ? `ROAS ${v.toFixed(2)}x: rentabilidad ajustada, hay que optimizar.` : v < 4 ? `ROAS ${v.toFixed(2)}x: rentable y saludable.` : `ROAS ${v.toFixed(2)}x: excelente, escala esta campaña.`,
+      tone: v === 0 ? "neutral" : v < 1 ? "bad" : v < 2 ? "warn" : "good",
+    }),
+  },
+  "Gasto hoy": {
+    desc: "Inversión publicitaria acumulada en el día de hoy contra el presupuesto diario configurado.",
+    interpret: (v) => ({
+      text: v === 0 ? "Sin gasto registrado aún hoy." : `Llevas $${v.toLocaleString("en-US", { maximumFractionDigits: 0 })} gastados hoy.`,
+      tone: "neutral",
+    }),
+  },
+  "Alertas sin reconocer": {
+    desc: "Alertas disparadas que aún no han sido revisadas por el equipo.",
+    interpret: (v) => ({
+      text: v === 0 ? "Todo tranquilo, no hay alertas pendientes." : v < 3 ? `${v} alerta(s) requieren tu atención.` : `${v} alertas acumuladas: revisa el módulo de alertas pronto.`,
+      tone: v === 0 ? "good" : v < 3 ? "warn" : "bad",
+    }),
+  },
+};
 
 function UpgradeScreen({ plan }: { plan: string }) {
   return (
