@@ -23,7 +23,6 @@ import { useColumnVisibility } from "@/hooks/useColumnVisibility";
 import { supabase } from "@/integrations/supabase/client";
 
 const REDES_SOCIALES = ["Instagram", "TikTok", "YouTube", "Twitter", "Facebook"];
-const TIPOS_CONTENIDO = ["Reel", "Story", "Collab", "UGC"];
 
 const emptyAcuerdo = (): Omit<Acuerdo, "id" | "createdAt"> => ({
   influencer: "", redSocial: [], seguidores: 0, plataforma: "", tipoContenido: [],
@@ -140,6 +139,19 @@ export default function AcuerdosPage() {
       .order("sort_order", { ascending: true })
       .then(({ data }) => {
         setFamilias((data || []).map((f) => f.name));
+      });
+  }, []);
+
+  const [tiposContenido, setTiposContenido] = useState<string[]>([]);
+
+  useEffect(() => {
+    supabase
+      .from("content_types")
+      .select("name")
+      .eq("is_active", true)
+      .order("sort_order", { ascending: true })
+      .then(({ data }) => {
+        setTiposContenido((data || []).map((t) => t.name));
       });
   }, []);
 
@@ -333,12 +345,18 @@ export default function AcuerdosPage() {
             <div className="space-y-2">
               <FieldLabel field="tipoContenido">Tipo de Contenido</FieldLabel>
               <div className="flex flex-wrap gap-3 pt-1">
-                {TIPOS_CONTENIDO.map((tipo) => (
-                  <label key={tipo} className="flex items-center gap-1.5 text-sm cursor-pointer">
-                    <Checkbox checked={(form.tipoContenido || []).includes(tipo)} onCheckedChange={() => toggleTipoContenido(tipo)} />
-                    {tipo}
-                  </label>
-                ))}
+                {tiposContenido.length === 0 ? (
+                  <p className="text-xs text-muted-foreground">
+                    Sin tipos de contenido configurados. Configúralos en Administración.
+                  </p>
+                ) : (
+                  tiposContenido.map((tipo) => (
+                    <label key={tipo} className="flex items-center gap-1.5 text-sm cursor-pointer">
+                      <Checkbox checked={(form.tipoContenido || []).includes(tipo)} onCheckedChange={() => toggleTipoContenido(tipo)} />
+                      {tipo}
+                    </label>
+                  ))
+                )}
               </div>
             </div>
             {(form.tipoContenido || []).includes("Reel") && (

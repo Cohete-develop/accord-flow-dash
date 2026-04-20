@@ -4,6 +4,7 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 type Msg = { role: 'user' | 'assistant'; content: string };
 
@@ -211,7 +212,7 @@ export default function AIChatBubble() {
                 >
                   {msg.role === 'assistant' ? (
                     <div className="prose prose-sm dark:prose-invert max-w-none [&>*:first-child]:mt-0 [&>*:last-child]:mb-0 [&_table]:text-xs [&_th]:px-2 [&_td]:px-2">
-                      <ReactMarkdown>{msg.content}</ReactMarkdown>
+                      <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content}</ReactMarkdown>
                     </div>
                   ) : (
                     <p className="whitespace-pre-wrap">{msg.content}</p>

@@ -65,7 +65,7 @@ export default function DashboardPage() {
     name: estado, value: pagos.filter((p) => p.estado === estado).length,
   })).filter((d) => d.value > 0);
 
-  const entregablesByTipo = ["Reel", "Story", "Collab", "UGC"].map((tipo) => ({
+  const entregablesByTipo = [...new Set(entregables.map((e) => e.tipoContenido))].filter(Boolean).map((tipo) => ({
     name: tipo, value: entregables.filter((e) => e.tipoContenido === tipo).length,
   })).filter((d) => d.value > 0);
 

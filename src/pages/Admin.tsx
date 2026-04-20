@@ -20,6 +20,7 @@ import { Navigate } from 'react-router-dom';
 import AdminDataManagement from '@/components/admin/AdminDataManagement';
 import InvitationsManager from '@/components/admin/InvitationsManager';
 import ProductFamiliesManager from '@/components/admin/ProductFamiliesManager';
+import ContentTypesManager from '@/components/admin/ContentTypesManager';
 
 const ALL_ROLES = [
   { value: 'gerencia', label: 'Gerencia' },
@@ -392,6 +393,9 @@ export default function AdminPage() {
           {(callerIsGerencia || callerIsCoordinador) && callerCompany && (
             <TabsTrigger value="families" className="gap-1.5"><Package className="w-4 h-4" /> Familias de Producto</TabsTrigger>
           )}
+          {(callerIsGerencia || callerIsCoordinador) && callerCompany && (
+            <TabsTrigger value="content-types" className="gap-1.5"><Package className="w-4 h-4" /> Tipos de Contenido</TabsTrigger>
+          )}
           <TabsTrigger value="audit" className="gap-1.5"><ScrollText className="w-4 h-4" /> Auditoría</TabsTrigger>
           <TabsTrigger value="data" className="gap-1.5"><Database className="w-4 h-4" /> Gestión de Datos</TabsTrigger>
         </TabsList>
@@ -536,6 +540,13 @@ export default function AdminPage() {
         {(callerIsGerencia || callerIsCoordinador) && callerCompany && (
           <TabsContent value="families" className="space-y-4">
             <ProductFamiliesManager companyId={callerCompany.id} canDelete={callerIsGerencia} />
+          </TabsContent>
+        )}
+
+        {/* CONTENT TYPES TAB */}
+        {(callerIsGerencia || callerIsCoordinador) && callerCompany && (
+          <TabsContent value="content-types" className="space-y-4">
+            <ContentTypesManager companyId={callerCompany.id} canDelete={callerIsGerencia} />
           </TabsContent>
         )}
 
