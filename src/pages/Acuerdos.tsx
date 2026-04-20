@@ -130,6 +130,18 @@ export default function AcuerdosPage() {
   const [sortKey, setSortKey] = useState<string | null>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>(null);
   const { sortItems, toggleSort } = useSort<Acuerdo>();
+  const [familias, setFamilias] = useState<string[]>([]);
+
+  useEffect(() => {
+    supabase
+      .from("product_families")
+      .select("name")
+      .eq("is_active", true)
+      .order("sort_order", { ascending: true })
+      .then(({ data }) => {
+        setFamilias((data || []).map((f) => f.name));
+      });
+  }, []);
 
   const acuerdoColumns: ColumnDef<Acuerdo>[] = [
     { key: "influencer", label: "Influencer", sortKey: "influencer", render: (a) => <span className="font-medium">{a.influencer}</span> },
