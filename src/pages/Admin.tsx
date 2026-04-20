@@ -323,6 +323,64 @@ export default function AdminPage() {
         <p className="text-sm text-muted-foreground">Gestión de usuarios, permisos y auditoría</p>
       </div>
 
+      {companyPlan && (
+        <Card>
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Crown className="w-5 h-5" /> Tu Plan
+              </CardTitle>
+              <Badge
+                className={`${
+                  companyPlan.plan_id === 'enterprise' ? 'bg-amber-100 text-amber-800 border border-amber-200' :
+                  companyPlan.plan_id === 'pro' ? 'bg-purple-100 text-purple-800 border border-purple-200' :
+                  companyPlan.plan_id === 'starter' ? 'bg-blue-100 text-blue-800 border border-blue-200' :
+                  'bg-muted text-muted-foreground border border-border'
+                } gap-1`}
+              >
+                <Crown className="w-3 h-3" /> {companyPlan.display_name}
+              </Badge>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid gap-4 md:grid-cols-2">
+              <div>
+                <h4 className="text-sm font-semibold mb-2">Incluye</h4>
+                <ul className="space-y-1 text-sm text-muted-foreground">
+                  {companyPlan.features.map((f, i) => (
+                    <li key={i} className="flex items-start gap-2">
+                      <span className="text-primary mt-0.5">✓</span>
+                      <span>{f}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <div className="space-y-3 text-sm">
+                <div className="rounded-md bg-muted/50 p-3">
+                  <p className="text-xs text-muted-foreground mb-1">Usuarios</p>
+                  <p className="font-semibold">
+                    {companyPlan.active_user_count} de {companyPlan.max_seats} incluidos en tu plan
+                  </p>
+                </div>
+                <div className="rounded-md bg-muted/50 p-3">
+                  <p className="text-xs text-muted-foreground mb-1">Campaign Monitor</p>
+                  {companyPlan.modules_included.includes('campaign_monitor') ? (
+                    <p className="font-semibold">
+                      Hasta {companyPlan.max_ad_connections} conexiones, sync cada {companyPlan.sync_interval_minutes} min
+                    </p>
+                  ) : (
+                    <p className="font-semibold text-muted-foreground">No incluido en tu plan</p>
+                  )}
+                </div>
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground border-t pt-3">
+              Para cambiar de plan, contacta a Cohete en <a href="mailto:soporte@cohete-it.com" className="text-primary font-medium hover:underline">soporte@cohete-it.com</a>
+            </p>
+          </CardContent>
+        </Card>
+      )}
+
       <Tabs value={tab} onValueChange={setTab}>
         <TabsList>
           <TabsTrigger value="users" className="gap-1.5"><Users className="w-4 h-4" /> Usuarios</TabsTrigger>
