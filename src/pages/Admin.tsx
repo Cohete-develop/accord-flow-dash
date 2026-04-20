@@ -10,7 +10,7 @@ import { Switch } from '@/components/ui/switch';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Users, Shield, ScrollText, UserPlus, Trash2, Pencil, Database } from 'lucide-react';
+import { Users, Shield, ScrollText, UserPlus, Trash2, Pencil, Database, Crown } from 'lucide-react';
 import { Send } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -83,6 +83,16 @@ export default function AdminPage() {
   const [callerIsGerencia, setCallerIsGerencia] = useState(false);
   const [callerIsCoordinador, setCallerIsCoordinador] = useState(false);
   const [callerCompany, setCallerCompany] = useState<{ id: string; name: string; domain: string | null } | null>(null);
+  const [companyPlan, setCompanyPlan] = useState<{
+    plan_id: string;
+    display_name: string;
+    max_seats: number;
+    features: string[];
+    modules_included: string[];
+    max_ad_connections: number;
+    sync_interval_minutes: number;
+    active_user_count: number;
+  } | null>(null);
 
   // Users state
   const [users, setUsers] = useState<UserRow[]>([]);
