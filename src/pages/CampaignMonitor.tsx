@@ -246,6 +246,17 @@ function ResumenTab() {
         </CardContent>
       </Card>
 
+      <PeriodComparisonCard metrics={metrics} days={parseInt(range, 10)} />
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <SpendByPlatformCard metrics={filtered} campaigns={campaigns} />
+        <PlatformComparisonCard metrics={filtered} campaigns={campaigns} />
+      </div>
+
+      <TopBottomCampaignsCard metrics={filtered} campaigns={campaigns} />
+
+      <BudgetPacingCard metrics={filtered} campaigns={campaigns} daysSelected={parseInt(range, 10)} />
+
       <Card>
         <CardHeader>
           <CardTitle>Campañas activas</CardTitle>
