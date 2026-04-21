@@ -14,6 +14,7 @@ import AdminPage from "./pages/Admin";
 import SuperAdminPage from "./pages/SuperAdmin";
 import CampaignMonitorPage from "./pages/CampaignMonitor";
 import AuthPage from "./pages/Auth";
+import OAuthCallbackPage from "./pages/OAuthCallback";
 import ResetPasswordPage from "./pages/ResetPassword";
 import AcceptInvitePage from "./pages/AcceptInvite";
 import NotFound from "./pages/NotFound";
@@ -40,6 +41,7 @@ const App = () => (
             <Route path="/admin" element={<Layout><AdminPage /></Layout>} />
             <Route path="/super-admin" element={<Layout><SuperAdminPage /></Layout>} />
             <Route path="/campaign-monitor" element={<Layout><CampaignMonitorPage /></Layout>} />
+            <Route path="/campaign-monitor/oauth/callback" element={<OAuthCallbackPage />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>
