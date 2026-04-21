@@ -79,7 +79,7 @@ export default function OAuthCallbackPage() {
 
           {status === "success" && (
             <>
-              <CheckCircle2 className="h-12 w-12 text-green-600" />
+              <CheckCircle2 className="h-12 w-12 text-primary" />
               <div className="text-center space-y-1">
                 <p className="font-medium">{message}</p>
                 {accountName && (
