@@ -12,7 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import {
   useIsPremium, useAdConnections, useCampaigns, useCampaignMetrics,
   useCampaignKeywords, useCampaignAlerts, useAlertHistory,
-  useSyncCampaigns, useConnectPlatform, useDisconnectPlatform, type Platform,
+  useSyncCampaigns, useDisconnectPlatform, useGoogleAdsOAuth, type Platform,
 } from "@/hooks/useCampaignMonitor";
 import { Activity, AlertTriangle, CheckCircle2, Crown, Plug, RefreshCw, TrendingDown, TrendingUp, Zap } from "lucide-react";
 import { Link } from "react-router-dom";
