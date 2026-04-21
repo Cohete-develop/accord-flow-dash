@@ -703,7 +703,7 @@ function AlertasTab() {
 
 function ConexionesTab() {
   const { data: connections = [] } = useAdConnections();
-  const connect = useConnectPlatform();
+  const googleOAuth = useGoogleAdsOAuth();
   const disconnect = useDisconnectPlatform();
   const sync = useSyncCampaigns();
 
@@ -744,13 +744,26 @@ function ConexionesTab() {
                   </div>
                 </>
               ) : (
-                <Button
-                  variant="gradient"
-                  disabled={connect.isPending}
-                  onClick={() => connect.mutate({ platform: p, account_name: `${PLATFORM_LABELS[p]} demo` })}
-                >
-                  Conectar
-                </Button>
+                p === "google_ads" ? (
+                  <Button
+                    variant="gradient"
+                    disabled={googleOAuth.isLaunching}
+                    onClick={() => googleOAuth.start()}
+                  >
+                    {googleOAuth.isLaunching ? "Abriendo Google..." : "Conectar con Google"}
+                  </Button>
+                ) : (
+                  <UITooltip>
+                    <TooltipTrigger asChild>
+                      <span className="inline-block">
+                        <Button variant="gradient" disabled>
+                          Conectar
+                        </Button>
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent>Próximamente</TooltipContent>
+                  </UITooltip>
+                )
               )}
             </CardContent>
           </Card>
