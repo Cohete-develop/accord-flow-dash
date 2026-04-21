@@ -863,6 +863,44 @@ export type Database = {
         }
         Relationships: []
       }
+      oauth_states: {
+        Row: {
+          company_id: string
+          created_at: string
+          expires_at: string
+          id: string
+          platform: string
+          state: string
+          user_id: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          platform: string
+          state?: string
+          user_id: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          platform?: string
+          state?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "oauth_states_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pagos: {
         Row: {
           acuerdo_id: string | null

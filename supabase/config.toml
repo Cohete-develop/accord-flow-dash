@@ -5,3 +5,6 @@ verify_jwt = false
 
 [functions.campaign-webhook-ingest]
 verify_jwt = false
+
+[functions.campaign-oauth-callback]
+verify_jwt = false
