@@ -370,3 +370,57 @@ export function useDisconnectPlatform() {
     },
   });
 }
+
+/**
+ * Hook para iniciar el flujo OAuth real de Google Ads.
+ * - Llama a campaign-oauth-url para obtener la URL de autorización
+ * - Abre una ventana popup hacia Google
+ * - Cuando la ventana se cierra (o la pestaña principal vuelve a tener foco)
+ *   refresca la lista de conexiones para reflejar el resultado del callback.
+ */
+export function useGoogleAdsOAuth() {
+  const qc = useQueryClient();
+  const [isLaunching, setIsLaunching] = useState(false);
+
+  const start = async () => {
+    setIsLaunching(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("campaign-oauth-url", {
+        body: { platform: "google_ads" },
+      });
+      if (error) throw error;
+      const url = (data as any)?.url;
+      if (!url) throw new Error("No se recibió la URL de autorización");
+
+      const popup = window.open(url, "google_ads_oauth", "width=600,height=700");
+      if (!popup) {
+        toast.error("El navegador bloqueó la ventana emergente. Permite popups e intenta de nuevo.");
+        return;
+      }
+
+      const refresh = () => {
+        qc.invalidateQueries({ queryKey: ["ad_connections"] });
+        qc.invalidateQueries({ queryKey: ["campaigns_sync"] });
+      };
+
+      // Detectar cierre del popup mediante polling
+      const interval = window.setInterval(() => {
+        if (popup.closed) {
+          window.clearInterval(interval);
+          window.removeEventListener("focus", onFocus);
+          refresh();
+        }
+      }, 800);
+
+      // Refrescar también cuando la pestaña principal recupera el foco
+      const onFocus = () => refresh();
+      window.addEventListener("focus", onFocus);
+    } catch (e: any) {
+      toast.error(e?.message || "No se pudo iniciar la conexión con Google Ads");
+    } finally {
+      setIsLaunching(false);
+    }
+  };
+
+  return { start, isLaunching };
+}

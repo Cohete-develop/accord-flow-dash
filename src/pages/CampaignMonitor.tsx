@@ -12,7 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import {
   useIsPremium, useAdConnections, useCampaigns, useCampaignMetrics,
   useCampaignKeywords, useCampaignAlerts, useAlertHistory,
-  useSyncCampaigns, useConnectPlatform, useDisconnectPlatform, type Platform,
+  useSyncCampaigns, useDisconnectPlatform, useGoogleAdsOAuth, type Platform,
 } from "@/hooks/useCampaignMonitor";
 import { Activity, AlertTriangle, CheckCircle2, Crown, Plug, RefreshCw, TrendingDown, TrendingUp, Zap } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -703,14 +703,15 @@ function AlertasTab() {
 
 function ConexionesTab() {
   const { data: connections = [] } = useAdConnections();
-  const connect = useConnectPlatform();
+  const googleOAuth = useGoogleAdsOAuth();
   const disconnect = useDisconnectPlatform();
   const sync = useSyncCampaigns();
 
   const platforms: Platform[] = ["google_ads", "meta_ads", "tiktok_ads", "linkedin_ads"];
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <TooltipProvider delayDuration={150}>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
       {platforms.map((p) => {
         const conn = connections.find((c) => c.platform === p);
         return (
@@ -744,19 +745,33 @@ function ConexionesTab() {
                   </div>
                 </>
               ) : (
-                <Button
-                  variant="gradient"
-                  disabled={connect.isPending}
-                  onClick={() => connect.mutate({ platform: p, account_name: `${PLATFORM_LABELS[p]} demo` })}
-                >
-                  Conectar
-                </Button>
+                p === "google_ads" ? (
+                  <Button
+                    variant="gradient"
+                    disabled={googleOAuth.isLaunching}
+                    onClick={() => googleOAuth.start()}
+                  >
+                    {googleOAuth.isLaunching ? "Abriendo Google..." : "Conectar con Google"}
+                  </Button>
+                ) : (
+                  <UITooltip>
+                    <TooltipTrigger asChild>
+                      <span className="inline-block">
+                        <Button variant="gradient" disabled>
+                          Conectar
+                        </Button>
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent>Próximamente</TooltipContent>
+                  </UITooltip>
+                )
               )}
             </CardContent>
           </Card>
         );
       })}
-    </div>
+      </div>
+    </TooltipProvider>
   );
 }
 
