@@ -710,7 +710,8 @@ function ConexionesTab() {
   const platforms: Platform[] = ["google_ads", "meta_ads", "tiktok_ads", "linkedin_ads"];
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <TooltipProvider delayDuration={150}>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
       {platforms.map((p) => {
         const conn = connections.find((c) => c.platform === p);
         return (
@@ -769,7 +770,8 @@ function ConexionesTab() {
           </Card>
         );
       })}
-    </div>
+      </div>
+    </TooltipProvider>
   );
 }
 
