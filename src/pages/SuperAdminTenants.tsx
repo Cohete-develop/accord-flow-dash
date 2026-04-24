@@ -19,26 +19,36 @@ interface TenantCard {
 }
 
 export default function SuperAdminTenantsPage() {
-  const { user, signOut } = useAuth();
+  const { user, loading: authLoading, signOut } = useAuth();
   const navigate = useNavigate();
   const [tenants, setTenants] = useState<TenantCard[]>([]);
   const [loading, setLoading] = useState(true);
   const [isSuperAdmin, setIsSuperAdmin] = useState<boolean | null>(null);
+  const [roleChecked, setRoleChecked] = useState(false);
   const [entering, setEntering] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!user) return;
+    if (authLoading) return;
+    if (!user) {
+      setRoleChecked(true);
+      return;
+    }
     const checkRole = async () => {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from("user_roles")
         .select("role")
         .eq("user_id", user.id)
         .eq("role", "super_admin")
         .maybeSingle();
+      if (error) {
+        console.error("[SuperAdminTenants] role check error:", error);
+      }
+      console.log("[SuperAdminTenants] role check result:", { data, error, userId: user.id });
       setIsSuperAdmin(!!data);
+      setRoleChecked(true);
     };
     checkRole();
-  }, [user]);
+  }, [user, authLoading]);
 
   useEffect(() => {
     if (!isSuperAdmin) return;
@@ -86,10 +96,17 @@ export default function SuperAdminTenantsPage() {
     navigate("/dashboard");
   };
 
+  if (authLoading || !roleChecked) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <p className="text-muted-foreground">Verificando acceso...</p>
+      </div>
+    );
+  }
   if (!user) return <Navigate to="/auth" replace />;
   if (isSuperAdmin === false) return <Navigate to="/dashboard" replace />;
 
-  if (isSuperAdmin === null || loading) {
+  if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <p className="text-muted-foreground">Cargando...</p>
