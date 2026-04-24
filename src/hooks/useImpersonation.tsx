@@ -67,7 +67,7 @@ export function ImpersonationProvider({ children }: { children: ReactNode }) {
   const stop = useCallback(async () => {
     setLoading(true);
     try {
-      const { error } = await supabase.rpc("stop_impersonation");
+      const { error } = await supabase.rpc("end_impersonation");
       if (error) throw error;
       setActive(null);
       await qc.invalidateQueries();
