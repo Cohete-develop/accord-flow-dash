@@ -580,6 +580,19 @@ export default function SuperAdminPage() {
                     Creada: {new Date(company.created_at).toLocaleDateString('es-CO')}
                   </p>
                   <div className="flex gap-2 pt-2 flex-wrap">
+                    <Button
+                      variant="default"
+                      size="sm"
+                      className="gap-1.5 flex-1"
+                      disabled={!company.is_active || activeImpersonation?.target_company_id === company.id}
+                      onClick={async () => {
+                        await startImpersonation(company.id, company.name);
+                        navigate('/dashboard');
+                      }}
+                    >
+                      <LogIn className="w-3.5 h-3.5" />
+                      {activeImpersonation?.target_company_id === company.id ? 'Dentro' : 'Entrar'}
+                    </Button>
                     <Button variant="outline" size="sm" className="gap-1.5 flex-1" onClick={() => fetchCompanyUsers(company)}>
                       <Eye className="w-3.5 h-3.5" /> Ver Usuarios
                     </Button>
