@@ -13,6 +13,7 @@ import EntregablesPage from "./pages/Entregables";
 import KPIsPage from "./pages/KPIs";
 import AdminPage from "./pages/Admin";
 import SuperAdminPage from "./pages/SuperAdmin";
+import SuperAdminTenantsPage from "./pages/SuperAdminTenants";
 import CampaignMonitorPage from "./pages/CampaignMonitor";
 import AuthPage from "./pages/Auth";
 import OAuthCallbackPage from "./pages/OAuthCallback";
@@ -42,6 +43,7 @@ const App = () => (
             <Route path="/kpis" element={<Layout><KPIsPage /></Layout>} />
             <Route path="/admin" element={<Layout><AdminPage /></Layout>} />
             <Route path="/super-admin" element={<Layout><SuperAdminPage /></Layout>} />
+            <Route path="/super-admin/tenants" element={<SuperAdminTenantsPage />} />
             <Route path="/campaign-monitor" element={<Layout><CampaignMonitorPage /></Layout>} />
             <Route path="/campaign-monitor/oauth/callback" element={<OAuthCallbackPage />} />
             <Route path="*" element={<NotFound />} />
