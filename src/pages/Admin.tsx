@@ -21,6 +21,7 @@ import AdminDataManagement from '@/components/admin/AdminDataManagement';
 import InvitationsManager from '@/components/admin/InvitationsManager';
 import ProductFamiliesManager from '@/components/admin/ProductFamiliesManager';
 import ContentTypesManager from '@/components/admin/ContentTypesManager';
+import DemoDataManager from '@/components/admin/DemoDataManager';
 
 const ALL_ROLES = [
   { value: 'gerencia', label: 'Gerencia' },
@@ -324,6 +325,8 @@ export default function AdminPage() {
         <h1 className="text-2xl font-bold">Administración</h1>
         <p className="text-sm text-muted-foreground">Gestión de usuarios, permisos y auditoría</p>
       </div>
+
+      <DemoDataManager />
 
       {companyPlan && (
         <Card>
