@@ -98,9 +98,9 @@ export default function DemoDataManager() {
   };
 
   return (
-    <Card className="border-dashed border-amber-300 bg-amber-50/30">
+    <Card className="border-dashed border-primary/40 bg-primary/5">
       <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-amber-900">
+        <CardTitle className="flex items-center gap-2 text-foreground">
           <Database className="w-5 h-5" /> Datos Demo (Solo Super Admin)
         </CardTitle>
         <CardDescription>
