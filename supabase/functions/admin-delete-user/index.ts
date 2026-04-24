@@ -46,6 +46,19 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Bloqueo: no permitir borrar usuarios mientras se está impersonando
+    const { data: activeImpersonation } = await adminClient
+      .from("super_admin_impersonations")
+      .select("id")
+      .eq("super_admin_user_id", caller.id)
+      .is("ended_at", null)
+      .maybeSingle();
+    if (activeImpersonation) {
+      return new Response(JSON.stringify({ error: "No puedes eliminar usuarios mientras estás en modo impersonación. Sal del tenant primero." }), {
+        status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const { user_id, transfer_to_user_id } = await req.json();
     if (!user_id) {
       return new Response(JSON.stringify({ error: "user_id es obligatorio" }), {
