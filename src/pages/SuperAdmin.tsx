@@ -737,6 +737,75 @@ export default function SuperAdminPage() {
         </TabsContent>
 
         {/* AUDIT TAB */}
+        <TabsContent value="impersonations" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Historial de impersonaciones</CardTitle>
+              <p className="text-xs text-muted-foreground">Sesiones de super_admin entrando como otro tenant</p>
+            </CardHeader>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Fecha inicio</TableHead>
+                  <TableHead>Super admin</TableHead>
+                  <TableHead>Empresa impersonada</TableHead>
+                  <TableHead>Duración</TableHead>
+                  <TableHead>Estado</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {(() => {
+                  // Cruza IMPERSONATE_START con su IMPERSONATE_END más cercano por super_admin + empresa
+                  const starts = auditLog
+                    .filter(e => e.action === 'IMPERSONATE_START')
+                    .map(start => {
+                      const targetId = start.details?.target_company_id;
+                      const end = auditLog
+                        .filter(e =>
+                          e.action === 'IMPERSONATE_END' &&
+                          e.user_name === start.user_name &&
+                          e.details?.target_company_id === targetId &&
+                          new Date(e.created_at) > new Date(start.created_at)
+                        )
+                        .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())[0];
+                      const durationMs = end ? new Date(end.created_at).getTime() - new Date(start.created_at).getTime() : null;
+                      const companyName = companies.find(c => c.id === targetId)?.name || targetId || '—';
+                      return { start, end, durationMs, companyName };
+                    });
+                  if (loadingAudit) {
+                    return <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground">Cargando...</TableCell></TableRow>;
+                  }
+                  if (starts.length === 0) {
+                    return <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground">Sin impersonaciones registradas</TableCell></TableRow>;
+                  }
+                  return starts.map(({ start, end, durationMs, companyName }) => {
+                    const fmtDur = (ms: number) => {
+                      const s = Math.floor(ms / 1000);
+                      const h = Math.floor(s / 3600);
+                      const m = Math.floor((s % 3600) / 60);
+                      const sec = s % 60;
+                      return h > 0 ? `${h}h ${m}m` : m > 0 ? `${m}m ${sec}s` : `${sec}s`;
+                    };
+                    return (
+                      <TableRow key={start.id}>
+                        <TableCell className="text-xs whitespace-nowrap">{new Date(start.created_at).toLocaleString('es-CO')}</TableCell>
+                        <TableCell className="font-medium">{start.user_name || '—'}</TableCell>
+                        <TableCell><Badge variant="secondary">{companyName}</Badge></TableCell>
+                        <TableCell className="text-xs">{durationMs !== null ? fmtDur(durationMs) : <span className="text-muted-foreground">—</span>}</TableCell>
+                        <TableCell>
+                          {end
+                            ? <Badge variant="outline" className="text-xs">Finalizada</Badge>
+                            : <Badge className="text-xs bg-amber-500/15 text-amber-700 border border-amber-500/30">Activa</Badge>}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  });
+                })()}
+              </TableBody>
+            </Table>
+          </Card>
+        </TabsContent>
+
         <TabsContent value="audit" className="space-y-4">
           <Card>
             <Table>
