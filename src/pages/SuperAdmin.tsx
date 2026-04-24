@@ -795,7 +795,7 @@ export default function SuperAdminPage() {
                         <TableCell>
                           {end
                             ? <Badge variant="outline" className="text-xs">Finalizada</Badge>
-                            : <Badge className="text-xs bg-amber-500/15 text-amber-700 border border-amber-500/30">Activa</Badge>}
+                            : <Badge variant="destructive" className="text-xs">Activa</Badge>}
                         </TableCell>
                       </TableRow>
                     );
