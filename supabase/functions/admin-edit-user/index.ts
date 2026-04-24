@@ -54,6 +54,21 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Bloqueo: no permitir cambios sensibles (email/rol) mientras se está impersonando
+    if (email || role) {
+      const { data: activeImpersonation } = await adminClient
+        .from("super_admin_impersonations")
+        .select("id")
+        .eq("super_admin_user_id", caller.id)
+        .is("ended_at", null)
+        .maybeSingle();
+      if (activeImpersonation) {
+        return new Response(JSON.stringify({ error: "No puedes cambiar email o rol de usuarios mientras estás en modo impersonación. Sal del tenant primero." }), {
+          status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    }
+
     const callerRoles = (roleData || []).map((r: any) => r.role);
     const isSuperAdmin = callerRoles.includes("super_admin");
     const isGerencia = callerRoles.includes("gerencia");
