@@ -414,6 +414,7 @@ export default function SuperAdminPage() {
     create_user: 'Creó usuario', edit_user: 'Editó usuario', deactivate_user: 'Desactivó usuario',
     activate_user: 'Activó usuario', delete_user: 'Eliminó usuario', export_data: 'Exportó datos',
     bulk_delete: 'Eliminación masiva', create_company: 'Creó empresa', delete_company: 'Eliminó empresa',
+    IMPERSONATE_START: 'Inició impersonación', IMPERSONATE_END: 'Terminó impersonación',
   };
 
   function confirmDeleteCompany(company: Company) {
