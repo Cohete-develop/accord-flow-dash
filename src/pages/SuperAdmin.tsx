@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
-import { Building2, Users, Plus, Pencil, Trash2, UserPlus, Eye, ScrollText, Crown } from 'lucide-react';
+import { Building2, Users, Plus, Pencil, Trash2, UserPlus, Eye, ScrollText, Crown, LogIn } from 'lucide-react';
 import { Send } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import InvitationsManager from '@/components/admin/InvitationsManager';
@@ -18,6 +18,8 @@ import { toast } from 'sonner';
 import { handleEdgeError } from '@/lib/friendly-errors';
 import { useAuth } from '@/hooks/useAuth';
 import { Navigate } from 'react-router-dom';
+import { useImpersonation } from '@/hooks/useImpersonation';
+import { useNavigate } from 'react-router-dom';
 
 interface Company {
   id: string;
@@ -82,6 +84,8 @@ const ROLES = [
 
 export default function SuperAdminPage() {
   const { session, user } = useAuth();
+  const { start: startImpersonation, active: activeImpersonation } = useImpersonation();
+  const navigate = useNavigate();
   const [tab, setTab] = useState('companies');
   const [isSuperAdmin, setIsSuperAdmin] = useState<boolean | null>(null);
 
@@ -576,6 +580,19 @@ export default function SuperAdminPage() {
                     Creada: {new Date(company.created_at).toLocaleDateString('es-CO')}
                   </p>
                   <div className="flex gap-2 pt-2 flex-wrap">
+                    <Button
+                      variant="default"
+                      size="sm"
+                      className="gap-1.5 flex-1"
+                      disabled={!company.is_active || activeImpersonation?.target_company_id === company.id}
+                      onClick={async () => {
+                        await startImpersonation(company.id, company.name);
+                        navigate('/dashboard');
+                      }}
+                    >
+                      <LogIn className="w-3.5 h-3.5" />
+                      {activeImpersonation?.target_company_id === company.id ? 'Dentro' : 'Entrar'}
+                    </Button>
                     <Button variant="outline" size="sm" className="gap-1.5 flex-1" onClick={() => fetchCompanyUsers(company)}>
                       <Eye className="w-3.5 h-3.5" /> Ver Usuarios
                     </Button>

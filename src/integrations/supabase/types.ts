@@ -1121,6 +1121,44 @@ export type Database = {
           },
         ]
       }
+      super_admin_impersonations: {
+        Row: {
+          ended_at: string | null
+          id: string
+          ip_address: string | null
+          started_at: string
+          super_admin_user_id: string
+          target_company_id: string
+          user_agent: string | null
+        }
+        Insert: {
+          ended_at?: string | null
+          id?: string
+          ip_address?: string | null
+          started_at?: string
+          super_admin_user_id: string
+          target_company_id: string
+          user_agent?: string | null
+        }
+        Update: {
+          ended_at?: string | null
+          id?: string
+          ip_address?: string | null
+          started_at?: string
+          super_admin_user_id?: string
+          target_company_id?: string
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "super_admin_impersonations_target_company_id_fkey"
+            columns: ["target_company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -1196,6 +1234,10 @@ export type Database = {
       }
     }
     Functions: {
+      get_active_impersonation_company: {
+        Args: { _user_id: string }
+        Returns: string
+      }
       get_company_plan_limits: {
         Args: { _company_id: string }
         Returns: {
@@ -1205,6 +1247,15 @@ export type Database = {
           modules_included: string[]
           plan_id: string
           sync_interval_minutes: number
+        }[]
+      }
+      get_my_active_impersonation: {
+        Args: never
+        Returns: {
+          company_name: string
+          id: string
+          started_at: string
+          target_company_id: string
         }[]
       }
       get_user_company_id: { Args: { _user_id: string }; Returns: string }
@@ -1220,6 +1271,11 @@ export type Database = {
       is_blocked_domain: { Args: { _domain: string }; Returns: boolean }
       is_platform_domain: { Args: { _domain: string }; Returns: boolean }
       is_protected_user: { Args: { _user_id: string }; Returns: boolean }
+      start_impersonation: {
+        Args: { _ip?: string; _target_company_id: string; _ua?: string }
+        Returns: string
+      }
+      stop_impersonation: { Args: never; Returns: undefined }
     }
     Enums: {
       app_role:

@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
+import { ImpersonationProvider } from "@/hooks/useImpersonation";
 import Layout from "@/components/Layout";
 import DashboardPage from "./pages/Dashboard";
 import AcuerdosPage from "./pages/Acuerdos";
@@ -28,7 +29,8 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <AuthProvider>
-          <Routes>
+          <ImpersonationProvider>
+            <Routes>
             <Route path="/auth" element={<AuthPage />} />
             <Route path="/reset-password" element={<ResetPasswordPage />} />
             <Route path="/accept-invite" element={<AcceptInvitePage />} />
@@ -43,7 +45,8 @@ const App = () => (
             <Route path="/campaign-monitor" element={<Layout><CampaignMonitorPage /></Layout>} />
             <Route path="/campaign-monitor/oauth/callback" element={<OAuthCallbackPage />} />
             <Route path="*" element={<NotFound />} />
-          </Routes>
+            </Routes>
+          </ImpersonationProvider>
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>

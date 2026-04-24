@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import companyLogo from "@/assets/company-logo.png";
 import fondoBg from "@/assets/Fondo_2026.png";
 import AIChatBubble from "@/components/AIChatBubble";
+import ImpersonationBanner from "@/components/ImpersonationBanner";
 import { NavLink } from "@/components/NavLink";
 import { Handshake, CreditCard, Package, BarChart3, LayoutDashboard, LogOut, Settings, Crown, Activity } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
@@ -123,6 +124,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         className="flex-1 overflow-auto bg-cover bg-center bg-no-repeat bg-fixed"
         style={{ backgroundImage: `url(${fondoBg})` }}
       >
+        <ImpersonationBanner />
         <div className="p-6 w-full backdrop-blur-sm">{children}</div>
       </main>
       <AIChatBubble />
