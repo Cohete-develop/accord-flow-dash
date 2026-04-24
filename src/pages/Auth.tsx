@@ -18,7 +18,7 @@ export default function AuthPage() {
   const { toast } = useToast();
 
   if (user) {
-    navigate("/dashboard", { replace: true });
+    navigate("/", { replace: true });
     return null;
   }
 
@@ -32,8 +32,22 @@ export default function AuthPage() {
 
     if (error) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
+      return;
+    }
+
+    // Verificar rol para redirigir según super_admin o usuario normal
+    const { data: sessionData } = await supabase.auth.getSession();
+    const userId = sessionData.session?.user.id;
+    if (userId) {
+      const { data: roleData } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", userId)
+        .eq("role", "super_admin")
+        .maybeSingle();
+      navigate(roleData ? "/super-admin/tenants" : "/dashboard", { replace: true });
     } else {
-      navigate("/dashboard", { replace: true });
+      navigate("/", { replace: true });
     }
   };
 
