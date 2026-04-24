@@ -14,6 +14,7 @@ import KPIsPage from "./pages/KPIs";
 import AdminPage from "./pages/Admin";
 import SuperAdminPage from "./pages/SuperAdmin";
 import SuperAdminTenantsPage from "./pages/SuperAdminTenants";
+import RoleBasedRedirect from "@/components/RoleBasedRedirect";
 import CampaignMonitorPage from "./pages/CampaignMonitor";
 import AuthPage from "./pages/Auth";
 import OAuthCallbackPage from "./pages/OAuthCallback";
@@ -35,7 +36,7 @@ const App = () => (
             <Route path="/auth" element={<AuthPage />} />
             <Route path="/reset-password" element={<ResetPasswordPage />} />
             <Route path="/accept-invite" element={<AcceptInvitePage />} />
-            <Route path="/" element={<Navigate to="/dashboard" replace />} />
+            <Route path="/" element={<RoleBasedRedirect />} />
             <Route path="/dashboard" element={<Layout><DashboardPage /></Layout>} />
             <Route path="/acuerdos" element={<Layout><AcuerdosPage /></Layout>} />
             <Route path="/pagos" element={<Layout><PagosPage /></Layout>} />
