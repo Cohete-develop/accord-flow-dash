@@ -511,6 +511,7 @@ export default function SuperAdminPage() {
           <TabsTrigger value="companies" className="gap-1.5"><Building2 className="w-4 h-4" /> Empresas</TabsTrigger>
           <TabsTrigger value="all-users" className="gap-1.5"><Users className="w-4 h-4" /> Todos los Usuarios</TabsTrigger>
           <TabsTrigger value="invitations" className="gap-1.5"><Send className="w-4 h-4" /> Invitaciones</TabsTrigger>
+          <TabsTrigger value="impersonations" className="gap-1.5"><Eye className="w-4 h-4" /> Impersonaciones</TabsTrigger>
           <TabsTrigger value="audit" className="gap-1.5"><ScrollText className="w-4 h-4" /> Auditoría Global</TabsTrigger>
         </TabsList>
 
