@@ -48,6 +48,19 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Bloqueo: no permitir borrar empresas mientras se está impersonando
+    const { data: activeImpersonation } = await adminClient
+      .from("super_admin_impersonations")
+      .select("id")
+      .eq("super_admin_user_id", caller.id)
+      .is("ended_at", null)
+      .maybeSingle();
+    if (activeImpersonation) {
+      return new Response(JSON.stringify({ error: "No puedes eliminar empresas mientras estás en modo impersonación. Sal del tenant primero." }), {
+        status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const { company_id } = await req.json();
     if (!company_id) {
       return new Response(JSON.stringify({ error: "company_id es obligatorio" }), {
