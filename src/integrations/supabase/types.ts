@@ -26,6 +26,7 @@ export type Database = {
           fecha_inicio: string | null
           id: string
           influencer: string
+          is_demo_data: boolean
           moneda: string
           notas: string
           plataforma: string
@@ -49,6 +50,7 @@ export type Database = {
           fecha_inicio?: string | null
           id?: string
           influencer?: string
+          is_demo_data?: boolean
           moneda?: string
           notas?: string
           plataforma?: string
@@ -72,6 +74,7 @@ export type Database = {
           fecha_inicio?: string | null
           id?: string
           influencer?: string
+          is_demo_data?: boolean
           moneda?: string
           notas?: string
           plataforma?: string
@@ -103,6 +106,7 @@ export type Database = {
           created_at: string
           credentials_vault_id: string | null
           id: string
+          is_demo_data: boolean
           last_sync_at: string | null
           platform: string
           status: string
@@ -117,6 +121,7 @@ export type Database = {
           created_at?: string
           credentials_vault_id?: string | null
           id?: string
+          is_demo_data?: boolean
           last_sync_at?: string | null
           platform: string
           status?: string
@@ -131,6 +136,7 @@ export type Database = {
           created_at?: string
           credentials_vault_id?: string | null
           id?: string
+          is_demo_data?: boolean
           last_sync_at?: string | null
           platform?: string
           status?: string
@@ -155,6 +161,7 @@ export type Database = {
           campaign_sync_id: string | null
           company_id: string
           id: string
+          is_demo_data: boolean
           message: string
           metric_value: number
           threshold_value: number
@@ -167,6 +174,7 @@ export type Database = {
           campaign_sync_id?: string | null
           company_id: string
           id?: string
+          is_demo_data?: boolean
           message: string
           metric_value: number
           threshold_value: number
@@ -179,6 +187,7 @@ export type Database = {
           campaign_sync_id?: string | null
           company_id?: string
           id?: string
+          is_demo_data?: boolean
           message?: string
           metric_value?: number
           threshold_value?: number
@@ -273,6 +282,7 @@ export type Database = {
           created_by: string
           id: string
           is_active: boolean
+          is_demo_data: boolean
           last_triggered_at: string | null
           metric: string
           notify_channels: Json
@@ -287,6 +297,7 @@ export type Database = {
           created_by: string
           id?: string
           is_active?: boolean
+          is_demo_data?: boolean
           last_triggered_at?: string | null
           metric: string
           notify_channels?: Json
@@ -301,6 +312,7 @@ export type Database = {
           created_by?: string
           id?: string
           is_active?: boolean
+          is_demo_data?: boolean
           last_triggered_at?: string | null
           metric?: string
           notify_channels?: Json
@@ -337,6 +349,7 @@ export type Database = {
           date: string
           id: string
           impressions: number
+          is_demo_data: boolean
           keyword: string
           match_type: string
           quality_score: number | null
@@ -354,6 +367,7 @@ export type Database = {
           date: string
           id?: string
           impressions?: number
+          is_demo_data?: boolean
           keyword: string
           match_type?: string
           quality_score?: number | null
@@ -371,6 +385,7 @@ export type Database = {
           date?: string
           id?: string
           impressions?: number
+          is_demo_data?: boolean
           keyword?: string
           match_type?: string
           quality_score?: number | null
@@ -409,6 +424,7 @@ export type Database = {
           hour: number | null
           id: string
           impressions: number
+          is_demo_data: boolean
           platform_data: Json
           roas: number
         }
@@ -427,6 +443,7 @@ export type Database = {
           hour?: number | null
           id?: string
           impressions?: number
+          is_demo_data?: boolean
           platform_data?: Json
           roas?: number
         }
@@ -445,6 +462,7 @@ export type Database = {
           hour?: number | null
           id?: string
           impressions?: number
+          is_demo_data?: boolean
           platform_data?: Json
           roas?: number
         }
@@ -476,6 +494,7 @@ export type Database = {
           end_date: string | null
           external_campaign_id: string
           id: string
+          is_demo_data: boolean
           last_sync_at: string | null
           platform: string
           start_date: string | null
@@ -493,6 +512,7 @@ export type Database = {
           end_date?: string | null
           external_campaign_id: string
           id?: string
+          is_demo_data?: boolean
           last_sync_at?: string | null
           platform: string
           start_date?: string | null
@@ -510,6 +530,7 @@ export type Database = {
           end_date?: string | null
           external_campaign_id?: string
           id?: string
+          is_demo_data?: boolean
           last_sync_at?: string | null
           platform?: string
           start_date?: string | null
@@ -640,6 +661,7 @@ export type Database = {
           fecha_programada: string | null
           id: string
           influencer: string
+          is_demo_data: boolean
           notas: string
           tipo_contenido: string
           url_contenido: string
@@ -655,6 +677,7 @@ export type Database = {
           fecha_programada?: string | null
           id?: string
           influencer?: string
+          is_demo_data?: boolean
           notas?: string
           tipo_contenido?: string
           url_contenido?: string
@@ -670,6 +693,7 @@ export type Database = {
           fecha_programada?: string | null
           id?: string
           influencer?: string
+          is_demo_data?: boolean
           notas?: string
           tipo_contenido?: string
           url_contenido?: string
@@ -761,6 +785,7 @@ export type Database = {
           impresiones: number
           influencer: string
           interacciones: number
+          is_demo_data: boolean
           notas: string
           periodo: string
           user_id: string
@@ -781,6 +806,7 @@ export type Database = {
           impresiones?: number
           influencer?: string
           interacciones?: number
+          is_demo_data?: boolean
           notas?: string
           periodo?: string
           user_id: string
@@ -801,6 +827,7 @@ export type Database = {
           impresiones?: number
           influencer?: string
           interacciones?: number
+          is_demo_data?: boolean
           notas?: string
           periodo?: string
           user_id?: string
@@ -912,6 +939,7 @@ export type Database = {
           fecha_pago: string | null
           id: string
           influencer: string
+          is_demo_data: boolean
           metodo_pago: string
           moneda: string
           monto: number
@@ -928,6 +956,7 @@ export type Database = {
           fecha_pago?: string | null
           id?: string
           influencer?: string
+          is_demo_data?: boolean
           metodo_pago?: string
           moneda?: string
           monto?: number
@@ -944,6 +973,7 @@ export type Database = {
           fecha_pago?: string | null
           id?: string
           influencer?: string
+          is_demo_data?: boolean
           metodo_pago?: string
           moneda?: string
           monto?: number
