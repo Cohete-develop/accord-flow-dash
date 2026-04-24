@@ -1234,10 +1234,8 @@ export type Database = {
       }
     }
     Functions: {
-      get_active_impersonation_company: {
-        Args: { _user_id: string }
-        Returns: string
-      }
+      end_impersonation: { Args: never; Returns: undefined }
+      get_active_impersonation: { Args: { _user_id: string }; Returns: string }
       get_company_plan_limits: {
         Args: { _company_id: string }
         Returns: {
@@ -1275,7 +1273,6 @@ export type Database = {
         Args: { _ip?: string; _target_company_id: string; _ua?: string }
         Returns: string
       }
-      stop_impersonation: { Args: never; Returns: undefined }
     }
     Enums: {
       app_role:
