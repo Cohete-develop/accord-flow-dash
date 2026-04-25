@@ -1,4 +1,3 @@
-import { useState, useEffect } from "react";
 import companyLogo from "@/assets/company-logo.png";
 import fondoBg from "@/assets/Fondo_2026.png";
 import AIChatBubble from "@/components/AIChatBubble";
@@ -9,6 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Navigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useImpersonation } from "@/hooks/useImpersonation";
+import { useQuery } from "@tanstack/react-query";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const navItems = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -21,37 +22,43 @@ const navItems = [
 export default function Layout({ children }: { children: React.ReactNode }) {
   const { signOut, user, loading } = useAuth();
   const { active: impersonationActive, stop: stopImpersonation } = useImpersonation();
-  const [isGerencia, setIsGerencia] = useState(false);
-  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
-  const [isCoordinador, setIsCoordinador] = useState(false);
-  const [isPremium, setIsPremium] = useState(false);
-  const [hasActiveImpersonation, setHasActiveImpersonation] = useState<boolean>(false);
 
-  useEffect(() => {
-    if (!user) return;
-    Promise.all([
-      supabase.from('user_roles').select('role').eq('user_id', user.id),
-      supabase.from('profiles').select('company_id').eq('user_id', user.id).maybeSingle(),
-      supabase.rpc('get_active_impersonation', { _user_id: user.id }),
-    ]).then(([rolesRes, profileRes, impersonationRes]) => {
+  const { data: layoutData, isLoading: layoutLoading } = useQuery({
+    queryKey: ["layout-context", user?.id],
+    enabled: !!user,
+    staleTime: 30_000,
+    queryFn: async () => {
+      if (!user) return null;
+      const [rolesRes, profileRes, impersonationRes] = await Promise.all([
+        supabase.from('user_roles').select('role').eq('user_id', user.id),
+        supabase.from('profiles').select('company_id').eq('user_id', user.id).maybeSingle(),
+        supabase.rpc('get_active_impersonation', { _user_id: user.id }),
+      ]);
       const roles = (rolesRes.data || []).map(r => r.role);
       const hasNoCompany = !profileRes.data?.company_id;
       const impersonating = !!impersonationRes.data;
-      setIsGerencia(roles.includes('gerencia'));
-      // super_admin link only for platform owners (no company)
-      setIsSuperAdmin(roles.includes('super_admin') && hasNoCompany);
-      setIsCoordinador(roles.includes('coordinador_mercadeo'));
-      setHasActiveImpersonation(impersonating);
-      // Effective company: impersonated takes priority over own profile
       const cid = (impersonationRes.data as string | null) || profileRes.data?.company_id;
+      let plan = '';
       if (cid) {
-        supabase.from('companies').select('plan').eq('id', cid).maybeSingle()
-          .then(({ data }) => setIsPremium(['pro', 'enterprise'].includes(data?.plan || '')));
-      } else {
-        setIsPremium(false);
+        const { data: comp } = await supabase
+          .from('companies').select('plan').eq('id', cid).maybeSingle();
+        plan = comp?.plan || '';
       }
-    });
-  }, [user]);
+      return {
+        isGerencia: roles.includes('gerencia'),
+        isSuperAdmin: roles.includes('super_admin') && hasNoCompany,
+        isCoordinador: roles.includes('coordinador_mercadeo'),
+        hasActiveImpersonation: impersonating,
+        isPremium: ['pro', 'enterprise'].includes(plan),
+      };
+    },
+  });
+
+  const isGerencia = layoutData?.isGerencia ?? false;
+  const isSuperAdmin = layoutData?.isSuperAdmin ?? false;
+  const isCoordinador = layoutData?.isCoordinador ?? false;
+  const isPremium = layoutData?.isPremium ?? false;
+  const hasActiveImpersonation = layoutData?.hasActiveImpersonation ?? false;
 
   if (loading) {
     return <div className="min-h-screen flex items-center justify-center bg-background"><p>Cargando...</p></div>;
@@ -72,6 +79,16 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           </div>
         </div>
         <nav className="flex-1 p-3 space-y-1">
+          {layoutLoading ? (
+            <div className="space-y-2 p-1">
+              <Skeleton className="h-9 w-full" />
+              <Skeleton className="h-9 w-full" />
+              <Skeleton className="h-9 w-full" />
+              <Skeleton className="h-9 w-full" />
+              <Skeleton className="h-9 w-full" />
+            </div>
+          ) : (
+            <>
           {/* Módulos CRM: ocultos para super_admin sin impersonar */}
           {(!isSuperAdmin || hasActiveImpersonation) && (
             <>
@@ -126,6 +143,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                 <Crown className="h-4 w-4" />
                 Super Admin
               </NavLink>
+            </>
+          )}
             </>
           )}
         </nav>
