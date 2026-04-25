@@ -935,6 +935,7 @@ export type Database = {
           comprobante: string
           concepto: string
           created_at: string
+          entregable_id: string | null
           estado: string
           fecha_pago: string | null
           id: string
@@ -952,6 +953,7 @@ export type Database = {
           comprobante?: string
           concepto?: string
           created_at?: string
+          entregable_id?: string | null
           estado?: string
           fecha_pago?: string | null
           id?: string
@@ -969,6 +971,7 @@ export type Database = {
           comprobante?: string
           concepto?: string
           created_at?: string
+          entregable_id?: string | null
           estado?: string
           fecha_pago?: string | null
           id?: string
@@ -993,6 +996,13 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pagos_entregable_id_fkey"
+            columns: ["entregable_id"]
+            isOneToOne: false
+            referencedRelation: "entregables"
             referencedColumns: ["id"]
           },
         ]
@@ -1266,6 +1276,10 @@ export type Database = {
     Functions: {
       admin_cascade_delete_company: {
         Args: { _company_id: string }
+        Returns: Json
+      }
+      create_payments_from_agreement: {
+        Args: { _acuerdo_id: string; _new_entregables: Json; _new_pagos: Json }
         Returns: Json
       }
       end_impersonation: { Args: never; Returns: undefined }
