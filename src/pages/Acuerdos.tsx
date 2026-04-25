@@ -419,6 +419,7 @@ export default function AcuerdosPage() {
               <Label>Duración (meses)</Label>
               <p className="text-xs text-muted-foreground">Calculado automáticamente desde las fechas</p>
               <Input type="number" value={form.duracionMeses} disabled className="bg-muted" />
+              {dateError && <p className="text-xs text-destructive">{dateError}</p>}
             </div>
             <div className="space-y-2">
               <FieldLabel field="valorTotal">Valor Total del Acuerdo (antes de IVA)</FieldLabel>
@@ -453,7 +454,13 @@ export default function AcuerdosPage() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
-            <Button variant="gradient" onClick={handleSave}>{editing ? "Guardar" : "Crear"}</Button>
+            <Button
+              variant="gradient"
+              onClick={handleSave}
+              disabled={!!dateError || form.valorTotal <= 0 || form.duracionMeses <= 0}
+            >
+              {editing ? "Guardar" : "Crear"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
