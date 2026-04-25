@@ -1,6 +1,6 @@
 import { useImpersonation } from "@/hooks/useImpersonation";
 import { Button } from "@/components/ui/button";
-import { LogOut, Eye } from "lucide-react";
+import { LogOut, Eye, Loader2 } from "lucide-react";
 
 export default function GlobalImpersonationBanner() {
   const { active, stop, loading } = useImpersonation();
@@ -25,7 +25,11 @@ export default function GlobalImpersonationBanner() {
           onClick={stop}
           disabled={loading}
         >
-          <LogOut className="h-3.5 w-3.5" /> Salir
+          {loading ? (
+            <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Saliendo...</>
+          ) : (
+            <><LogOut className="h-3.5 w-3.5" /> Salir</>
+          )}
         </Button>
       </div>
     </div>

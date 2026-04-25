@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { useLocation } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 
 interface ActiveImpersonation {
   id: string;
@@ -25,6 +25,7 @@ const ImpersonationContext = createContext<ImpersonationContextType | undefined>
 export function ImpersonationProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
   const qc = useQueryClient();
+  const navigate = useNavigate();
   const [active, setActive] = useState<ActiveImpersonation | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -47,9 +48,6 @@ export function ImpersonationProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => { refresh(); }, [refresh]);
 
-  const location = useLocation();
-  useEffect(() => { refresh(); }, [location.pathname, refresh]);
-
   useEffect(() => {
     const onFocus = () => refresh();
     window.addEventListener("focus", onFocus);
@@ -66,6 +64,8 @@ export function ImpersonationProvider({ children }: { children: ReactNode }) {
       if (error) throw error;
       await refresh();
       await qc.invalidateQueries();
+      // Pequeña espera para asegurar que componentes recojan el nuevo estado
+      await new Promise(resolve => setTimeout(resolve, 100));
       toast.success(`Entraste como ${companyName || "tenant"}`);
     } catch (e: any) {
       toast.error(e.message || "No se pudo iniciar la impersonación");
@@ -82,12 +82,13 @@ export function ImpersonationProvider({ children }: { children: ReactNode }) {
       setActive(null);
       await qc.invalidateQueries();
       toast.success("Saliste de la impersonación");
+      navigate("/super-admin/tenants", { replace: true });
     } catch (e: any) {
       toast.error(e.message || "No se pudo terminar la impersonación");
     } finally {
       setLoading(false);
     }
-  }, [qc]);
+  }, [qc, navigate]);
 
   return (
     <ImpersonationContext.Provider value={{ active, loading, start, stop, refresh }}>

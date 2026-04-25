@@ -53,25 +53,23 @@ export default function SuperAdminTenantsPage() {
   useEffect(() => {
     if (!isSuperAdmin) return;
     const loadTenants = async () => {
-      const { data: companies, error } = await supabase
-        .from("companies")
-        .select("id, name, domain, logo_url, plan, is_active")
-        .order("name");
+      const { data, error } = await supabase.rpc("get_companies_with_user_count");
       if (error) {
         toast.error("Error cargando tenants");
         setLoading(false);
         return;
       }
-      const withCounts = await Promise.all(
-        (companies || []).map(async (c) => {
-          const { count } = await supabase
-            .from("profiles")
-            .select("*", { count: "exact", head: true })
-            .eq("company_id", c.id);
-          return { ...c, user_count: count || 0 } as TenantCard;
-        })
+      setTenants(
+        (data || []).map((c: any) => ({
+          id: c.id,
+          name: c.name,
+          domain: c.domain,
+          logo_url: c.logo_url,
+          plan: c.plan,
+          is_active: c.is_active,
+          user_count: Number(c.user_count) || 0,
+        }))
       );
-      setTenants(withCounts);
       setLoading(false);
     };
     loadTenants();
