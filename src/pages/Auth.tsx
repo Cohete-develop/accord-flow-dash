@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
+import { useQueryClient } from "@tanstack/react-query";
 import logo from "@/assets/logo.png";
 
 export default function AuthPage() {
@@ -16,6 +17,7 @@ export default function AuthPage() {
   const { signIn, user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const qc = useQueryClient();
 
   if (user) {
     navigate("/", { replace: true });
@@ -39,6 +41,25 @@ export default function AuthPage() {
     const { data: sessionData } = await supabase.auth.getSession();
     const userId = sessionData.session?.user.id;
     if (userId) {
+      // Pre-fetch en paralelo: rol + perfil para que el Layout pinte instantáneo
+      await Promise.all([
+        qc.prefetchQuery({
+          queryKey: ["user_roles", userId],
+          queryFn: async () => {
+            const { data } = await supabase.from('user_roles')
+              .select('role').eq('user_id', userId);
+            return data || [];
+          },
+        }),
+        qc.prefetchQuery({
+          queryKey: ["user_profile", userId],
+          queryFn: async () => {
+            const { data } = await supabase.from('profiles')
+              .select('company_id').eq('user_id', userId).maybeSingle();
+            return data;
+          },
+        }),
+      ]);
       const { data: roleData } = await supabase
         .from("user_roles")
         .select("role")
