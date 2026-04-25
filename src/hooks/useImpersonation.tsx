@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { useLocation } from "react-router-dom";
 
 interface ActiveImpersonation {
   id: string;
@@ -45,6 +46,15 @@ export function ImpersonationProvider({ children }: { children: ReactNode }) {
   }, [user]);
 
   useEffect(() => { refresh(); }, [refresh]);
+
+  const location = useLocation();
+  useEffect(() => { refresh(); }, [location.pathname, refresh]);
+
+  useEffect(() => {
+    const onFocus = () => refresh();
+    window.addEventListener("focus", onFocus);
+    return () => window.removeEventListener("focus", onFocus);
+  }, [refresh]);
 
   const start = useCallback(async (companyId: string, companyName?: string) => {
     setLoading(true);
