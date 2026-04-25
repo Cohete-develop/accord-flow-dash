@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Acuerdo } from "@/types/crm";
 import { useAcuerdos } from "@/hooks/useCrmData";
 import { Button } from "@/components/ui/button";
