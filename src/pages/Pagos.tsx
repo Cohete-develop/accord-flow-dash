@@ -23,6 +23,8 @@ import { useResizableColumns } from "@/hooks/useResizableColumns";
 import { exportToFile } from "@/lib/export-utils";
 import { useColumnVisibility } from "@/hooks/useColumnVisibility";
 import { toast } from "sonner";
+import CreatePaymentWizard from "@/components/pagos/CreatePaymentWizard";
+import { useNavigate } from "react-router-dom";
 
 const estadoColors: Record<string, string> = {
   Pendiente: "bg-amber-100 text-amber-800",
@@ -114,7 +116,9 @@ export default function PagosPage() {
   const { user } = useAuth();
   const { acuerdos } = useAcuerdos();
   const { pagos, isLoading, save, remove } = usePagos();
+  const navigate = useNavigate();
   const [open, setOpen] = useState(false);
+  const [wizardOpen, setWizardOpen] = useState(false);
   const [editing, setEditing] = useState<Pago | null>(null);
   const [form, setForm] = useState(emptyPago());
   const [view, setView] = useState<ViewMode>("list");
@@ -128,6 +132,15 @@ export default function PagosPage() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [deleting, setDeleting] = useState(false);
   const [canDelete, setCanDelete] = useState(false);
+  const [mismatchDialog, setMismatchDialog] = useState<{
+    open: boolean;
+    diff: number;
+    expected: number;
+    actual: number;
+    acuerdoId: string;
+    moneda: string;
+    action: "edit" | "delete";
+  } | null>(null);
 
   // Check if user has gerencia or coordinador role
   useEffect(() => {
