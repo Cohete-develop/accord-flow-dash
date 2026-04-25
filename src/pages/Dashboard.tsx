@@ -1,7 +1,7 @@
 import { useState, useCallback, useMemo } from "react";
 import { useAcuerdos, usePagos, useEntregables, useKPIs } from "@/hooks/useCrmData";
 import ProductFamilyReport from "@/components/ProductFamilyReport";
-import { Acuerdo, Pago, Entregable } from "@/types/crm";
+import { Acuerdo, Pago, Entregable, KPI } from "@/types/crm";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, AreaChart, Area, LineChart, Line, Legend } from "recharts";
@@ -122,6 +122,53 @@ export default function DashboardPage() {
   const measuredKpis = kpis.filter(k => k.cpr > 0 || k.cpc > 0);
   const avgCPR = measuredKpis.length > 0 ? measuredKpis.reduce((s, k) => s + k.cpr, 0) / measuredKpis.length : 0;
   const avgCPC = measuredKpis.length > 0 ? measuredKpis.reduce((s, k) => s + k.cpc, 0) / measuredKpis.length : 0;
+
+  // ===== Cumplimiento de metas =====
+  const kpisConMetas = kpis.filter(k =>
+    k.metaAlcanceSnapshot > 0 || k.metaImpresionesSnapshot > 0 ||
+    k.metaInteraccionesSnapshot > 0 || k.metaClicksSnapshot > 0
+  );
+
+  function avgCumplimientoKpi(k: KPI): number {
+    const cumps = [k.cumplimientoAlcance, k.cumplimientoImpresiones,
+                   k.cumplimientoInteracciones, k.cumplimientoClicks]
+                  .filter(c => c > 0);
+    return cumps.length > 0 ? cumps.reduce((s, c) => s + c, 0) / cumps.length : 0;
+  }
+
+  const avgCumplimientoGlobal = kpisConMetas.length > 0
+    ? kpisConMetas.reduce((sum, k) => sum + avgCumplimientoKpi(k), 0) / kpisConMetas.length
+    : 0;
+
+  const kpisAlerta = kpisConMetas.filter(k => avgCumplimientoKpi(k) < 70);
+
+  function getCumplimientoColor(pct: number): string {
+    if (pct === 0) return "text-muted-foreground";
+    if (pct >= 100) return "text-green-600";
+    if (pct >= 70) return "text-amber-600";
+    return "text-red-600";
+  }
+
+  const metaVsRealByInfluencer = (() => {
+    const byInfluencer: Record<string, {
+      metaAlcance: number; realAlcance: number;
+      metaImpresiones: number; realImpresiones: number;
+    }> = {};
+    kpis.forEach(k => {
+      if (!byInfluencer[k.influencer]) {
+        byInfluencer[k.influencer] = {
+          metaAlcance: 0, realAlcance: 0, metaImpresiones: 0, realImpresiones: 0
+        };
+      }
+      byInfluencer[k.influencer].metaAlcance += k.metaAlcanceSnapshot;
+      byInfluencer[k.influencer].realAlcance += k.alcance;
+      byInfluencer[k.influencer].metaImpresiones += k.metaImpresionesSnapshot;
+      byInfluencer[k.influencer].realImpresiones += k.impresiones;
+    });
+    return Object.entries(byInfluencer)
+      .filter(([_, v]) => v.metaAlcance > 0 || v.metaImpresiones > 0)
+      .map(([influencer, v]) => ({ influencer, ...v }));
+  })();
 
   // KPI evolution chart data
   const [selectedInfluencerChart, setSelectedInfluencerChart] = useState<string>("all");
@@ -413,12 +460,26 @@ export default function DashboardPage() {
         <ProductFamilyReport acuerdos={acuerdos} />
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4 animate-fade-in" style={{ animationDelay: '800ms', animationFillMode: 'backwards' }}>
+      <div className="grid grid-cols-2 md:grid-cols-6 gap-4 animate-fade-in" style={{ animationDelay: '800ms', animationFillMode: 'backwards' }}>
         <Card className="overflow-hidden"><CardHeader className="pb-2"><CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground truncate">Alcance Total</CardTitle></CardHeader><CardContent><div className="text-lg sm:text-2xl font-bold truncate">{totalAlcance.toLocaleString()}</div></CardContent></Card>
         <Card className="overflow-hidden"><CardHeader className="pb-2"><CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground truncate">Clicks Totales</CardTitle></CardHeader><CardContent><div className="text-lg sm:text-2xl font-bold truncate">{totalClicks.toLocaleString()}</div></CardContent></Card>
         <Card className="overflow-hidden"><CardHeader className="pb-2"><CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground truncate">Entregables</CardTitle></CardHeader><CardContent><div className="text-lg sm:text-2xl font-bold truncate">{entregables.length}</div></CardContent></Card>
         <Card className="overflow-hidden"><CardHeader className="pb-2"><CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground truncate">CPR Promedio</CardTitle></CardHeader><CardContent><div className="text-lg sm:text-2xl font-bold truncate">{avgCPR > 0 ? fmtCurrency(avgCPR) : "—"}</div></CardContent></Card>
         <Card className="overflow-hidden"><CardHeader className="pb-2"><CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground truncate">CPC Promedio</CardTitle></CardHeader><CardContent><div className="text-lg sm:text-2xl font-bold truncate">{avgCPC > 0 ? fmtCurrency(avgCPC) : "—"}</div></CardContent></Card>
+        <Card className={`overflow-hidden ${kpisAlerta.length > 0 ? "border-red-200" : ""}`}>
+          <CardHeader className="pb-2"><CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground truncate">Cumplimiento Promedio</CardTitle></CardHeader>
+          <CardContent>
+            <div className={`text-lg sm:text-2xl font-bold truncate ${getCumplimientoColor(avgCumplimientoGlobal)}`}>
+              {avgCumplimientoGlobal.toFixed(1)}%
+            </div>
+            {kpisAlerta.length > 0 && (
+              <p className="text-xs text-red-600 mt-1">⚠️ {kpisAlerta.length} bajo 70%</p>
+            )}
+            {kpisConMetas.length === 0 && (
+              <p className="text-xs text-muted-foreground mt-1">Aún sin metas</p>
+            )}
+          </CardContent>
+        </Card>
       </div>
 
       {/* KPI CPR/CPC Evolution Chart */}
@@ -451,6 +512,59 @@ export default function DashboardPage() {
                   <Line type="monotone" dataKey="CPC" stroke="hsl(152, 60%, 42%)" strokeWidth={2} dot={{ r: 4 }} name="CPC" />
                 </LineChart>
               </ResponsiveContainer>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 animate-fade-in" style={{ animationDelay: '950ms', animationFillMode: 'backwards' }}>
+        <Card>
+          <CardHeader><CardTitle className="text-base">Meta vs Real por Influencer (Alcance)</CardTitle></CardHeader>
+          <CardContent>
+            {metaVsRealByInfluencer.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-8">
+                Sin datos. Define metas en los entregables y registra KPIs para ver la comparación.
+              </p>
+            ) : (
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={metaVsRealByInfluencer}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="influencer" fontSize={11} />
+                  <YAxis fontSize={11} />
+                  <Tooltip formatter={(v: number) => v.toLocaleString()} />
+                  <Legend />
+                  <Bar dataKey="metaAlcance" fill="hsl(215, 16%, 65%)" name="Meta Alcance" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="realAlcance" fill="hsl(217, 91%, 60%)" name="Real Alcance" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            )}
+          </CardContent>
+        </Card>
+        <Card className={kpisAlerta.length > 0 ? "border-red-100" : ""}>
+          <CardHeader>
+            <CardTitle className={`text-base flex items-center gap-2 ${kpisAlerta.length > 0 ? 'text-red-600' : ''}`}>
+              {kpisAlerta.length > 0 ? '⚠️' : '✓'} KPIs con bajo cumplimiento
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {kpisAlerta.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                Todos los KPIs medidos están cumpliendo. ¡Bien hecho!
+              </p>
+            ) : (
+              <div className="space-y-2">
+                {kpisAlerta.slice(0, 5).map(k => (
+                  <div key={k.id} className="flex items-center justify-between py-2 border-b last:border-0">
+                    <div>
+                      <p className="text-sm font-medium">{k.influencer}</p>
+                      <p className="text-xs text-muted-foreground">{k.periodo || 'Sin periodo'}</p>
+                    </div>
+                    <span className="text-red-600 font-semibold text-sm">
+                      {avgCumplimientoKpi(k).toFixed(1)}%
+                    </span>
+                  </div>
+                ))}
+              </div>
             )}
           </CardContent>
         </Card>

@@ -169,6 +169,10 @@ serve(async (req) => {
     acuerdosCreados!.forEach((acuerdo: any, idx: number) => {
       for (let e = 0; e < 2; e++) {
         const fechaProg = new Date(sixMonthsAgo.getTime() + (idx * 20 + e * 15) * 24 * 60 * 60 * 1000);
+        const baseAlcance = 30000 + Math.floor(Math.random() * 70000);
+        const baseImpresiones = Math.floor(baseAlcance * (1.3 + Math.random() * 0.7));
+        const baseInteracciones = Math.floor(baseAlcance * (0.04 + Math.random() * 0.06));
+        const baseClicks = Math.floor(baseInteracciones * (0.15 + Math.random() * 0.25));
         entregablesPayload.push({
           company_id: companyId,
           user_id: creatorUserId,
@@ -181,6 +185,10 @@ serve(async (req) => {
           estado: ESTADOS_ENTREGABLE[(idx + e) % ESTADOS_ENTREGABLE.length],
           url_contenido: e === 0 ? `https://instagram.com/p/demo${idx}${e}` : "",
           notas: "Entregable demo",
+          meta_alcance: baseAlcance,
+          meta_impresiones: baseImpresiones,
+          meta_interacciones: baseInteracciones,
+          meta_clicks: baseClicks,
           is_demo_data: true,
         });
       }
@@ -189,7 +197,7 @@ serve(async (req) => {
     const { data: entregablesCreados, error: errEntreg } = await admin
       .from("entregables")
       .insert(entregablesPayload)
-      .select("id, influencer, acuerdo_id, estado");
+      .select("id, influencer, acuerdo_id, estado, meta_alcance, meta_impresiones, meta_interacciones, meta_clicks");
 
     if (errEntreg) throw new Error(`Error creando entregables: ${errEntreg.message}`);
 
@@ -199,10 +207,28 @@ serve(async (req) => {
 
     entregablesEntregados.forEach((ent: any) => {
       for (let p = 0; p < 2; p++) {
-        const alcance = 15000 + Math.floor(Math.random() * 85000);
-        const impresiones = Math.floor(alcance * (1.2 + Math.random() * 0.8));
-        const interacciones = Math.floor(alcance * (0.02 + Math.random() * 0.08));
-        const clicks = Math.floor(interacciones * (0.15 + Math.random() * 0.25));
+        const meta_alcance = Number(ent.meta_alcance) || 0;
+        const meta_impresiones = Number(ent.meta_impresiones) || 0;
+        const meta_interacciones = Number(ent.meta_interacciones) || 0;
+        const meta_clicks = Number(ent.meta_clicks) || 0;
+
+        const r = Math.random();
+        let factor: number;
+        if (r < 0.60) factor = 1.0 + Math.random() * 0.3;
+        else if (r < 0.85) factor = 0.70 + Math.random() * 0.30;
+        else factor = 0.40 + Math.random() * 0.30;
+
+        const jitter = () => factor + (Math.random() - 0.5) * 0.2;
+        const alcance = Math.max(0, Math.floor(meta_alcance * factor));
+        const impresiones = Math.max(0, Math.floor(meta_impresiones * jitter()));
+        const interacciones = Math.max(0, Math.floor(meta_interacciones * jitter()));
+        const clicks = Math.max(0, Math.floor(meta_clicks * jitter()));
+
+        const cumplimiento_alcance = meta_alcance > 0 ? +((alcance / meta_alcance) * 100).toFixed(2) : 0;
+        const cumplimiento_impresiones = meta_impresiones > 0 ? +((impresiones / meta_impresiones) * 100).toFixed(2) : 0;
+        const cumplimiento_interacciones = meta_interacciones > 0 ? +((interacciones / meta_interacciones) * 100).toFixed(2) : 0;
+        const cumplimiento_clicks = meta_clicks > 0 ? +((clicks / meta_clicks) * 100).toFixed(2) : 0;
+
         kpisPayload.push({
           company_id: companyId,
           user_id: creatorUserId,
@@ -213,12 +239,20 @@ serve(async (req) => {
           impresiones,
           interacciones,
           clicks,
-          engagement: Number(((interacciones / alcance) * 100).toFixed(2)),
+          engagement: alcance > 0 ? Number(((interacciones / alcance) * 100).toFixed(2)) : 0,
           cpr: Math.floor(Math.random() * 500) + 100,
           cpc: Math.floor(Math.random() * 2000) + 500,
           periodo: p === 0 ? "primera_semana" : "primer_mes",
           estado: "Publicado",
           valor_mensual_snapshot: 1500000,
+          meta_alcance_snapshot: meta_alcance,
+          meta_impresiones_snapshot: meta_impresiones,
+          meta_interacciones_snapshot: meta_interacciones,
+          meta_clicks_snapshot: meta_clicks,
+          cumplimiento_alcance,
+          cumplimiento_impresiones,
+          cumplimiento_interacciones,
+          cumplimiento_clicks,
           notas: "KPI demo",
           is_demo_data: true,
         });
