@@ -788,8 +788,8 @@ export default function CampaignMonitorPage() {
       <div className="flex items-center gap-3">
         <Activity className="h-7 w-7 text-primary" />
         <div>
-          <h1 className="text-2xl font-bold">Campaign Monitor</h1>
-          <p className="text-sm text-muted-foreground">Monitoreo en tiempo real de campañas publicitarias</p>
+          <h1 className="text-2xl font-bold text-white">Campaign Monitor</h1>
+          <p className="text-sm text-white/80">Monitoreo en tiempo real de campañas publicitarias</p>
         </div>
       </div>
 

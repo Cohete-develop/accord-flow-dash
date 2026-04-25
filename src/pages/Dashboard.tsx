@@ -249,8 +249,8 @@ export default function DashboardPage() {
   return (
     <div className="space-y-6">
       <div className="animate-fade-in">
-        <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
-        <p className="text-muted-foreground text-sm">Resumen general de todos los módulos</p>
+        <h1 className="text-2xl font-bold tracking-tight text-white">Dashboard</h1>
+        <p className="text-white/80 text-sm">Resumen general de todos los módulos</p>
       </div>
 
       {isPremium && <CampaignMonitorWidget />}

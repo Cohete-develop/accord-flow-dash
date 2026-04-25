@@ -133,8 +133,8 @@ export default function EntregablesPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Entregables Detalles</h1>
-          <p className="text-muted-foreground text-sm">Seguimiento de contenido por influencer</p>
+          <h1 className="text-2xl font-bold tracking-tight text-white">Entregables Detalles</h1>
+          <p className="text-white/80 text-sm">Seguimiento de contenido por influencer</p>
         </div>
         <Button variant="gradient" onClick={() => handleOpen()} disabled={acuerdos.length === 0}><Plus className="h-4 w-4 mr-2" /> Nuevo Entregable</Button>
       </div>
