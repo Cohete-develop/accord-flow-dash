@@ -14,10 +14,26 @@ export function useCompanyContext() {
   useEffect(() => {
     let cancelled = false;
     const loadCompany = async () => {
+      // 1. Verificar si hay impersonación activa (solo aplica a super_admin)
+      const { data: impersonatedCompanyId } = await supabase.rpc(
+        "get_active_impersonation",
+        { _user_id: user!.id }
+      );
+
+      if (cancelled) return;
+
+      // Si hay impersonación, usa el target_company_id
+      if (impersonatedCompanyId) {
+        setCompanyId(impersonatedCompanyId as string);
+        setLoading(false);
+        return;
+      }
+
+      // 2. Si no hay impersonación, leer del profile como siempre
       const { data } = await supabase
         .from("profiles")
         .select("company_id")
-        .eq("user_id", user.id)
+        .eq("user_id", user!.id)
         .maybeSingle();
 
       if (cancelled) return;
