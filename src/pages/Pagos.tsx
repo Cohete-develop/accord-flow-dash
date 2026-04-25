@@ -170,6 +170,13 @@ export default function PagosPage() {
   const pagoColumns: ColumnDef<Pago>[] = [
     { key: "influencer", label: "Influencer", sortKey: "influencer", render: (p) => <span className="font-medium">{p.influencer}</span> },
     { key: "concepto", label: "Concepto", sortKey: "concepto", render: (p) => p.concepto || <span className="text-amber-500 italic text-xs">Sin concepto</span> },
+    {
+      key: "origen",
+      label: "Origen",
+      render: (p) => p.acuerdoId
+        ? <Badge variant="outline" className="text-xs">Acuerdo: {acuerdos.find(a => a.id === p.acuerdoId)?.influencer || "—"}</Badge>
+        : <Badge variant="secondary" className="text-xs">Manual</Badge>,
+    },
     { key: "monto", label: "Monto", sortKey: "monto", render: (p) => `$${p.monto.toLocaleString()}` },
     { key: "fechaPago", label: "Fecha Pago", sortKey: "fechaPago", render: (p) => p.fechaPago },
     { key: "metodoPago", label: "Método", sortKey: "metodoPago", render: (p) => p.metodoPago },
@@ -198,11 +205,53 @@ export default function PagosPage() {
 
   const handleSave = async () => {
     const selected = acuerdos.find((a) => a.id === form.acuerdoId);
+    // Validation: if linked to acuerdo and amount changed, require sum to match
+    if (editing && form.acuerdoId && selected) {
+      const otros = pagos.filter((p) => p.acuerdoId === form.acuerdoId && p.id !== editing.id);
+      const sumOtros = otros.reduce((s, p) => s + p.monto, 0);
+      const nuevaSuma = +(sumOtros + form.monto).toFixed(2);
+      const expected = +selected.valorTotal.toFixed(2);
+      if (Math.abs(nuevaSuma - expected) >= 0.01) {
+        setMismatchDialog({
+          open: true,
+          diff: nuevaSuma - expected,
+          expected,
+          actual: nuevaSuma,
+          acuerdoId: form.acuerdoId,
+          moneda: selected.moneda,
+          action: "edit",
+        });
+        return;
+      }
+    }
     await save({ data: { ...form, influencer: selected?.influencer || form.influencer }, id: editing?.id });
     setOpen(false);
   };
 
-  const handleDelete = async (id: string) => { await remove(id); };
+  const handleDelete = async (id: string) => {
+    const pago = pagos.find((p) => p.id === id);
+    if (pago && pago.acuerdoId) {
+      const acuerdo = acuerdos.find((a) => a.id === pago.acuerdoId);
+      if (acuerdo) {
+        const otros = pagos.filter((p) => p.acuerdoId === pago.acuerdoId && p.id !== id);
+        const sumOtros = otros.reduce((s, p) => s + p.monto, 0);
+        const expected = +acuerdo.valorTotal.toFixed(2);
+        if (Math.abs(sumOtros - expected) >= 0.01) {
+          setMismatchDialog({
+            open: true,
+            diff: sumOtros - expected,
+            expected,
+            actual: sumOtros,
+            acuerdoId: pago.acuerdoId,
+            moneda: acuerdo.moneda,
+            action: "delete",
+          });
+          return;
+        }
+      }
+    }
+    await remove(id);
+  };
   const update = (field: string, value: any) => setForm((p) => ({ ...p, [field]: value }));
 
   const handleStatusChange = async (item: Pago, newStatus: string) => {
