@@ -66,8 +66,8 @@ const fieldDescriptions: Record<string, string> = {
   storiesPactadas: "Cantidad de stories mensuales acordadas",
   fechaInicio: "Fecha de inicio del acuerdo",
   fechaFin: "Fecha de finalización del acuerdo",
-  valorMensual: "Monto mensual antes de IVA",
-  valorTotal: "Valor total del acuerdo (calculado: mensual × duración)",
+  valorMensual: "Calculado automáticamente: valor total ÷ duración en meses",
+  valorTotal: "Valor total del acuerdo antes de IVA",
   moneda: "Divisa del pago",
   estado: "Estado actual del acuerdo",
   contacto: "Email o teléfono de contacto del influencer o agencia",
@@ -188,11 +188,15 @@ export default function AcuerdosPage() {
 
   useEffect(() => {
     const dur = calcDuration(form.fechaInicio, form.fechaFin);
-    const total = dur * form.valorMensual;
-    if (dur !== form.duracionMeses || total !== form.valorTotal) {
-      setForm((p) => ({ ...p, duracionMeses: dur, valorTotal: dur * p.valorMensual }));
+    const mensual = dur > 0 ? +(form.valorTotal / dur).toFixed(2) : 0;
+    if (dur !== form.duracionMeses || mensual !== form.valorMensual) {
+      setForm((p) => ({
+        ...p,
+        duracionMeses: dur,
+        valorMensual: dur > 0 ? +(p.valorTotal / dur).toFixed(2) : 0,
+      }));
     }
-  }, [form.fechaInicio, form.fechaFin, form.valorMensual]);
+  }, [form.fechaInicio, form.fechaFin, form.valorTotal]);
 
   const handleOpen = (a?: Acuerdo) => {
     if (a) {
@@ -388,10 +392,14 @@ export default function AcuerdosPage() {
               <p className="text-xs text-muted-foreground">Calculado automáticamente desde las fechas</p>
               <Input type="number" value={form.duracionMeses} disabled className="bg-muted" />
             </div>
-            <div className="space-y-2"><FieldLabel field="valorMensual">Valor Mensual (antes de IVA)</FieldLabel><NumericInput value={form.valorMensual} onChange={(v) => update("valorMensual", v)} /></div>
             <div className="space-y-2">
-              <FieldLabel field="valorTotal">Valor Total</FieldLabel>
-              <Input type="number" value={form.valorTotal} disabled className="bg-muted" />
+              <FieldLabel field="valorTotal">Valor Total del Acuerdo (antes de IVA)</FieldLabel>
+              <NumericInput value={form.valorTotal} onChange={(v) => update("valorTotal", v)} />
+            </div>
+            <div className="space-y-2">
+              <Label>Valor Mensual</Label>
+              <p className="text-xs text-muted-foreground">Calculado automáticamente: valor total ÷ duración</p>
+              <Input type="number" value={form.valorMensual} disabled className="bg-muted" />
             </div>
             <div className="space-y-2"><FieldLabel field="moneda">Moneda</FieldLabel><Select value={form.moneda} onValueChange={(v) => update("moneda", v)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="COP">COP</SelectItem><SelectItem value="USD">USD</SelectItem></SelectContent></Select></div>
             <div className="space-y-2"><FieldLabel field="estado">Estado</FieldLabel><Select value={form.estado} onValueChange={(v) => update("estado", v)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="En Negociación">En Negociación</SelectItem><SelectItem value="Activo">Activo</SelectItem><SelectItem value="Pausado">Pausado</SelectItem><SelectItem value="Finalizado">Finalizado</SelectItem><SelectItem value="Cancelado">Cancelado</SelectItem></SelectContent></Select></div>
