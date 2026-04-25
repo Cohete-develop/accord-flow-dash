@@ -133,6 +133,7 @@ export default function AcuerdosPage() {
   const [sortDirection, setSortDirection] = useState<SortDirection>(null);
   const { sortItems, toggleSort } = useSort<Acuerdo>();
   const [familias, setFamilias] = useState<string[]>([]);
+  const [dateError, setDateError] = useState<string | null>(null);
 
   useEffect(() => {
     supabase
@@ -189,6 +190,16 @@ export default function AcuerdosPage() {
 
   useEffect(() => {
     const dur = calcDuration(form.fechaInicio, form.fechaFin);
+
+    if (form.fechaInicio && form.fechaFin && dur <= 0) {
+      setDateError("La fecha de fin debe ser posterior a la fecha de inicio");
+      if (form.duracionMeses !== 0 || form.valorMensual !== 0) {
+        setForm((p) => ({ ...p, duracionMeses: 0, valorMensual: 0 }));
+      }
+      return;
+    }
+    setDateError(null);
+
     const mensual = dur > 0 ? +(form.valorTotal / dur).toFixed(2) : 0;
     if (dur !== form.duracionMeses || mensual !== form.valorMensual) {
       setForm((p) => ({
@@ -213,6 +224,22 @@ export default function AcuerdosPage() {
   };
 
   const handleSave = async () => {
+    if (!form.fechaInicio || !form.fechaFin) {
+      toast.error("Debes especificar fecha de inicio y fecha de fin");
+      return;
+    }
+    if (new Date(form.fechaFin) < new Date(form.fechaInicio)) {
+      toast.error("La fecha de fin no puede ser anterior a la fecha de inicio");
+      return;
+    }
+    if (form.duracionMeses <= 0) {
+      toast.error("La duración del acuerdo debe ser mayor a 0 meses");
+      return;
+    }
+    if (form.valorTotal <= 0) {
+      toast.error("El valor total debe ser mayor a 0");
+      return;
+    }
     await save({ data: form, id: editing?.id });
     setOpen(false);
   };
