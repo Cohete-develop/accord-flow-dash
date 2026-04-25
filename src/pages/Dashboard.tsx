@@ -1,7 +1,7 @@
 import { useState, useCallback, useMemo } from "react";
 import { useAcuerdos, usePagos, useEntregables, useKPIs } from "@/hooks/useCrmData";
 import ProductFamilyReport from "@/components/ProductFamilyReport";
-import { Acuerdo, Pago, Entregable } from "@/types/crm";
+import { Acuerdo, Pago, Entregable, KPI } from "@/types/crm";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, AreaChart, Area, LineChart, Line, Legend } from "recharts";
@@ -122,6 +122,53 @@ export default function DashboardPage() {
   const measuredKpis = kpis.filter(k => k.cpr > 0 || k.cpc > 0);
   const avgCPR = measuredKpis.length > 0 ? measuredKpis.reduce((s, k) => s + k.cpr, 0) / measuredKpis.length : 0;
   const avgCPC = measuredKpis.length > 0 ? measuredKpis.reduce((s, k) => s + k.cpc, 0) / measuredKpis.length : 0;
+
+  // ===== Cumplimiento de metas =====
+  const kpisConMetas = kpis.filter(k =>
+    k.metaAlcanceSnapshot > 0 || k.metaImpresionesSnapshot > 0 ||
+    k.metaInteraccionesSnapshot > 0 || k.metaClicksSnapshot > 0
+  );
+
+  function avgCumplimientoKpi(k: KPI): number {
+    const cumps = [k.cumplimientoAlcance, k.cumplimientoImpresiones,
+                   k.cumplimientoInteracciones, k.cumplimientoClicks]
+                  .filter(c => c > 0);
+    return cumps.length > 0 ? cumps.reduce((s, c) => s + c, 0) / cumps.length : 0;
+  }
+
+  const avgCumplimientoGlobal = kpisConMetas.length > 0
+    ? kpisConMetas.reduce((sum, k) => sum + avgCumplimientoKpi(k), 0) / kpisConMetas.length
+    : 0;
+
+  const kpisAlerta = kpisConMetas.filter(k => avgCumplimientoKpi(k) < 70);
+
+  function getCumplimientoColor(pct: number): string {
+    if (pct === 0) return "text-muted-foreground";
+    if (pct >= 100) return "text-green-600";
+    if (pct >= 70) return "text-amber-600";
+    return "text-red-600";
+  }
+
+  const metaVsRealByInfluencer = (() => {
+    const byInfluencer: Record<string, {
+      metaAlcance: number; realAlcance: number;
+      metaImpresiones: number; realImpresiones: number;
+    }> = {};
+    kpis.forEach(k => {
+      if (!byInfluencer[k.influencer]) {
+        byInfluencer[k.influencer] = {
+          metaAlcance: 0, realAlcance: 0, metaImpresiones: 0, realImpresiones: 0
+        };
+      }
+      byInfluencer[k.influencer].metaAlcance += k.metaAlcanceSnapshot;
+      byInfluencer[k.influencer].realAlcance += k.alcance;
+      byInfluencer[k.influencer].metaImpresiones += k.metaImpresionesSnapshot;
+      byInfluencer[k.influencer].realImpresiones += k.impresiones;
+    });
+    return Object.entries(byInfluencer)
+      .filter(([_, v]) => v.metaAlcance > 0 || v.metaImpresiones > 0)
+      .map(([influencer, v]) => ({ influencer, ...v }));
+  })();
 
   // KPI evolution chart data
   const [selectedInfluencerChart, setSelectedInfluencerChart] = useState<string>("all");
