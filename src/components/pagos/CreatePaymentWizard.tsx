@@ -109,6 +109,7 @@ export default function CreatePaymentWizard({ open, onClose, onSaved }: Props) {
   );
   const yaPagado = pagosDelAcuerdo.reduce((s, p) => s + p.monto, 0);
   const restante = acuerdo ? +(acuerdo.valorTotal - yaPagado).toFixed(2) : 0;
+  const acuerdoFull = acuerdo ? restante <= 0 : false;
 
   // Reset everything when dialog closes
   useEffect(() => {
@@ -451,6 +452,33 @@ export default function CreatePaymentWizard({ open, onClose, onSaved }: Props) {
                 </CardContent>
               </Card>
             )}
+
+            {acuerdoFull && acuerdo && (
+              <Card className="border-destructive bg-destructive/5">
+                <CardContent className="p-4 space-y-3">
+                  <div className="flex items-start gap-2">
+                    <AlertTriangle className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
+                    <div className="text-sm">
+                      <div className="font-semibold text-destructive">Acuerdo cubierto al 100%</div>
+                      <p className="text-muted-foreground mt-1">
+                        Este acuerdo ya tiene pagos por un total de {fmt(yaPagado, acuerdo.moneda)} que cubren el {Math.round((yaPagado / acuerdo.valorTotal) * 100)}% de su valor ({fmt(acuerdo.valorTotal, acuerdo.moneda)}). 
+                        Si necesitas agregar más pagos, primero edita el valor total del acuerdo en el módulo Acuerdos.
+                      </p>
+                    </div>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      onClose();
+                      window.location.href = `/acuerdos?edit=${acuerdo.id}`;
+                    }}
+                  >
+                    Editar acuerdo
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
           </div>
         )}
 
@@ -701,7 +729,7 @@ export default function CreatePaymentWizard({ open, onClose, onSaved }: Props) {
           <div className="flex gap-2">
             <Button variant="outline" onClick={onClose}>Cancelar</Button>
             {step === "agreement" && (
-              <Button variant="gradient" disabled={!acuerdo} onClick={goModality}>
+              <Button variant="gradient" disabled={!acuerdo || acuerdoFull} onClick={goModality}>
                 Continuar <ArrowRight className="h-4 w-4 ml-1" />
               </Button>
             )}
