@@ -47,6 +47,10 @@ export interface Entregable {
   estado: "Pendiente" | "En progreso" | "Entregado" | "Aprobado" | "Rechazado";
   urlContenido: string;
   notas: string;
+  metaAlcance: number;
+  metaImpresiones: number;
+  metaInteracciones: number;
+  metaClicks: number;
   createdAt: string;
 }
 
@@ -62,6 +66,14 @@ export interface KPI {
   engagement: number;
   cpr: number;
   cpc: number;
+  metaAlcanceSnapshot: number;
+  metaImpresionesSnapshot: number;
+  metaInteraccionesSnapshot: number;
+  metaClicksSnapshot: number;
+  cumplimientoAlcance: number;
+  cumplimientoImpresiones: number;
+  cumplimientoInteracciones: number;
+  cumplimientoClicks: number;
   periodo: string;
   estado: "Pendiente" | "Medido" | "Revisado" | "Aprobado";
   notas: string;
