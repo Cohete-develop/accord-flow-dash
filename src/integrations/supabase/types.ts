@@ -662,6 +662,10 @@ export type Database = {
           id: string
           influencer: string
           is_demo_data: boolean
+          meta_alcance: number
+          meta_clicks: number
+          meta_impresiones: number
+          meta_interacciones: number
           notas: string
           tipo_contenido: string
           url_contenido: string
@@ -678,6 +682,10 @@ export type Database = {
           id?: string
           influencer?: string
           is_demo_data?: boolean
+          meta_alcance?: number
+          meta_clicks?: number
+          meta_impresiones?: number
+          meta_interacciones?: number
           notas?: string
           tipo_contenido?: string
           url_contenido?: string
@@ -694,6 +702,10 @@ export type Database = {
           id?: string
           influencer?: string
           is_demo_data?: boolean
+          meta_alcance?: number
+          meta_clicks?: number
+          meta_impresiones?: number
+          meta_interacciones?: number
           notas?: string
           tipo_contenido?: string
           url_contenido?: string
@@ -778,6 +790,10 @@ export type Database = {
           cpc: number
           cpr: number
           created_at: string
+          cumplimiento_alcance: number
+          cumplimiento_clicks: number
+          cumplimiento_impresiones: number
+          cumplimiento_interacciones: number
           engagement: number
           entregable_id: string | null
           estado: string
@@ -786,6 +802,10 @@ export type Database = {
           influencer: string
           interacciones: number
           is_demo_data: boolean
+          meta_alcance_snapshot: number
+          meta_clicks_snapshot: number
+          meta_impresiones_snapshot: number
+          meta_interacciones_snapshot: number
           notas: string
           periodo: string
           user_id: string
@@ -799,6 +819,10 @@ export type Database = {
           cpc?: number
           cpr?: number
           created_at?: string
+          cumplimiento_alcance?: number
+          cumplimiento_clicks?: number
+          cumplimiento_impresiones?: number
+          cumplimiento_interacciones?: number
           engagement?: number
           entregable_id?: string | null
           estado?: string
@@ -807,6 +831,10 @@ export type Database = {
           influencer?: string
           interacciones?: number
           is_demo_data?: boolean
+          meta_alcance_snapshot?: number
+          meta_clicks_snapshot?: number
+          meta_impresiones_snapshot?: number
+          meta_interacciones_snapshot?: number
           notas?: string
           periodo?: string
           user_id: string
@@ -820,6 +848,10 @@ export type Database = {
           cpc?: number
           cpr?: number
           created_at?: string
+          cumplimiento_alcance?: number
+          cumplimiento_clicks?: number
+          cumplimiento_impresiones?: number
+          cumplimiento_interacciones?: number
           engagement?: number
           entregable_id?: string | null
           estado?: string
@@ -828,6 +860,10 @@ export type Database = {
           influencer?: string
           interacciones?: number
           is_demo_data?: boolean
+          meta_alcance_snapshot?: number
+          meta_clicks_snapshot?: number
+          meta_impresiones_snapshot?: number
+          meta_interacciones_snapshot?: number
           notas?: string
           periodo?: string
           user_id?: string
