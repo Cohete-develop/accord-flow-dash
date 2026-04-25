@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Plus, Pencil, Trash2, Users } from "lucide-react";
+import { toast } from "sonner";
 import ViewToolbar, { ViewMode, DateRange } from "@/components/ViewToolbar";
 import KanbanBoard, { KanbanColumn } from "@/components/KanbanBoard";
 import ForecastBoard from "@/components/ForecastBoard";
@@ -132,6 +133,7 @@ export default function AcuerdosPage() {
   const [sortDirection, setSortDirection] = useState<SortDirection>(null);
   const { sortItems, toggleSort } = useSort<Acuerdo>();
   const [familias, setFamilias] = useState<string[]>([]);
+  const [dateError, setDateError] = useState<string | null>(null);
 
   useEffect(() => {
     supabase
@@ -188,6 +190,16 @@ export default function AcuerdosPage() {
 
   useEffect(() => {
     const dur = calcDuration(form.fechaInicio, form.fechaFin);
+
+    if (form.fechaInicio && form.fechaFin && dur <= 0) {
+      setDateError("La fecha de fin debe ser posterior a la fecha de inicio");
+      if (form.duracionMeses !== 0 || form.valorMensual !== 0) {
+        setForm((p) => ({ ...p, duracionMeses: 0, valorMensual: 0 }));
+      }
+      return;
+    }
+    setDateError(null);
+
     const mensual = dur > 0 ? +(form.valorTotal / dur).toFixed(2) : 0;
     if (dur !== form.duracionMeses || mensual !== form.valorMensual) {
       setForm((p) => ({
@@ -212,6 +224,22 @@ export default function AcuerdosPage() {
   };
 
   const handleSave = async () => {
+    if (!form.fechaInicio || !form.fechaFin) {
+      toast.error("Debes especificar fecha de inicio y fecha de fin");
+      return;
+    }
+    if (new Date(form.fechaFin) < new Date(form.fechaInicio)) {
+      toast.error("La fecha de fin no puede ser anterior a la fecha de inicio");
+      return;
+    }
+    if (form.duracionMeses <= 0) {
+      toast.error("La duración del acuerdo debe ser mayor a 0 meses");
+      return;
+    }
+    if (form.valorTotal <= 0) {
+      toast.error("El valor total debe ser mayor a 0");
+      return;
+    }
     await save({ data: form, id: editing?.id });
     setOpen(false);
   };
@@ -391,6 +419,7 @@ export default function AcuerdosPage() {
               <Label>Duración (meses)</Label>
               <p className="text-xs text-muted-foreground">Calculado automáticamente desde las fechas</p>
               <Input type="number" value={form.duracionMeses} disabled className="bg-muted" />
+              {dateError && <p className="text-xs text-destructive">{dateError}</p>}
             </div>
             <div className="space-y-2">
               <FieldLabel field="valorTotal">Valor Total del Acuerdo (antes de IVA)</FieldLabel>
@@ -425,7 +454,13 @@ export default function AcuerdosPage() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
-            <Button variant="gradient" onClick={handleSave}>{editing ? "Guardar" : "Crear"}</Button>
+            <Button
+              variant="gradient"
+              onClick={handleSave}
+              disabled={!!dateError || form.valorTotal <= 0 || form.duracionMeses <= 0}
+            >
+              {editing ? "Guardar" : "Crear"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
