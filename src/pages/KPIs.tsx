@@ -462,6 +462,30 @@ export default function KPIsPage() {
                 <p className="text-xs text-muted-foreground">Valor mensual: {fmtCurrency(selectedAcuerdo.valorMensual, selectedAcuerdo.moneda)}</p>
               )}
             </div>
+            <div className="col-span-2 space-y-2">
+              <Label>Entregable vinculado (opcional, copia las metas)</Label>
+              <Select
+                value={form.entregableId || "none"}
+                onValueChange={(v) => updateField("entregableId", v === "none" ? "" : v)}
+              >
+                <SelectTrigger><SelectValue placeholder="Seleccionar entregable" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">— Sin entregable —</SelectItem>
+                  {entregables
+                    .filter(e => !form.acuerdoId || e.acuerdoId === form.acuerdoId)
+                    .map(e => (
+                      <SelectItem key={e.id} value={e.id}>
+                        {e.tipoContenido} · {e.descripcion || "(sin descripción)"} {e.fechaProgramada ? `· ${e.fechaProgramada}` : ""}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+              {selectedEntregable && (
+                <p className="text-xs text-muted-foreground">
+                  Metas del entregable: alcance {selectedEntregable.metaAlcance.toLocaleString()} · impresiones {selectedEntregable.metaImpresiones.toLocaleString()} · interacciones {selectedEntregable.metaInteracciones.toLocaleString()} · clicks {selectedEntregable.metaClicks.toLocaleString()}
+                </p>
+              )}
+            </div>
             <div className="space-y-2"><Label>Estado</Label><Select value={form.estado} onValueChange={(v) => updateField("estado", v)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="Pendiente">Pendiente</SelectItem><SelectItem value="Medido">Medido</SelectItem><SelectItem value="Revisado">Revisado</SelectItem><SelectItem value="Aprobado">Aprobado</SelectItem></SelectContent></Select></div>
             <div className="space-y-2">
               <Label>Periodo</Label>
@@ -487,10 +511,16 @@ export default function KPIsPage() {
             <div className="space-y-2">
               <Label>Alcance</Label>
               <Input type="number" value={form.alcance || ""} onChange={(e) => updateField("alcance", +e.target.value || 0)} />
+              {form.metaAlcanceSnapshot > 0 ? (
+                <p className="text-xs"><span className="text-muted-foreground">Meta: {form.metaAlcanceSnapshot.toLocaleString()} · </span><span className={`font-medium ${getCumplimientoColor(form.cumplimientoAlcance)}`}>{form.cumplimientoAlcance.toFixed(0)}%</span></p>
+              ) : <p className="text-xs text-muted-foreground">Sin meta definida</p>}
             </div>
             <div className="space-y-2">
               <Label>Impresiones</Label>
               <Input type="number" value={form.impresiones || ""} onChange={(e) => updateField("impresiones", +e.target.value || 0)} />
+              {form.metaImpresionesSnapshot > 0 ? (
+                <p className="text-xs"><span className="text-muted-foreground">Meta: {form.metaImpresionesSnapshot.toLocaleString()} · </span><span className={`font-medium ${getCumplimientoColor(form.cumplimientoImpresiones)}`}>{form.cumplimientoImpresiones.toFixed(0)}%</span></p>
+              ) : <p className="text-xs text-muted-foreground">Sin meta definida</p>}
             </div>
             <div className="space-y-2">
               <Label>Interacciones (likes + comments + shares)</Label>
@@ -503,6 +533,9 @@ export default function KPIsPage() {
               {form.interacciones > form.alcance && form.alcance > 0 && (
                 <p className="text-xs text-destructive">Las interacciones no pueden superar el alcance</p>
               )}
+              {form.metaInteraccionesSnapshot > 0 ? (
+                <p className="text-xs"><span className="text-muted-foreground">Meta: {form.metaInteraccionesSnapshot.toLocaleString()} · </span><span className={`font-medium ${getCumplimientoColor(form.cumplimientoInteracciones)}`}>{form.cumplimientoInteracciones.toFixed(0)}%</span></p>
+              ) : <p className="text-xs text-muted-foreground">Sin meta definida</p>}
             </div>
             <div className="space-y-2">
               <Label>Clicks</Label>
@@ -515,6 +548,9 @@ export default function KPIsPage() {
               {form.clicks > form.impresiones && form.impresiones > 0 && (
                 <p className="text-xs text-destructive">Los clicks no pueden superar las impresiones</p>
               )}
+              {form.metaClicksSnapshot > 0 ? (
+                <p className="text-xs"><span className="text-muted-foreground">Meta: {form.metaClicksSnapshot.toLocaleString()} · </span><span className={`font-medium ${getCumplimientoColor(form.cumplimientoClicks)}`}>{form.cumplimientoClicks.toFixed(0)}%</span></p>
+              ) : <p className="text-xs text-muted-foreground">Sin meta definida</p>}
             </div>
             <div className="space-y-2">
               <Label>Engagement (%)</Label>
