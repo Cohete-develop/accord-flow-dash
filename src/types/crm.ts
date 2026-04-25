@@ -23,6 +23,7 @@ export interface Acuerdo {
 export interface Pago {
   id: string;
   acuerdoId: string;
+  entregableId?: string;
   influencer: string;
   concepto: string;
   monto: number;
