@@ -353,7 +353,7 @@ export default function PagosPage() {
           <Button variant="outline" onClick={handleGeneratePayments} disabled={acuerdos.length === 0 || generating}>
             <RefreshCw className={`h-4 w-4 mr-2 ${generating ? "animate-spin" : ""}`} /> Generar desde Acuerdos
           </Button>
-          <Button variant="gradient" onClick={() => handleOpen()} disabled={acuerdos.length === 0}><Plus className="h-4 w-4 mr-2" /> Nuevo Pago</Button>
+          <Button variant="gradient" onClick={() => setWizardOpen(true)}><Plus className="h-4 w-4 mr-2" /> Nuevo Pago</Button>
         </div>
       </div>
 
@@ -476,6 +476,56 @@ export default function PagosPage() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
             <Button variant="gradient" onClick={handleSave}>{editing ? "Guardar" : "Crear"}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <CreatePaymentWizard
+        open={wizardOpen}
+        onClose={() => setWizardOpen(false)}
+        onSaved={() => { /* react-query refresca solo */ }}
+      />
+
+      <Dialog
+        open={!!mismatchDialog?.open}
+        onOpenChange={(o) => !o && setMismatchDialog(null)}
+      >
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-destructive" />
+              Total no coincide con el acuerdo
+            </DialogTitle>
+          </DialogHeader>
+          {mismatchDialog && (
+            <div className="space-y-3 text-sm">
+              <p>
+                {mismatchDialog.action === "edit"
+                  ? "El monto editado hace que el total de pagos"
+                  : "Eliminar este pago dejaría el total de pagos"}{" "}
+                (<strong>{mismatchDialog.moneda} {mismatchDialog.actual.toLocaleString()}</strong>)
+                {" "}no coincida con el valor del acuerdo
+                (<strong>{mismatchDialog.moneda} {mismatchDialog.expected.toLocaleString()}</strong>).
+              </p>
+              <p className="text-muted-foreground text-xs">
+                Diferencia: {mismatchDialog.diff > 0 ? "+" : ""}{mismatchDialog.moneda} {mismatchDialog.diff.toLocaleString()}.
+                Para realizar este cambio, primero ajusta el acuerdo origen.
+              </p>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setMismatchDialog(null)}>Cancelar</Button>
+            <Button
+              variant="gradient"
+              onClick={() => {
+                const id = mismatchDialog?.acuerdoId;
+                setMismatchDialog(null);
+                setOpen(false);
+                if (id) navigate(`/acuerdos?edit=${id}`);
+              }}
+            >
+              Editar acuerdo
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
