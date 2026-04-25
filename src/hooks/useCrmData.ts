@@ -125,6 +125,10 @@ function dbToEntregable(row: any): Entregable {
     tipoContenido: row.tipo_contenido, descripcion: row.descripcion,
     fechaProgramada: row.fecha_programada || "", fechaEntrega: row.fecha_entrega || "",
     estado: row.estado, urlContenido: row.url_contenido, notas: row.notas,
+    metaAlcance: Number(row.meta_alcance || 0),
+    metaImpresiones: Number(row.meta_impresiones || 0),
+    metaInteracciones: Number(row.meta_interacciones || 0),
+    metaClicks: Number(row.meta_clicks || 0),
     createdAt: row.created_at,
   };
 }
@@ -136,6 +140,10 @@ function entregableToDb(e: Omit<Entregable, "id" | "createdAt">, userId: string,
     tipo_contenido: e.tipoContenido, descripcion: e.descripcion,
     fecha_programada: e.fechaProgramada || null, fecha_entrega: e.fechaEntrega || null,
     estado: e.estado, url_contenido: e.urlContenido, notas: e.notas,
+    meta_alcance: e.metaAlcance || 0,
+    meta_impresiones: e.metaImpresiones || 0,
+    meta_interacciones: e.metaInteracciones || 0,
+    meta_clicks: e.metaClicks || 0,
   };
 }
 
@@ -146,6 +154,14 @@ function dbToKPI(row: any): KPI {
     interacciones: row.interacciones, clicks: row.clicks, engagement: Number(row.engagement),
     cpr: Number(row.cpr), cpc: Number(row.cpc), periodo: row.periodo,
     estado: row.estado, notas: row.notas, valorMensualSnapshot: Number(row.valor_mensual_snapshot || 0),
+    metaAlcanceSnapshot: Number(row.meta_alcance_snapshot || 0),
+    metaImpresionesSnapshot: Number(row.meta_impresiones_snapshot || 0),
+    metaInteraccionesSnapshot: Number(row.meta_interacciones_snapshot || 0),
+    metaClicksSnapshot: Number(row.meta_clicks_snapshot || 0),
+    cumplimientoAlcance: Number(row.cumplimiento_alcance || 0),
+    cumplimientoImpresiones: Number(row.cumplimiento_impresiones || 0),
+    cumplimientoInteracciones: Number(row.cumplimiento_interacciones || 0),
+    cumplimientoClicks: Number(row.cumplimiento_clicks || 0),
     createdAt: row.created_at,
   };
 }
@@ -158,6 +174,14 @@ function kpiToDb(k: Omit<KPI, "id" | "createdAt">, userId: string, companyId: st
     interacciones: k.interacciones, clicks: k.clicks, engagement: k.engagement,
     cpr: k.cpr, cpc: k.cpc, periodo: k.periodo, estado: k.estado, notas: k.notas,
     valor_mensual_snapshot: k.valorMensualSnapshot || 0,
+    meta_alcance_snapshot: k.metaAlcanceSnapshot || 0,
+    meta_impresiones_snapshot: k.metaImpresionesSnapshot || 0,
+    meta_interacciones_snapshot: k.metaInteraccionesSnapshot || 0,
+    meta_clicks_snapshot: k.metaClicksSnapshot || 0,
+    cumplimiento_alcance: k.cumplimientoAlcance || 0,
+    cumplimiento_impresiones: k.cumplimientoImpresiones || 0,
+    cumplimiento_interacciones: k.cumplimientoInteracciones || 0,
+    cumplimiento_clicks: k.cumplimientoClicks || 0,
   };
 }
 

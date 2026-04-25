@@ -39,6 +39,7 @@ const kanbanColumns: KanbanColumn[] = [
 const emptyEntregable = (): Omit<Entregable, "id" | "createdAt"> => ({
   acuerdoId: "", influencer: "", tipoContenido: "Reel", descripcion: "",
   fechaProgramada: "", fechaEntrega: "", estado: "Pendiente", urlContenido: "", notas: "",
+  metaAlcance: 0, metaImpresiones: 0, metaInteracciones: 0, metaClicks: 0,
 });
 
 function filterByDateRange<T>(items: T[], dateRange: DateRange, getDateFields: (item: T) => string[]): T[] {
@@ -231,6 +232,16 @@ export default function EntregablesPage() {
             <div className="col-span-2 space-y-2"><Label>Descripción</Label><Input value={form.descripcion} onChange={(e) => update("descripcion", e.target.value)} /></div>
             <div className="col-span-2 space-y-2"><Label>URL Contenido</Label><Input value={form.urlContenido} onChange={(e) => update("urlContenido", e.target.value)} /></div>
             <div className="col-span-2 space-y-2"><Label>Notas</Label><Textarea value={form.notas} onChange={(e) => update("notas", e.target.value)} /></div>
+            <div className="col-span-2 mt-2">
+              <div className="text-sm font-semibold mb-2">Metas esperadas</div>
+              <p className="text-xs text-muted-foreground mb-3">Valores esperados de desempeño. Se compararán contra los resultados reales registrados en KPIs. Deja en 0 si no aplica.</p>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1"><Label className="text-xs">Meta Alcance</Label><Input type="number" min={0} value={form.metaAlcance || ""} onChange={(e) => update("metaAlcance", +e.target.value || 0)} /></div>
+                <div className="space-y-1"><Label className="text-xs">Meta Impresiones</Label><Input type="number" min={0} value={form.metaImpresiones || ""} onChange={(e) => update("metaImpresiones", +e.target.value || 0)} /></div>
+                <div className="space-y-1"><Label className="text-xs">Meta Interacciones</Label><Input type="number" min={0} value={form.metaInteracciones || ""} onChange={(e) => update("metaInteracciones", +e.target.value || 0)} /></div>
+                <div className="space-y-1"><Label className="text-xs">Meta Clicks</Label><Input type="number" min={0} value={form.metaClicks || ""} onChange={(e) => update("metaClicks", +e.target.value || 0)} /></div>
+              </div>
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
