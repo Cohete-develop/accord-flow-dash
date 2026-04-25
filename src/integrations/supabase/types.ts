@@ -1303,6 +1303,10 @@ export type Database = {
       is_blocked_domain: { Args: { _domain: string }; Returns: boolean }
       is_platform_domain: { Args: { _domain: string }; Returns: boolean }
       is_protected_user: { Args: { _user_id: string }; Returns: boolean }
+      is_super_admin_no_impersonation: {
+        Args: { _user_id: string }
+        Returns: boolean
+      }
       start_impersonation: {
         Args: { _ip?: string; _target_company_id: string; _ua?: string }
         Returns: string
