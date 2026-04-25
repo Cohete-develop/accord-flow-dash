@@ -1,3 +1,4 @@
+// redeploy 2026-04-25
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 
 const ALLOWED_ORIGIN = Deno.env.get("ALLOWED_ORIGIN") || "*";
@@ -8,6 +9,8 @@ const corsHeaders = {
 };
 
 Deno.serve(async (req) => {
+  console.log('[admin-delete-company] invoked v2', new Date().toISOString());
+
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
   try {
@@ -41,6 +44,7 @@ Deno.serve(async (req) => {
     );
 
     if (rpcError) {
+      console.error('[admin-delete-company] rpc error', rpcError);
       return new Response(JSON.stringify({ error: rpcError.message }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -49,7 +53,12 @@ Deno.serve(async (req) => {
     // Borrar de auth.users en paralelo (requiere admin client)
     const userIdsToDelete: string[] = (rpcResult?.users_to_delete_from_auth as string[]) || [];
     const deletePromises = userIdsToDelete.map(uid => adminClient.auth.admin.deleteUser(uid));
-    await Promise.allSettled(deletePromises);
+    const deleteResults = await Promise.allSettled(deletePromises);
+    const failedAuthDeletes = deleteResults.filter((result) => result.status === 'rejected');
+
+    if (failedAuthDeletes.length > 0) {
+      console.error('[admin-delete-company] auth deletion failures', failedAuthDeletes.length);
+    }
 
     return new Response(JSON.stringify({
       success: true,
@@ -59,6 +68,7 @@ Deno.serve(async (req) => {
       status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err: any) {
+    console.error('[admin-delete-company] unexpected error', err);
     return new Response(JSON.stringify({ error: err?.message || "Error inesperado" }), {
       status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
