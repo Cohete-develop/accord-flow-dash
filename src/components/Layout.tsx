@@ -88,7 +88,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           {(isGerencia || isSuperAdmin || isCoordinador) && (
             <>
               <div className="my-2 border-t border-sidebar-border" />
-              {(isGerencia || isCoordinador) && (
+              {(isGerencia || isCoordinador || isSuperAdmin) && (
                 <NavLink
                   to="/admin"
                   className="flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
