@@ -2,13 +2,13 @@ import { useState, useEffect } from "react";
 import companyLogo from "@/assets/company-logo.png";
 import fondoBg from "@/assets/Fondo_2026.png";
 import AIChatBubble from "@/components/AIChatBubble";
-import ImpersonationBanner from "@/components/ImpersonationBanner";
 import { NavLink } from "@/components/NavLink";
 import { Handshake, CreditCard, Package, BarChart3, LayoutDashboard, LogOut, Settings, Crown, Activity } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Navigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { useImpersonation } from "@/hooks/useImpersonation";
 
 const navItems = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -20,6 +20,7 @@ const navItems = [
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   const { signOut, user, loading } = useAuth();
+  const { active: impersonationActive, stop: stopImpersonation } = useImpersonation();
   const [isGerencia, setIsGerencia] = useState(false);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [isCoordinador, setIsCoordinador] = useState(false);
@@ -131,6 +132,19 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         {user && (
           <div className="p-3 border-t border-sidebar-border">
             <p className="text-xs text-muted-foreground truncate px-3 mb-2">{user.email}</p>
+            {impersonationActive && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full justify-start gap-2 mb-2 bg-amber-500 hover:bg-amber-400 text-amber-950 border-amber-700"
+                onClick={async () => {
+                  await stopImpersonation();
+                  window.location.href = '/super-admin/tenants';
+                }}
+              >
+                <LogOut className="h-4 w-4" /> Salir de impersonación
+              </Button>
+            )}
             <Button variant="ghost" size="sm" className="w-full justify-start gap-2 text-sidebar-foreground hover:bg-sidebar-accent" onClick={signOut}>
               <LogOut className="h-4 w-4" /> Cerrar sesión
             </Button>
@@ -141,8 +155,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         className="flex-1 overflow-auto bg-cover bg-center bg-no-repeat bg-fixed"
         style={{ backgroundImage: `url(${fondoBg})` }}
       >
-        <ImpersonationBanner />
-        <div className="p-6 w-full backdrop-blur-sm">{children}</div>
+        <div className={`p-6 w-full backdrop-blur-sm ${impersonationActive ? 'pt-16' : ''}`}>{children}</div>
       </main>
       <AIChatBubble />
     </div>
