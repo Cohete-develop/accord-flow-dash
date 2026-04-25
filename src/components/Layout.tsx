@@ -30,17 +30,21 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     Promise.all([
       supabase.from('user_roles').select('role').eq('user_id', user.id),
       supabase.from('profiles').select('company_id').eq('user_id', user.id).maybeSingle(),
-    ]).then(([rolesRes, profileRes]) => {
+      supabase.rpc('get_active_impersonation', { _user_id: user.id }),
+    ]).then(([rolesRes, profileRes, impersonationRes]) => {
       const roles = (rolesRes.data || []).map(r => r.role);
       const hasNoCompany = !profileRes.data?.company_id;
       setIsGerencia(roles.includes('gerencia'));
       // super_admin link only for platform owners (no company)
       setIsSuperAdmin(roles.includes('super_admin') && hasNoCompany);
       setIsCoordinador(roles.includes('coordinador_mercadeo'));
-      const cid = profileRes.data?.company_id;
+      // Effective company: impersonated takes priority over own profile
+      const cid = (impersonationRes.data as string | null) || profileRes.data?.company_id;
       if (cid) {
         supabase.from('companies').select('plan').eq('id', cid).maybeSingle()
           .then(({ data }) => setIsPremium(['pro', 'enterprise'].includes(data?.plan || '')));
+      } else {
+        setIsPremium(false);
       }
     });
   }, [user]);
