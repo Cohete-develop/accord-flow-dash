@@ -1320,6 +1320,19 @@ export type Database = {
       }
       end_impersonation: { Args: never; Returns: undefined }
       get_active_impersonation: { Args: { _user_id: string }; Returns: string }
+      get_companies_with_user_count: {
+        Args: never
+        Returns: {
+          domain: string
+          id: string
+          is_active: boolean
+          logo_url: string
+          name: string
+          plan: string
+          slug: string
+          user_count: number
+        }[]
+      }
       get_company_plan_limits: {
         Args: { _company_id: string }
         Returns: {
