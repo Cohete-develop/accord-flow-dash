@@ -96,28 +96,31 @@ export interface AlertHistoryItem {
   acknowledged_by: string | null;
 }
 
-// Premium plan check
+// Premium plan check (uses React Query so it invalidates on impersonation start/stop)
 export function useIsPremium() {
   const { companyId, loading: companyLoading } = useCompanyContext();
-  const [isPremium, setIsPremium] = useState<boolean | null>(null);
-  const [plan, setPlan] = useState<string>("");
 
-  useEffect(() => {
-    if (companyLoading) return;
-    if (!companyId) {
-      setPlan("");
-      setIsPremium(false);
-      return;
-    }
-    supabase.from("companies").select("plan").eq("id", companyId).maybeSingle()
-      .then(({ data }) => {
-        const p = data?.plan || "trial";
-        setPlan(p);
-        setIsPremium(["pro", "enterprise"].includes(p));
-      });
-  }, [companyId, companyLoading]);
+  const { data, isLoading } = useQuery({
+    queryKey: ["company_plan", companyId],
+    queryFn: async () => {
+      if (!companyId) return { plan: "", isPremium: false };
+      const { data } = await supabase
+        .from("companies")
+        .select("plan")
+        .eq("id", companyId)
+        .maybeSingle();
+      const p = data?.plan || "trial";
+      return { plan: p, isPremium: ["pro", "enterprise"].includes(p) };
+    },
+    enabled: !!companyId && !companyLoading,
+    staleTime: 30000,
+  });
 
-  return { isPremium, plan, loading: companyLoading || isPremium === null };
+  return {
+    plan: data?.plan || "",
+    isPremium: data?.isPremium ?? null,
+    loading: companyLoading || isLoading,
+  };
 }
 
 export function useAdConnections() {
