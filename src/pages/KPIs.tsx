@@ -32,6 +32,10 @@ const emptyKPI = (): Omit<KPI, "id" | "createdAt"> => ({
   entregableId: "", acuerdoId: "", influencer: "", alcance: 0, impresiones: 0,
   interacciones: 0, clicks: 0, engagement: 0, cpr: 0, cpc: 0, periodo: "",
   estado: "Pendiente", notas: "", valorMensualSnapshot: 0,
+  metaAlcanceSnapshot: 0, metaImpresionesSnapshot: 0,
+  metaInteraccionesSnapshot: 0, metaClicksSnapshot: 0,
+  cumplimientoAlcance: 0, cumplimientoImpresiones: 0,
+  cumplimientoInteracciones: 0, cumplimientoClicks: 0,
 });
 
 function filterByDateRange<T>(items: T[], dateRange: DateRange, getDateFields: (item: T) => string[]): T[] {
@@ -67,6 +71,22 @@ function fmtCurrency(value: number, moneda: string): string {
   return new Intl.NumberFormat("es-CO", { style: "currency", currency: moneda || "USD", minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(value);
 }
 
+function getCumplimientoColor(pct: number): string {
+  if (pct >= 100) return "text-emerald-600";
+  if (pct >= 70) return "text-amber-600";
+  return "text-red-600";
+}
+
+function avgCumplimiento(k: KPI): number | null {
+  const parts: number[] = [];
+  if (k.metaAlcanceSnapshot > 0) parts.push(k.cumplimientoAlcance);
+  if (k.metaImpresionesSnapshot > 0) parts.push(k.cumplimientoImpresiones);
+  if (k.metaInteraccionesSnapshot > 0) parts.push(k.cumplimientoInteracciones);
+  if (k.metaClicksSnapshot > 0) parts.push(k.cumplimientoClicks);
+  if (parts.length === 0) return null;
+  return parts.reduce((s, v) => s + v, 0) / parts.length;
+}
+
 export default function KPIsPage() {
   const { acuerdos } = useAcuerdos();
   const { entregables } = useEntregables();
@@ -84,6 +104,7 @@ export default function KPIsPage() {
 
   // Get the selected acuerdo for form context
   const selectedAcuerdo = useMemo(() => acuerdos.find(a => a.id === form.acuerdoId), [acuerdos, form.acuerdoId]);
+  const selectedEntregable = useMemo(() => entregables.find(e => e.id === form.entregableId), [entregables, form.entregableId]);
 
   // Build trend map: for each acuerdo, sort KPIs by periodo and compare consecutive months
   const trendMap = useMemo(() => {
@@ -122,6 +143,44 @@ export default function KPIsPage() {
       return { ...prev, engagement, cpr, cpc };
     });
   }, [form.alcance, form.impresiones, form.interacciones, form.clicks, selectedAcuerdo?.valorMensual, form.valorMensualSnapshot]);
+
+  // When entregable changes, copy meta snapshots from it
+  useEffect(() => {
+    if (!selectedEntregable) return;
+    setForm(prev => {
+      if (
+        prev.metaAlcanceSnapshot === selectedEntregable.metaAlcance &&
+        prev.metaImpresionesSnapshot === selectedEntregable.metaImpresiones &&
+        prev.metaInteraccionesSnapshot === selectedEntregable.metaInteracciones &&
+        prev.metaClicksSnapshot === selectedEntregable.metaClicks
+      ) return prev;
+      return {
+        ...prev,
+        metaAlcanceSnapshot: selectedEntregable.metaAlcance,
+        metaImpresionesSnapshot: selectedEntregable.metaImpresiones,
+        metaInteraccionesSnapshot: selectedEntregable.metaInteracciones,
+        metaClicksSnapshot: selectedEntregable.metaClicks,
+      };
+    });
+  }, [selectedEntregable]);
+
+  // Recalculate cumplimientos in real time
+  useEffect(() => {
+    const calc = (real: number, meta: number) => meta > 0 ? parseFloat(((real / meta) * 100).toFixed(2)) : 0;
+    const cAlc = calc(form.alcance, form.metaAlcanceSnapshot);
+    const cImp = calc(form.impresiones, form.metaImpresionesSnapshot);
+    const cInt = calc(form.interacciones, form.metaInteraccionesSnapshot);
+    const cClk = calc(form.clicks, form.metaClicksSnapshot);
+    setForm(prev => {
+      if (
+        prev.cumplimientoAlcance === cAlc &&
+        prev.cumplimientoImpresiones === cImp &&
+        prev.cumplimientoInteracciones === cInt &&
+        prev.cumplimientoClicks === cClk
+      ) return prev;
+      return { ...prev, cumplimientoAlcance: cAlc, cumplimientoImpresiones: cImp, cumplimientoInteracciones: cInt, cumplimientoClicks: cClk };
+    });
+  }, [form.alcance, form.impresiones, form.interacciones, form.clicks, form.metaAlcanceSnapshot, form.metaImpresionesSnapshot, form.metaInteraccionesSnapshot, form.metaClicksSnapshot]);
 
   // When acuerdo changes, set valorMensualSnapshot
   useEffect(() => {
@@ -167,6 +226,12 @@ export default function KPIsPage() {
       return <span>{k.cpc > 0 ? fmtCurrency(k.cpc, moneda) : "—"}<TrendIndicator value={trend?.cpcTrend || null} type="cost" /></span>;
     }},
     { key: "estado", label: "Estado", sortKey: "estado", render: (k) => k.id.startsWith("placeholder-") ? "—" : k.estado },
+    { key: "cumplimiento", label: "Cumplimiento", render: (k) => {
+      if (k.id.startsWith("placeholder-")) return "—";
+      const avg = avgCumplimiento(k);
+      if (avg === null) return <span className="text-xs text-muted-foreground">Sin meta</span>;
+      return <span className={`font-medium ${getCumplimientoColor(avg)}`}>{avg.toFixed(0)}%</span>;
+    }},
   ];
 
   const { orderedColumns, draggedColumn, handleDragStart, handleDragOver, handleDrop, handleDragEnd } = useColumnOrder(kpiColumns);
@@ -183,6 +248,10 @@ export default function KPIsPage() {
       influencer: a.influencer,
       alcance: 0, impresiones: 0, interacciones: 0, clicks: 0, engagement: 0, cpr: 0, cpc: 0,
       periodo: "", estado: "Pendiente" as const, notas: "", valorMensualSnapshot: 0, createdAt: "",
+      metaAlcanceSnapshot: 0, metaImpresionesSnapshot: 0,
+      metaInteraccionesSnapshot: 0, metaClicksSnapshot: 0,
+      cumplimientoAlcance: 0, cumplimientoImpresiones: 0,
+      cumplimientoInteracciones: 0, cumplimientoClicks: 0,
     }));
 
   const allKpis = [...kpis, ...placeholderKpis];
