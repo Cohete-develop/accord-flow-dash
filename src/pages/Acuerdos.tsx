@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Acuerdo } from "@/types/crm";
 import { useAcuerdos } from "@/hooks/useCrmData";
 import { Button } from "@/components/ui/button";
@@ -120,6 +121,7 @@ function filterByDateRange<T>(items: T[], dateRange: DateRange, getDateFields: (
 
 export default function AcuerdosPage() {
   const { acuerdos, isLoading, save, remove } = useAcuerdos();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Acuerdo | null>(null);
   const [form, setForm] = useState(emptyAcuerdo());
@@ -209,6 +211,20 @@ export default function AcuerdosPage() {
     await save({ data: form, id: editing?.id });
     setOpen(false);
   };
+
+  // Open edit dialog when ?edit={id} is present in the URL
+  useEffect(() => {
+    const editId = searchParams.get("edit");
+    if (editId && acuerdos.length > 0 && !open) {
+      const a = acuerdos.find((x) => x.id === editId);
+      if (a) {
+        handleOpen(a);
+        searchParams.delete("edit");
+        setSearchParams(searchParams, { replace: true });
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams, acuerdos]);
 
   const handleDelete = async (id: string) => { await remove(id); };
   const update = (field: string, value: any) => setForm((p) => ({ ...p, [field]: value }));

@@ -23,6 +23,8 @@ import { useResizableColumns } from "@/hooks/useResizableColumns";
 import { exportToFile } from "@/lib/export-utils";
 import { useColumnVisibility } from "@/hooks/useColumnVisibility";
 import { toast } from "sonner";
+import CreatePaymentWizard from "@/components/pagos/CreatePaymentWizard";
+import { useNavigate } from "react-router-dom";
 
 const estadoColors: Record<string, string> = {
   Pendiente: "bg-amber-100 text-amber-800",
@@ -114,7 +116,9 @@ export default function PagosPage() {
   const { user } = useAuth();
   const { acuerdos } = useAcuerdos();
   const { pagos, isLoading, save, remove } = usePagos();
+  const navigate = useNavigate();
   const [open, setOpen] = useState(false);
+  const [wizardOpen, setWizardOpen] = useState(false);
   const [editing, setEditing] = useState<Pago | null>(null);
   const [form, setForm] = useState(emptyPago());
   const [view, setView] = useState<ViewMode>("list");
@@ -128,6 +132,15 @@ export default function PagosPage() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [deleting, setDeleting] = useState(false);
   const [canDelete, setCanDelete] = useState(false);
+  const [mismatchDialog, setMismatchDialog] = useState<{
+    open: boolean;
+    diff: number;
+    expected: number;
+    actual: number;
+    acuerdoId: string;
+    moneda: string;
+    action: "edit" | "delete";
+  } | null>(null);
 
   // Check if user has gerencia or coordinador role
   useEffect(() => {
@@ -157,6 +170,13 @@ export default function PagosPage() {
   const pagoColumns: ColumnDef<Pago>[] = [
     { key: "influencer", label: "Influencer", sortKey: "influencer", render: (p) => <span className="font-medium">{p.influencer}</span> },
     { key: "concepto", label: "Concepto", sortKey: "concepto", render: (p) => p.concepto || <span className="text-amber-500 italic text-xs">Sin concepto</span> },
+    {
+      key: "origen",
+      label: "Origen",
+      render: (p) => p.acuerdoId
+        ? <Badge variant="outline" className="text-xs">Acuerdo: {acuerdos.find(a => a.id === p.acuerdoId)?.influencer || "—"}</Badge>
+        : <Badge variant="secondary" className="text-xs">Manual</Badge>,
+    },
     { key: "monto", label: "Monto", sortKey: "monto", render: (p) => `$${p.monto.toLocaleString()}` },
     { key: "fechaPago", label: "Fecha Pago", sortKey: "fechaPago", render: (p) => p.fechaPago },
     { key: "metodoPago", label: "Método", sortKey: "metodoPago", render: (p) => p.metodoPago },
@@ -185,11 +205,53 @@ export default function PagosPage() {
 
   const handleSave = async () => {
     const selected = acuerdos.find((a) => a.id === form.acuerdoId);
+    // Validation: if linked to acuerdo and amount changed, require sum to match
+    if (editing && form.acuerdoId && selected) {
+      const otros = pagos.filter((p) => p.acuerdoId === form.acuerdoId && p.id !== editing.id);
+      const sumOtros = otros.reduce((s, p) => s + p.monto, 0);
+      const nuevaSuma = +(sumOtros + form.monto).toFixed(2);
+      const expected = +selected.valorTotal.toFixed(2);
+      if (Math.abs(nuevaSuma - expected) >= 0.01) {
+        setMismatchDialog({
+          open: true,
+          diff: nuevaSuma - expected,
+          expected,
+          actual: nuevaSuma,
+          acuerdoId: form.acuerdoId,
+          moneda: selected.moneda,
+          action: "edit",
+        });
+        return;
+      }
+    }
     await save({ data: { ...form, influencer: selected?.influencer || form.influencer }, id: editing?.id });
     setOpen(false);
   };
 
-  const handleDelete = async (id: string) => { await remove(id); };
+  const handleDelete = async (id: string) => {
+    const pago = pagos.find((p) => p.id === id);
+    if (pago && pago.acuerdoId) {
+      const acuerdo = acuerdos.find((a) => a.id === pago.acuerdoId);
+      if (acuerdo) {
+        const otros = pagos.filter((p) => p.acuerdoId === pago.acuerdoId && p.id !== id);
+        const sumOtros = otros.reduce((s, p) => s + p.monto, 0);
+        const expected = +acuerdo.valorTotal.toFixed(2);
+        if (Math.abs(sumOtros - expected) >= 0.01) {
+          setMismatchDialog({
+            open: true,
+            diff: sumOtros - expected,
+            expected,
+            actual: sumOtros,
+            acuerdoId: pago.acuerdoId,
+            moneda: acuerdo.moneda,
+            action: "delete",
+          });
+          return;
+        }
+      }
+    }
+    await remove(id);
+  };
   const update = (field: string, value: any) => setForm((p) => ({ ...p, [field]: value }));
 
   const handleStatusChange = async (item: Pago, newStatus: string) => {
@@ -291,7 +353,7 @@ export default function PagosPage() {
           <Button variant="outline" onClick={handleGeneratePayments} disabled={acuerdos.length === 0 || generating}>
             <RefreshCw className={`h-4 w-4 mr-2 ${generating ? "animate-spin" : ""}`} /> Generar desde Acuerdos
           </Button>
-          <Button variant="gradient" onClick={() => handleOpen()} disabled={acuerdos.length === 0}><Plus className="h-4 w-4 mr-2" /> Nuevo Pago</Button>
+          <Button variant="gradient" onClick={() => setWizardOpen(true)}><Plus className="h-4 w-4 mr-2" /> Nuevo Pago</Button>
         </div>
       </div>
 
@@ -414,6 +476,56 @@ export default function PagosPage() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
             <Button variant="gradient" onClick={handleSave}>{editing ? "Guardar" : "Crear"}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <CreatePaymentWizard
+        open={wizardOpen}
+        onClose={() => setWizardOpen(false)}
+        onSaved={() => { /* react-query refresca solo */ }}
+      />
+
+      <Dialog
+        open={!!mismatchDialog?.open}
+        onOpenChange={(o) => !o && setMismatchDialog(null)}
+      >
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-destructive" />
+              Total no coincide con el acuerdo
+            </DialogTitle>
+          </DialogHeader>
+          {mismatchDialog && (
+            <div className="space-y-3 text-sm">
+              <p>
+                {mismatchDialog.action === "edit"
+                  ? "El monto editado hace que el total de pagos"
+                  : "Eliminar este pago dejaría el total de pagos"}{" "}
+                (<strong>{mismatchDialog.moneda} {mismatchDialog.actual.toLocaleString()}</strong>)
+                {" "}no coincida con el valor del acuerdo
+                (<strong>{mismatchDialog.moneda} {mismatchDialog.expected.toLocaleString()}</strong>).
+              </p>
+              <p className="text-muted-foreground text-xs">
+                Diferencia: {mismatchDialog.diff > 0 ? "+" : ""}{mismatchDialog.moneda} {mismatchDialog.diff.toLocaleString()}.
+                Para realizar este cambio, primero ajusta el acuerdo origen.
+              </p>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setMismatchDialog(null)}>Cancelar</Button>
+            <Button
+              variant="gradient"
+              onClick={() => {
+                const id = mismatchDialog?.acuerdoId;
+                setMismatchDialog(null);
+                setOpen(false);
+                if (id) navigate(`/acuerdos?edit=${id}`);
+              }}
+            >
+              Editar acuerdo
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

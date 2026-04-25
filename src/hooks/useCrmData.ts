@@ -104,6 +104,7 @@ function dbToPago(row: any): Pago {
     fechaPago: row.fecha_pago || "",
     estado: row.estado, metodoPago: row.metodo_pago, comprobante: row.comprobante,
     notas: row.notas, createdAt: row.created_at,
+    entregableId: row.entregable_id || undefined,
   };
 }
 
@@ -114,6 +115,7 @@ function pagoToDb(p: Omit<Pago, "id" | "createdAt">, userId: string, companyId: 
     monto: p.monto, moneda: p.moneda, fecha_pago: p.fechaPago || null,
     estado: p.estado,
     metodo_pago: p.metodoPago, comprobante: p.comprobante, notas: p.notas,
+    entregable_id: p.entregableId || null,
   };
 }
 
