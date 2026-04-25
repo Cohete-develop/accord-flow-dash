@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import { ImpersonationProvider } from "@/hooks/useImpersonation";
 import Layout from "@/components/Layout";
+import GlobalImpersonationBanner from "@/components/GlobalImpersonationBanner";
 import DashboardPage from "./pages/Dashboard";
 import AcuerdosPage from "./pages/Acuerdos";
 import PagosPage from "./pages/Pagos";
@@ -32,6 +33,7 @@ const App = () => (
       <BrowserRouter>
         <AuthProvider>
           <ImpersonationProvider>
+            <GlobalImpersonationBanner />
             <Routes>
             <Route path="/auth" element={<AuthPage />} />
             <Route path="/reset-password" element={<ResetPasswordPage />} />
