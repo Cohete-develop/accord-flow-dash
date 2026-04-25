@@ -74,10 +74,10 @@ serve(async (req) => {
       { nombre: "Sofía Ramírez", handle: "@sofiramirez", seguidores: 340000 },
     ];
     const REDES = ["Instagram", "TikTok", "YouTube"];
-    const TIPOS = ["Reel", "Story", "Post", "Video"];
+    const TIPOS = ["Reel", "Story", "Collab", "UGC"];
     const ESTADOS_ACUERDO = ["Activo", "Finalizado", "Pausado"];
-    const ESTADOS_PAGO = ["Pagado", "Pendiente", "Parcial"];
-    const ESTADOS_ENTREGABLE = ["Entregado", "Pendiente", "En producción"];
+    const ESTADOS_PAGO = ["Pagado", "Pendiente", "Programado"];
+    const ESTADOS_ENTREGABLE = ["Entregado", "Pendiente", "En progreso", "Aprobado"];
 
     // Familias del tenant
     const { data: familias } = await admin
@@ -243,7 +243,7 @@ serve(async (req) => {
           cpr: Math.floor(Math.random() * 500) + 100,
           cpc: Math.floor(Math.random() * 2000) + 500,
           periodo: p === 0 ? "primera_semana" : "primer_mes",
-          estado: "Publicado",
+          estado: ["Medido", "Revisado", "Aprobado"][Math.floor(Math.random() * 3)],
           valor_mensual_snapshot: 1500000,
           meta_alcance_snapshot: meta_alcance,
           meta_impresiones_snapshot: meta_impresiones,
@@ -264,6 +264,7 @@ serve(async (req) => {
       const alcance = 15000 + Math.floor(Math.random() * 85000);
       const impresiones = Math.floor(alcance * 1.5);
       const interacciones = Math.floor(alcance * 0.05);
+      const clicks = Math.floor(interacciones * 0.2);
       kpisPayload.push({
         company_id: companyId,
         user_id: creatorUserId,
@@ -272,12 +273,20 @@ serve(async (req) => {
         alcance,
         impresiones,
         interacciones,
-        clicks: Math.floor(interacciones * 0.2),
+        clicks,
+        meta_alcance_snapshot: Math.floor(alcance / (0.7 + Math.random() * 0.6)),
+        meta_impresiones_snapshot: Math.floor(impresiones / (0.7 + Math.random() * 0.6)),
+        meta_interacciones_snapshot: Math.floor(interacciones / (0.7 + Math.random() * 0.6)),
+        meta_clicks_snapshot: Math.floor(clicks / (0.7 + Math.random() * 0.6)),
+        cumplimiento_alcance: +(70 + Math.random() * 60).toFixed(2),
+        cumplimiento_impresiones: +(70 + Math.random() * 60).toFixed(2),
+        cumplimiento_interacciones: +(70 + Math.random() * 60).toFixed(2),
+        cumplimiento_clicks: +(70 + Math.random() * 60).toFixed(2),
         engagement: Number(((interacciones / alcance) * 100).toFixed(2)),
         cpr: Math.floor(Math.random() * 500) + 100,
         cpc: Math.floor(Math.random() * 2000) + 500,
         periodo: "consolidado",
-        estado: "Publicado",
+        estado: ["Medido", "Revisado", "Aprobado"][Math.floor(Math.random() * 3)],
         valor_mensual_snapshot: randomAcuerdo.valor_mensual,
         notas: "KPI demo consolidado",
         is_demo_data: true,
