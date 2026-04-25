@@ -3,14 +3,15 @@ import { getCorsHeaders } from "../_shared/cors.ts";
 
 
 
-function errResp(code: string, message: string, status = 400) {
-  return new Response(JSON.stringify({ error: message, code }), {
-    status, headers: { ...corsHeaders, "Content-Type": "application/json" },
-  });
-}
 
 Deno.serve(async (req) => {
   const corsHeaders = getCorsHeaders(req.headers.get("origin"));
+  function errResp(code: string, message: string, status = 400) {
+    return new Response(JSON.stringify({ error: message, code }), {
+      status, headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }

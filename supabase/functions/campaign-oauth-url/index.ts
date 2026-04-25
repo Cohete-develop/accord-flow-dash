@@ -3,11 +3,6 @@ import { getCorsHeaders } from "../_shared/cors.ts";
 
 
 
-function err(code: string, message: string, status = 400) {
-  return new Response(JSON.stringify({ error: message, code }), {
-    status, headers: { ...corsHeaders, "Content-Type": "application/json" },
-  });
-}
 
 /**
  * Genera la URL de autorización OAuth de Google Ads.
@@ -18,6 +13,12 @@ function err(code: string, message: string, status = 400) {
  */
 Deno.serve(async (req) => {
   const corsHeaders = getCorsHeaders(req.headers.get("origin"));
+  function err(code: string, message: string, status = 400) {
+    return new Response(JSON.stringify({ error: message, code }), {
+      status, headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
   try {
