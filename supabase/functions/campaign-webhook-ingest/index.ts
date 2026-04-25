@@ -1,17 +1,8 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
+import { getCorsHeaders } from "../_shared/cors.ts";
 
-const ALLOWED_ORIGIN = Deno.env.get("ALLOWED_ORIGIN") || "*";
-const corsHeaders = {
-  "Access-Control-Allow-Origin": ALLOWED_ORIGIN,
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-api-key",
-  "Vary": "Origin",
-};
 
-function err(code: string, message: string, status = 400) {
-  return new Response(JSON.stringify({ error: message, code }), {
-    status, headers: { ...corsHeaders, "Content-Type": "application/json" },
-  });
-}
+
 
 /**
  * Webhook público para ingestar métricas desde n8n / Zapier / scripts externos.
@@ -28,6 +19,13 @@ function err(code: string, message: string, status = 400) {
  * }
  */
 Deno.serve(async (req) => {
+  const corsHeaders = getCorsHeaders(req.headers.get("origin"));
+  function err(code: string, message: string, status = 400) {
+    return new Response(JSON.stringify({ error: message, code }), {
+      status, headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (req.method !== "POST") return err("METHOD_NOT_ALLOWED", "Use POST", 405);
 
