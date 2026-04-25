@@ -730,7 +730,7 @@ export default function CreatePaymentWizard({ open, onClose, onSaved }: Props) {
 function SumStatus({ v, expected, currency }: { v: ReturnType<typeof validateSum>; expected: number; currency: string }) {
   if (v.ok) {
     return (
-      <div className="flex items-center gap-2 text-sm text-emerald-600 bg-emerald-50 dark:bg-emerald-950/30 p-2 rounded-md">
+      <div className="flex items-center gap-2 text-sm text-primary bg-primary/10 p-2 rounded-md">
         <Check className="h-4 w-4" /> Total cuadra: {fmt(v.sum, currency)} de {fmt(expected, currency)}
       </div>
     );
@@ -743,7 +743,7 @@ function SumStatus({ v, expected, currency }: { v: ReturnType<typeof validateSum
     );
   }
   return (
-    <div className="flex items-center gap-2 text-sm text-amber-600 bg-amber-50 dark:bg-amber-950/30 p-2 rounded-md">
+    <div className="flex items-center gap-2 text-sm text-foreground bg-muted p-2 rounded-md">
       <AlertTriangle className="h-4 w-4" /> Faltan {fmt(-v.diff, currency)} para llegar al total ({fmt(v.sum, currency)} de {fmt(expected, currency)})
     </div>
   );
