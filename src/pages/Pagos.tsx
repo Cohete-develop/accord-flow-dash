@@ -13,7 +13,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus, Pencil, Trash2, AlertTriangle, RefreshCw } from "lucide-react";
+import { Plus, Pencil, Trash2, AlertTriangle } from "lucide-react";
 import ViewToolbar, { ViewMode, DateRange } from "@/components/ViewToolbar";
 import KanbanBoard, { KanbanColumn } from "@/components/KanbanBoard";
 import ForecastBoard from "@/components/ForecastBoard";
@@ -78,40 +78,6 @@ function filterByDateRange<T>(items: T[], dateRange: DateRange, getDateFields: (
   });
 }
 
-/** Get last business day of a given month (year, month 0-indexed) */
-function getLastBusinessDay(year: number, month: number): string {
-  const lastDay = new Date(year, month + 1, 0);
-  let day = lastDay.getDay();
-  if (day === 0) lastDay.setDate(lastDay.getDate() - 2);
-  else if (day === 6) lastDay.setDate(lastDay.getDate() - 1);
-  return lastDay.toISOString().split("T")[0];
-}
-
-/** Generate expected monthly payments for an agreement */
-function generatePaymentsForAcuerdo(acuerdo: Acuerdo): Omit<Pago, "id" | "createdAt">[] {
-  if (!acuerdo.fechaInicio || acuerdo.duracionMeses <= 0) return [];
-  const start = new Date(acuerdo.fechaInicio);
-  const payments: Omit<Pago, "id" | "createdAt">[] = [];
-  
-  for (let i = 0; i < acuerdo.duracionMeses; i++) {
-    const month = new Date(start.getFullYear(), start.getMonth() + i, 1);
-    const fechaPago = getLastBusinessDay(month.getFullYear(), month.getMonth());
-    payments.push({
-      acuerdoId: acuerdo.id,
-      influencer: acuerdo.influencer,
-      concepto: "",
-      monto: acuerdo.valorMensual,
-      moneda: acuerdo.moneda,
-      fechaPago,
-      estado: "Pendiente",
-      metodoPago: "Transferencia",
-      comprobante: "",
-      notas: "",
-    });
-  }
-  return payments;
-}
-
 export default function PagosPage() {
   const { user } = useAuth();
   const { acuerdos } = useAcuerdos();
@@ -127,7 +93,6 @@ export default function PagosPage() {
   const [sortKey, setSortKey] = useState<string | null>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>(null);
   const { sortItems, toggleSort } = useSort<Pago>();
-  const [generating, setGenerating] = useState(false);
   const [alertShown, setAlertShown] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [deleting, setDeleting] = useState(false);
@@ -293,41 +258,6 @@ export default function PagosPage() {
     }
   };
 
-  // Auto-generate payments from active agreements
-  const handleGeneratePayments = async () => {
-    const activeAcuerdos = acuerdos.filter((a) => a.estado === "Activo" || a.estado === "En Negociación");
-    if (activeAcuerdos.length === 0) {
-      toast.info("No hay acuerdos activos para generar pagos");
-      return;
-    }
-
-    setGenerating(true);
-    let created = 0;
-    try {
-      for (const acuerdo of activeAcuerdos) {
-        const existingMonths = new Set(
-          pagos.filter((p) => p.acuerdoId === acuerdo.id).map((p) => p.fechaPago?.slice(0, 7))
-        );
-        const newPayments = generatePaymentsForAcuerdo(acuerdo).filter(
-          (p) => !existingMonths.has(p.fechaPago?.slice(0, 7))
-        );
-        for (const payment of newPayments) {
-          await save({ data: payment });
-          created++;
-        }
-      }
-      if (created > 0) {
-        toast.success(`Se generaron ${created} pago(s) automáticamente`);
-      } else {
-        toast.info("Todos los pagos ya están generados para los acuerdos activos");
-      }
-    } catch (e: any) {
-      toast.error("Error al generar pagos: " + (e?.message || "Error desconocido"));
-    } finally {
-      setGenerating(false);
-    }
-  };
-
   const totalPagado = filtered.filter((p) => p.estado === "Pagado").reduce((s, p) => s + p.monto, 0);
   const totalPendiente = filtered.filter((p) => p.estado === "Pendiente").reduce((s, p) => s + p.monto, 0);
 
@@ -350,9 +280,6 @@ export default function PagosPage() {
           <p className="text-white/80 text-sm">Control de pagos vinculados a acuerdos</p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={handleGeneratePayments} disabled={acuerdos.length === 0 || generating}>
-            <RefreshCw className={`h-4 w-4 mr-2 ${generating ? "animate-spin" : ""}`} /> Generar desde Acuerdos
-          </Button>
           <Button variant="gradient" onClick={() => setWizardOpen(true)}><Plus className="h-4 w-4 mr-2" /> Nuevo Pago</Button>
         </div>
       </div>
