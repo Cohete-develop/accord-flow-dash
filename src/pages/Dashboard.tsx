@@ -460,12 +460,26 @@ export default function DashboardPage() {
         <ProductFamilyReport acuerdos={acuerdos} />
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4 animate-fade-in" style={{ animationDelay: '800ms', animationFillMode: 'backwards' }}>
+      <div className="grid grid-cols-2 md:grid-cols-6 gap-4 animate-fade-in" style={{ animationDelay: '800ms', animationFillMode: 'backwards' }}>
         <Card className="overflow-hidden"><CardHeader className="pb-2"><CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground truncate">Alcance Total</CardTitle></CardHeader><CardContent><div className="text-lg sm:text-2xl font-bold truncate">{totalAlcance.toLocaleString()}</div></CardContent></Card>
         <Card className="overflow-hidden"><CardHeader className="pb-2"><CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground truncate">Clicks Totales</CardTitle></CardHeader><CardContent><div className="text-lg sm:text-2xl font-bold truncate">{totalClicks.toLocaleString()}</div></CardContent></Card>
         <Card className="overflow-hidden"><CardHeader className="pb-2"><CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground truncate">Entregables</CardTitle></CardHeader><CardContent><div className="text-lg sm:text-2xl font-bold truncate">{entregables.length}</div></CardContent></Card>
         <Card className="overflow-hidden"><CardHeader className="pb-2"><CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground truncate">CPR Promedio</CardTitle></CardHeader><CardContent><div className="text-lg sm:text-2xl font-bold truncate">{avgCPR > 0 ? fmtCurrency(avgCPR) : "—"}</div></CardContent></Card>
         <Card className="overflow-hidden"><CardHeader className="pb-2"><CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground truncate">CPC Promedio</CardTitle></CardHeader><CardContent><div className="text-lg sm:text-2xl font-bold truncate">{avgCPC > 0 ? fmtCurrency(avgCPC) : "—"}</div></CardContent></Card>
+        <Card className={`overflow-hidden ${kpisAlerta.length > 0 ? "border-red-200" : ""}`}>
+          <CardHeader className="pb-2"><CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground truncate">Cumplimiento Promedio</CardTitle></CardHeader>
+          <CardContent>
+            <div className={`text-lg sm:text-2xl font-bold truncate ${getCumplimientoColor(avgCumplimientoGlobal)}`}>
+              {avgCumplimientoGlobal.toFixed(1)}%
+            </div>
+            {kpisAlerta.length > 0 && (
+              <p className="text-xs text-red-600 mt-1">⚠️ {kpisAlerta.length} bajo 70%</p>
+            )}
+            {kpisConMetas.length === 0 && (
+              <p className="text-xs text-muted-foreground mt-1">Aún sin metas</p>
+            )}
+          </CardContent>
+        </Card>
       </div>
 
       {/* KPI CPR/CPC Evolution Chart */}
