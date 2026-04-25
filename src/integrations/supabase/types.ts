@@ -1264,6 +1264,10 @@ export type Database = {
       }
     }
     Functions: {
+      admin_cascade_delete_company: {
+        Args: { _company_id: string }
+        Returns: Json
+      }
       end_impersonation: { Args: never; Returns: undefined }
       get_active_impersonation: { Args: { _user_id: string }; Returns: string }
       get_company_plan_limits: {
