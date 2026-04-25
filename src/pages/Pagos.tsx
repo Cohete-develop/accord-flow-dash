@@ -284,8 +284,8 @@ export default function PagosPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Pagos</h1>
-          <p className="text-muted-foreground text-sm">Control de pagos vinculados a acuerdos</p>
+          <h1 className="text-2xl font-bold tracking-tight text-white">Pagos</h1>
+          <p className="text-white/80 text-sm">Control de pagos vinculados a acuerdos</p>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" onClick={handleGeneratePayments} disabled={acuerdos.length === 0 || generating}>

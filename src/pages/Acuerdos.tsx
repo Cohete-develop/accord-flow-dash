@@ -254,8 +254,8 @@ export default function AcuerdosPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Acuerdos</h1>
-          <p className="text-muted-foreground text-sm">Gestión de acuerdos con influencers</p>
+          <h1 className="text-2xl font-bold tracking-tight text-white">Acuerdos</h1>
+          <p className="text-white/80 text-sm">Gestión de acuerdos con influencers</p>
         </div>
         <Button variant="gradient" onClick={() => handleOpen()}><Plus className="h-4 w-4 mr-2" /> Nuevo Acuerdo</Button>
       </div>

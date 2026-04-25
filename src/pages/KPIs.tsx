@@ -283,8 +283,8 @@ export default function KPIsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">KPIs</h1>
-          <p className="text-muted-foreground text-sm">Métricas de rendimiento por influencer</p>
+          <h1 className="text-2xl font-bold tracking-tight text-white">KPIs</h1>
+          <p className="text-white/80 text-sm">Métricas de rendimiento por influencer</p>
         </div>
         <Button variant="gradient" onClick={() => handleOpen()} disabled={acuerdos.length === 0}><Plus className="h-4 w-4 mr-2" /> Nuevo KPI</Button>
       </div>

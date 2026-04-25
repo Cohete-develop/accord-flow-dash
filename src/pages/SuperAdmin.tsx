@@ -502,8 +502,8 @@ export default function SuperAdminPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">Panel Super Admin</h1>
-        <p className="text-sm text-muted-foreground">Gestión global de empresas clientes y usuarios</p>
+        <h1 className="text-2xl font-bold text-white">Panel Super Admin</h1>
+        <p className="text-sm text-white/80">Gestión global de empresas clientes y usuarios</p>
       </div>
 
       <Tabs value={tab} onValueChange={setTab}>
