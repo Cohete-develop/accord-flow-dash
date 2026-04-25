@@ -517,6 +517,59 @@ export default function DashboardPage() {
         </Card>
       </div>
 
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 animate-fade-in" style={{ animationDelay: '950ms', animationFillMode: 'backwards' }}>
+        <Card>
+          <CardHeader><CardTitle className="text-base">Meta vs Real por Influencer (Alcance)</CardTitle></CardHeader>
+          <CardContent>
+            {metaVsRealByInfluencer.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-8">
+                Sin datos. Define metas en los entregables y registra KPIs para ver la comparación.
+              </p>
+            ) : (
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={metaVsRealByInfluencer}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="influencer" fontSize={11} />
+                  <YAxis fontSize={11} />
+                  <Tooltip formatter={(v: number) => v.toLocaleString()} />
+                  <Legend />
+                  <Bar dataKey="metaAlcance" fill="hsl(215, 16%, 65%)" name="Meta Alcance" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="realAlcance" fill="hsl(217, 91%, 60%)" name="Real Alcance" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            )}
+          </CardContent>
+        </Card>
+        <Card className={kpisAlerta.length > 0 ? "border-red-100" : ""}>
+          <CardHeader>
+            <CardTitle className={`text-base flex items-center gap-2 ${kpisAlerta.length > 0 ? 'text-red-600' : ''}`}>
+              {kpisAlerta.length > 0 ? '⚠️' : '✓'} KPIs con bajo cumplimiento
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {kpisAlerta.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                Todos los KPIs medidos están cumpliendo. ¡Bien hecho!
+              </p>
+            ) : (
+              <div className="space-y-2">
+                {kpisAlerta.slice(0, 5).map(k => (
+                  <div key={k.id} className="flex items-center justify-between py-2 border-b last:border-0">
+                    <div>
+                      <p className="text-sm font-medium">{k.influencer}</p>
+                      <p className="text-xs text-muted-foreground">{k.periodo || 'Sin periodo'}</p>
+                    </div>
+                    <span className="text-red-600 font-semibold text-sm">
+                      {avgCumplimientoKpi(k).toFixed(1)}%
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
       <ChartDetailDialog
         open={detail.open}
         onOpenChange={(o) => setDetail((d) => ({ ...d, open: o }))}
