@@ -24,6 +24,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [isCoordinador, setIsCoordinador] = useState(false);
   const [isPremium, setIsPremium] = useState(false);
+  const [hasActiveImpersonation, setHasActiveImpersonation] = useState<boolean>(false);
 
   useEffect(() => {
     if (!user) return;
@@ -34,10 +35,12 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     ]).then(([rolesRes, profileRes, impersonationRes]) => {
       const roles = (rolesRes.data || []).map(r => r.role);
       const hasNoCompany = !profileRes.data?.company_id;
+      const impersonating = !!impersonationRes.data;
       setIsGerencia(roles.includes('gerencia'));
       // super_admin link only for platform owners (no company)
       setIsSuperAdmin(roles.includes('super_admin') && hasNoCompany);
       setIsCoordinador(roles.includes('coordinador_mercadeo'));
+      setHasActiveImpersonation(impersonating);
       // Effective company: impersonated takes priority over own profile
       const cid = (impersonationRes.data as string | null) || profileRes.data?.company_id;
       if (cid) {
@@ -68,50 +71,60 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           </div>
         </div>
         <nav className="flex-1 p-3 space-y-1">
-          {navItems.map((item) => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              className="flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-              activeClassName="bg-sidebar-accent text-sidebar-accent-foreground"
-            >
-              <item.icon className="h-4 w-4" />
-              {item.label}
-            </NavLink>
-          ))}
-          {isPremium && (
-            <NavLink
-              to="/campaign-monitor"
-              className="flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-              activeClassName="bg-sidebar-accent text-sidebar-accent-foreground"
-            >
-              <Activity className="h-4 w-4" />
-              Campaign Monitor
-            </NavLink>
+          {/* Módulos CRM: ocultos para super_admin sin impersonar */}
+          {(!isSuperAdmin || hasActiveImpersonation) && (
+            <>
+              {navItems.map((item) => (
+                <NavLink
+                  key={item.to}
+                  to={item.to}
+                  className="flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                  activeClassName="bg-sidebar-accent text-sidebar-accent-foreground"
+                >
+                  <item.icon className="h-4 w-4" />
+                  {item.label}
+                </NavLink>
+              ))}
+              {isPremium && (
+                <NavLink
+                  to="/campaign-monitor"
+                  className="flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                  activeClassName="bg-sidebar-accent text-sidebar-accent-foreground"
+                >
+                  <Activity className="h-4 w-4" />
+                  Campaign Monitor
+                </NavLink>
+              )}
+            </>
           )}
-          {(isGerencia || isSuperAdmin || isCoordinador) && (
+
+          {/* Administración: roles de gestión, o super_admin impersonando */}
+          {(isGerencia || isCoordinador || (isSuperAdmin && hasActiveImpersonation)) && (
             <>
               <div className="my-2 border-t border-sidebar-border" />
-              {(isGerencia || isCoordinador || isSuperAdmin) && (
-                <NavLink
-                  to="/admin"
-                  className="flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-                  activeClassName="bg-sidebar-accent text-sidebar-accent-foreground"
-                >
-                  <Settings className="h-4 w-4" />
-                  Administración
-                </NavLink>
-              )}
-              {isSuperAdmin && (
-                <NavLink
-                  to="/super-admin"
-                  className="flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-                  activeClassName="bg-sidebar-accent text-sidebar-accent-foreground"
-                >
-                  <Crown className="h-4 w-4" />
-                  Super Admin
-                </NavLink>
-              )}
+              <NavLink
+                to="/admin"
+                className="flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                activeClassName="bg-sidebar-accent text-sidebar-accent-foreground"
+              >
+                <Settings className="h-4 w-4" />
+                Administración
+              </NavLink>
+            </>
+          )}
+
+          {/* Super Admin: solo super_admin sin impersonar */}
+          {isSuperAdmin && !hasActiveImpersonation && (
+            <>
+              <div className="my-2 border-t border-sidebar-border" />
+              <NavLink
+                to="/super-admin"
+                className="flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                activeClassName="bg-sidebar-accent text-sidebar-accent-foreground"
+              >
+                <Crown className="h-4 w-4" />
+                Super Admin
+              </NavLink>
             </>
           )}
         </nav>
