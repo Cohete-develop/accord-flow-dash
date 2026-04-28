@@ -22,6 +22,12 @@ const PERIOD_DAYS = 30;                // ventana del resumen de campañas
 const TOP_BOTTOM_N = 3;                // top 3 + bottom 3 por plataforma
 const TOP_KEYWORDS = 5;
 const RECENT_ALERTS = 20;
+// ---------- Fase 4: function calling (search_campaign_by_name) --------------
+const MAX_TOOL_ITERATIONS = 2;         // máximo de rondas de tool calling por request
+const MAX_CAMPAIGN_RESULTS = 5;        // filas devueltas por search_campaign_by_name
+const DEFAULT_SEARCH_DAYS = 30;        // ventana default de la tool
+const MAX_SEARCH_DAYS = 180;           // cap de la ventana
+const MIN_QUERY_LENGTH = 3;            // largo mínimo del fragmento de búsqueda
 // -----------------------------------------------------------------------------
 
 serve(async (req) => {
