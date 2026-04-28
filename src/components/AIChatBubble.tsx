@@ -185,8 +185,8 @@ export default function AIChatBubble() {
                   {[
                     '¿Cuántos acuerdos activos hay?',
                     '¿Cuál es la inversión total?',
-                    '¿Cómo va el engagement?',
-                    '¿Qué entregables están pendientes?',
+                    '¿Cuál es mi campaña con mejor ROAS?',
+                    '¿Qué plataforma rinde mejor?',
                   ].map(q => (
                     <button
                       key={q}
