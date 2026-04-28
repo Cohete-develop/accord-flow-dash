@@ -265,6 +265,25 @@ serve(async (req) => {
             roas: round(div(a.conversion_value, a.cost), 2),
           }));
 
+          // ---------- Fase 3: preparar datos de ads para el cruce ----------
+          // Totales por moneda (ads pueden tener mezcla USD/COP por currency
+          // de cada campaña). Sumamos cost y conversions agrupando por moneda.
+          for (const [id, a] of byCampaign.entries()) {
+            const camp = campaignById.get(id)!;
+            const cur = (camp.currency || "USD").toUpperCase();
+            if (!adsTotalsByCurrency[cur]) adsTotalsByCurrency[cur] = { cost: 0, conversions: 0 };
+            adsTotalsByCurrency[cur].cost += a.cost;
+            adsTotalsByCurrency[cur].conversions += a.conversions;
+            adsCampaignsForCross.push({
+              campaign_name: camp.campaign_name,
+              platform: camp.platform,
+              cost: a.cost,
+              conversions: a.conversions,
+              currency: cur,
+            });
+          }
+          // -----------------------------------------------------------------
+
           // Pacing por campaña activa (gasto vs daily_budget × días transcurridos)
           const campaignSummary = Array.from(byCampaign.entries()).map(([id, a]) => {
             const camp = campaignById.get(id)!;
