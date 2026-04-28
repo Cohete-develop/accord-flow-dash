@@ -22,6 +22,12 @@ const PERIOD_DAYS = 30;                // ventana del resumen de campañas
 const TOP_BOTTOM_N = 3;                // top 3 + bottom 3 por plataforma
 const TOP_KEYWORDS = 5;
 const RECENT_ALERTS = 20;
+// ---------- Fase 4: function calling (search_campaign_by_name) --------------
+const MAX_TOOL_ITERATIONS = 2;         // máximo de rondas de tool calling por request
+const MAX_CAMPAIGN_RESULTS = 5;        // filas devueltas por search_campaign_by_name
+const DEFAULT_SEARCH_DAYS = 30;        // ventana default de la tool
+const MAX_SEARCH_DAYS = 180;           // cap de la ventana
+const MIN_QUERY_LENGTH = 3;            // largo mínimo del fragmento de búsqueda
 // -----------------------------------------------------------------------------
 
 serve(async (req) => {
@@ -685,50 +691,249 @@ FORMATO DE RESPUESTA (MUY IMPORTANTE — el chat es angosto, ~400px):
 - ✅ Máximo 3-4 métricas por card. Si hay más datos, agrupa por categoría con subtítulos en negrita.
 - ✅ Prefiere bullets cortos y líneas separadas en vez de párrafos densos.
 
-CONTEXTO DE DATOS:
+${campaignAccessAllowed ? `HERRAMIENTAS DISPONIBLES (function calling):
+- search_campaign_by_name(query, days?, platform?): úsala SIEMPRE que el usuario mencione una campaña específica por nombre o fragmento ("Black Friday Reels", "lanzamiento", "Navidad 2025", etc.). NO inventes métricas de campañas que no estén en el resumen agregado: si no la ves, llamá la tool.
+- Nunca llames la tool más de ${MAX_TOOL_ITERATIONS} veces en una misma respuesta.
+- Si la tool devuelve results=[], decí explícitamente "no encontré campañas con ese nombre" en vez de inventar.
+- Los datos de la tool ya vienen agregados por campaña (una fila por campaña, máx ${MAX_CAMPAIGN_RESULTS}); nunca pidas datos diarios.
+- Respetá las mismas reglas de multi-moneda: el campo currency viene en cada fila, no sumes monedas distintas.
+
+` : ""}CONTEXTO DE DATOS:
 ${dataContext}
 
 Responde basándote en estos datos reales. Si el usuario pide algo que no está en los datos, dilo claramente.`;
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
+    // ---------- Fase 4: definición de tool y executor ----------
+    const tools = campaignAccessAllowed ? [{
+      type: "function",
+      function: {
+        name: "search_campaign_by_name",
+        description: "Busca métricas agregadas de campañas de ads por coincidencia parcial de nombre. Devuelve una fila por campaña (máx 5), nunca métricas diarias. Úsala cuando el usuario mencione el nombre o fragmento de una campaña específica.",
+        parameters: {
+          type: "object",
+          properties: {
+            query: { type: "string", description: `Fragmento del nombre de la campaña (mín ${MIN_QUERY_LENGTH} chars, case-insensitive)` },
+            days: { type: "integer", description: `Ventana en días hacia atrás. Default ${DEFAULT_SEARCH_DAYS}, máx ${MAX_SEARCH_DAYS}.` },
+            platform: { type: "string", enum: ["google_ads", "meta_ads", "tiktok_ads", "linkedin_ads", "any"], description: "Plataforma específica o 'any'" },
+          },
+          required: ["query"],
+        },
       },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        messages: [
-          { role: "system", content: systemPrompt },
-          ...trimmedMessages,
-        ],
-        stream: true,
-        max_tokens: MAX_RESPONSE_TOKENS,
-      }),
-    });
+    }] : undefined;
 
-    if (!response.ok) {
-      if (response.status === 429) {
-        return new Response(JSON.stringify({ error: "Límite de solicitudes excedido. Intenta de nuevo en unos momentos." }), {
-          status: 429,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
+    async function executeSearchCampaign(args: any): Promise<any> {
+      try {
+        const rawQuery = typeof args?.query === "string" ? args.query.trim() : "";
+        if (rawQuery.length < MIN_QUERY_LENGTH) {
+          return { error: `query muy corta, mínimo ${MIN_QUERY_LENGTH} caracteres` };
+        }
+        // Escape LIKE wildcards para evitar que query="%" matchee todo
+        const escaped = rawQuery.replace(/[%_\\]/g, "\\$&");
+
+        let days = Number(args?.days ?? DEFAULT_SEARCH_DAYS);
+        if (!Number.isFinite(days)) days = DEFAULT_SEARCH_DAYS;
+        days = Math.min(Math.max(Math.trunc(days), 1), MAX_SEARCH_DAYS);
+
+        const platform = typeof args?.platform === "string" ? args.platform : "any";
+        const since = new Date(Date.now() - days * 86400000).toISOString().slice(0, 10);
+        const until = new Date().toISOString().slice(0, 10);
+
+        // Buscar campañas (RLS filtra por company_id automáticamente)
+        let cq = supabase
+          .from("campaigns_sync")
+          .select("id, campaign_name, platform, status, currency")
+          .ilike("campaign_name", `%${escaped}%`)
+          .limit(MAX_CAMPAIGN_RESULTS + 1); // pedimos uno extra para detectar truncado
+        if (platform !== "any") cq = cq.eq("platform", platform);
+        const { data: campaigns, error: campErr } = await cq;
+        if (campErr) return { error: `error buscando campañas: ${campErr.message}` };
+        if (!campaigns || campaigns.length === 0) {
+          return { results: [], message: "Sin coincidencias", query_used: rawQuery, days_used: days };
+        }
+        const truncated = campaigns.length > MAX_CAMPAIGN_RESULTS;
+        const limited = campaigns.slice(0, MAX_CAMPAIGN_RESULTS);
+        const ids = limited.map((c: any) => c.id);
+
+        // Métricas agregadas del período (RLS filtra por company_id)
+        const { data: metrics, error: mErr } = await supabase
+          .from("campaign_metrics")
+          .select("campaign_sync_id, cost, clicks, impressions, conversions, conversion_value, date")
+          .in("campaign_sync_id", ids)
+          .gte("date", since)
+          .lte("date", until);
+        if (mErr) return { error: `error agregando métricas: ${mErr.message}` };
+
+        const round = (n: number, d = 2) => Math.round(n * 10 ** d) / 10 ** d;
+        const results = limited.map((c: any) => {
+          const rows = (metrics || []).filter((m: any) => m.campaign_sync_id === c.id);
+          const sum = (k: string) => rows.reduce((a: number, r: any) => a + Number(r[k] || 0), 0);
+          const cost = sum("cost");
+          const clicks = sum("clicks");
+          const impressions = sum("impressions");
+          const conversions = sum("conversions");
+          const conversion_value = sum("conversion_value");
+          const days_with_data = new Set(rows.map((r: any) => r.date)).size;
+          return {
+            campaign_name: c.campaign_name,
+            platform: c.platform,
+            status: c.status,
+            currency: c.currency || "USD",
+            period: { start: since, end: until },
+            total_cost: round(cost),
+            total_clicks: clicks,
+            total_impressions: impressions,
+            total_conversions: conversions,
+            total_conversion_value: round(conversion_value),
+            avg_ctr: impressions > 0 ? round((clicks / impressions) * 100, 2) : 0,
+            avg_cpc: clicks > 0 ? round(cost / clicks, 2) : 0,
+            avg_cpa: conversions > 0 ? round(cost / conversions, 2) : 0,
+            avg_roas: cost > 0 ? round(conversion_value / cost, 2) : 0,
+            days_with_data,
+          };
         });
+
+        return { results, query_used: rawQuery, days_used: days, truncated };
+      } catch (e) {
+        return { error: e instanceof Error ? e.message : "error desconocido" };
       }
-      if (response.status === 402) {
-        return new Response(JSON.stringify({ error: "Créditos de IA agotados. Contacta al administrador." }), {
-          status: 402,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      const t = await response.text();
-      console.error("AI gateway error:", response.status, t);
-      return new Response(JSON.stringify({ error: "Error del servicio de IA" }), {
-        status: 500,
+    }
+
+    // ---------- Fase 4: pre-flight no-streaming + loop tool calling ----------
+    const conversation: any[] = [
+      { role: "system", content: systemPrompt },
+      ...trimmedMessages,
+    ];
+    let toolCallsCount = 0;
+    const toolsInvoked: string[] = [];
+    let preflightContent = "";
+    let useStreaming = true; // si el modelo respondió directo en pre-flight, no necesitamos streaming
+
+    const callGateway = async (stream: boolean, includeTools: boolean) => {
+      const body: any = {
+        model: "google/gemini-2.5-flash",
+        messages: conversation,
+        stream,
+        max_tokens: MAX_RESPONSE_TOKENS,
+      };
+      if (includeTools && tools) body.tools = tools;
+      return await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${LOVABLE_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(body),
+      });
+    };
+
+    const errorResponse = (status: number, msg: string) =>
+      new Response(JSON.stringify({ error: msg }), {
+        status,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+
+    // Pre-flight (no-stream) solo si hay tools disponibles. Si no, vamos directo a streaming.
+    if (tools && tools.length > 0) {
+      let iteration = 0;
+      while (iteration < MAX_TOOL_ITERATIONS) {
+        const r = await callGateway(false, true);
+        if (!r.ok) {
+          if (r.status === 429) return errorResponse(429, "Límite de solicitudes excedido. Intenta de nuevo en unos momentos.");
+          if (r.status === 402) return errorResponse(402, "Créditos de IA agotados. Contacta al administrador.");
+          const t = await r.text();
+          console.error("AI gateway error (preflight):", r.status, t);
+          return errorResponse(500, "Error del servicio de IA");
+        }
+        const json = await r.json();
+        const choice = json?.choices?.[0];
+        const msg = choice?.message;
+        const toolCalls = msg?.tool_calls;
+
+        if (choice?.finish_reason === "tool_calls" && Array.isArray(toolCalls) && toolCalls.length > 0) {
+          // Append assistant message con tool_calls a la conversación
+          conversation.push({
+            role: "assistant",
+            content: msg.content ?? "",
+            tool_calls: toolCalls,
+          });
+          // Ejecutar cada tool call
+          for (const tc of toolCalls) {
+            const fname = tc?.function?.name;
+            let parsedArgs: any = {};
+            try { parsedArgs = JSON.parse(tc?.function?.arguments || "{}"); } catch { parsedArgs = {}; }
+            let toolResult: any;
+            if (fname === "search_campaign_by_name") {
+              toolResult = await executeSearchCampaign(parsedArgs);
+            } else {
+              toolResult = { error: `tool desconocida: ${fname}` };
+            }
+            toolCallsCount += 1;
+            toolsInvoked.push(fname || "unknown");
+            conversation.push({
+              role: "tool",
+              tool_call_id: tc.id,
+              content: JSON.stringify(toolResult),
+            });
+          }
+          iteration += 1;
+          continue; // siguiente ronda
+        }
+
+        // No tool call: el modelo respondió directo. Aprovechamos el contenido del pre-flight.
+        preflightContent = msg?.content ?? "";
+        useStreaming = false;
+        break;
+      }
+
+      // Si llegamos al límite de iteraciones, forzamos respuesta final SIN tools (streaming).
+      if (iteration >= MAX_TOOL_ITERATIONS) {
+        useStreaming = true;
+      }
+    }
+
+    // ---------- Audit log post-AI con info de tool calls ----------
+    try {
+      await supabaseAdmin.from("audit_log").insert({
+        user_id: userId,
+        user_name: userEmail,
+        action: "ai_assistant_tool_usage",
+        module: "ai_assistant",
+        company_id: companyId,
+        details: {
+          model: "google/gemini-2.5-flash",
+          tools_available: tools ? tools.map((t: any) => t.function.name) : [],
+          tool_calls_count: toolCallsCount,
+          tools_invoked: toolsInvoked,
+          plan: planId,
+        },
+      });
+    } catch (e) {
+      console.error("audit_log (tool usage) insert exception:", e);
+    }
+
+    // ---------- Respuesta final ----------
+    if (!useStreaming && preflightContent) {
+      // El modelo respondió en pre-flight sin tool calls. Emitimos el contenido como un solo SSE chunk.
+      const sseChunk =
+        `data: ${JSON.stringify({ choices: [{ delta: { content: preflightContent } }] })}\n\n` +
+        `data: [DONE]\n\n`;
+      return new Response(sseChunk, {
+        headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
       });
     }
 
-    return new Response(response.body, {
+    // Streaming final (cuando hubo tool calls, o cuando no había tools desde el principio).
+    // Importante: NO mandamos tools en este request para garantizar respuesta final de texto.
+    const finalResp = await callGateway(true, false);
+    if (!finalResp.ok) {
+      if (finalResp.status === 429) return errorResponse(429, "Límite de solicitudes excedido. Intenta de nuevo en unos momentos.");
+      if (finalResp.status === 402) return errorResponse(402, "Créditos de IA agotados. Contacta al administrador.");
+      const t = await finalResp.text();
+      console.error("AI gateway error (final):", finalResp.status, t);
+      return errorResponse(500, "Error del servicio de IA");
+    }
+
+    return new Response(finalResp.body, {
       headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
     });
   } catch (e) {
