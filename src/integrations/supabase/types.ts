@@ -1308,6 +1308,24 @@ export type Database = {
           },
         ]
       }
+      audit_log_ai_usage_hourly: {
+        Row: {
+          company_id: string | null
+          hour: string | null
+          invocations: number | null
+          user_id: string | null
+          user_name: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "audit_log_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       admin_cascade_delete_company: {
@@ -1320,6 +1338,27 @@ export type Database = {
       }
       end_impersonation: { Args: never; Returns: undefined }
       get_active_impersonation: { Args: { _user_id: string }; Returns: string }
+      get_campaign_roas_ranking: {
+        Args: {
+          _company_id: string
+          _end_date: string
+          _min_cost?: number
+          _start_date: string
+          _top_n?: number
+        }
+        Returns: {
+          campaign_name: string
+          campaign_sync_id: string
+          conversion_value: number
+          conversions: number
+          cost: number
+          platform: string
+          rank_position: number
+          rank_type: string
+          roas: number
+          status: string
+        }[]
+      }
       get_companies_with_user_count: {
         Args: never
         Returns: {
