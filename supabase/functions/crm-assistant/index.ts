@@ -122,6 +122,16 @@ serve(async (req) => {
     let campaignSummaryInjected = false;
     let campaignsSummarySizeBytes = 0;
 
+    // ---------- Fase 3: cruce influencers vs ads (siempre que haya pagos) ----
+    // Pro -> usa también totales de ads (mismas 30d).
+    // Trial/Starter -> solo lado influencers, sin bloque de ads.
+    let crossChannelBlock = "";
+    let crossChannelInjected = false;
+    // Estos los popula la rama Pro y los reutilizamos en el bloque de cruce
+    let adsTotalsByCurrency: Record<string, { cost: number; conversions: number }> = {};
+    let adsCampaignsForCross: Array<{ campaign_name: string; platform: string; cost: number; conversions: number; currency: string }> = [];
+    // -----------------------------------------------------------------------
+
     if (campaignAccessAllowed && companyId) {
       try {
         const today = new Date();
@@ -255,6 +265,25 @@ serve(async (req) => {
             roas: round(div(a.conversion_value, a.cost), 2),
           }));
 
+          // ---------- Fase 3: preparar datos de ads para el cruce ----------
+          // Totales por moneda (ads pueden tener mezcla USD/COP por currency
+          // de cada campaña). Sumamos cost y conversions agrupando por moneda.
+          for (const [id, a] of byCampaign.entries()) {
+            const camp = campaignById.get(id)!;
+            const cur = (camp.currency || "USD").toUpperCase();
+            if (!adsTotalsByCurrency[cur]) adsTotalsByCurrency[cur] = { cost: 0, conversions: 0 };
+            adsTotalsByCurrency[cur].cost += a.cost;
+            adsTotalsByCurrency[cur].conversions += a.conversions;
+            adsCampaignsForCross.push({
+              campaign_name: camp.campaign_name,
+              platform: camp.platform,
+              cost: a.cost,
+              conversions: a.conversions,
+              currency: cur,
+            });
+          }
+          // -----------------------------------------------------------------
+
           // Pacing por campaña activa (gasto vs daily_budget × días transcurridos)
           const campaignSummary = Array.from(byCampaign.entries()).map(([id, a]) => {
             const camp = campaignById.get(id)!;
@@ -367,6 +396,172 @@ serve(async (req) => {
       }
     }
 
+    // ---------- Fase 3: bloque CRUCE INFLUENCERS vs ADS ----------
+    // Se construye SIEMPRE que haya pagos en el período (independiente del plan).
+    // En Pro/Enterprise se cruza con ads; en Trial/Starter va solo influencers.
+    try {
+      const today = new Date();
+      const fmt = (d: Date) => d.toISOString().slice(0, 10);
+      const endDate = new Date(today);
+      const startDate = new Date(today);
+      startDate.setDate(startDate.getDate() - (PERIOD_DAYS - 1));
+      const startStr = fmt(startDate);
+      const endStr = fmt(endDate);
+
+      // Pagos del período (caja real) y familias activas
+      const [pagosPeriodoRes, familiasRes] = await Promise.all([
+        supabase
+          .from("pagos")
+          .select("monto, moneda, acuerdo_id, fecha_pago")
+          .gte("fecha_pago", startStr)
+          .lte("fecha_pago", endStr),
+        supabase
+          .from("product_families")
+          .select("name")
+          .eq("is_active", true),
+      ]);
+
+      const pagosPeriodo = pagosPeriodoRes.data || [];
+      const familias = (familiasRes.data || []).map((f: any) => f.name as string);
+
+      // Index acuerdo_id -> familia_producto[] (ya tenemos `acuerdos` cargado arriba)
+      const acuerdoFamilias = new Map<string, string[]>(
+        acuerdos.map((a: any) => [a.id, Array.isArray(a.familia_producto) ? a.familia_producto : []])
+      );
+
+      // Engagement total influencers del período = suma de interacciones de KPIs
+      // cuyo periodo cae en los últimos 30 días aproximados.
+      // KPIs.periodo es texto libre (formato YYYY-MM en este proyecto).
+      // Usamos como heurística los KPIs creados/actualizados en la ventana.
+      const periodMonth = startStr.slice(0, 7);
+      const periodMonthEnd = endStr.slice(0, 7);
+      const engagementInfluencers = kpis
+        .filter((k: any) => {
+          const p = (k.periodo || "").slice(0, 7);
+          return p && (p === periodMonth || p === periodMonthEnd);
+        })
+        .reduce((acc: number, k: any) => acc + Number(k.interacciones || 0), 0);
+
+      // Totales influencers por moneda (caja real)
+      const influencersTotalsByCurrency: Record<string, number> = {};
+      for (const p of pagosPeriodo) {
+        const cur = (p.moneda || "USD").toUpperCase();
+        influencersTotalsByCurrency[cur] = (influencersTotalsByCurrency[cur] || 0) + Number(p.monto || 0);
+      }
+
+      // Por familia (lado influencers): si un acuerdo tiene N familias, repartimos
+      // el pago en partes iguales entre ellas (heurística simple y explicada al modelo).
+      const familiaInfluencersByCurrency: Record<string, Record<string, number>> = {};
+      for (const p of pagosPeriodo) {
+        const cur = (p.moneda || "USD").toUpperCase();
+        const fams = p.acuerdo_id ? (acuerdoFamilias.get(p.acuerdo_id) || []) : [];
+        const target = fams.length > 0 ? fams : ["_sin_clasificar"];
+        const share = Number(p.monto || 0) / target.length;
+        for (const f of target) {
+          if (!familiaInfluencersByCurrency[cur]) familiaInfluencersByCurrency[cur] = {};
+          familiaInfluencersByCurrency[cur][f] = (familiaInfluencersByCurrency[cur][f] || 0) + share;
+        }
+      }
+
+      // Por familia (lado ads): match exacto del nombre de familia (case-insensitive)
+      // dentro de campaign_name. Lo que no matchea va a _sin_clasificar.
+      const familiaAdsByCurrency: Record<string, Record<string, number>> = {};
+      let adsSinClasificarByCurrency: Record<string, number> = {};
+      let adsTotalForUnclassifiedPctByCurrency: Record<string, number> = {};
+
+      for (const ac of adsCampaignsForCross) {
+        const cur = ac.currency;
+        const nameLower = (ac.campaign_name || "").toLowerCase();
+        const matched = familias.filter(f => f && nameLower.includes(f.toLowerCase()));
+        const target = matched.length > 0 ? matched : ["_sin_clasificar"];
+        const share = ac.cost / target.length;
+        for (const f of target) {
+          if (!familiaAdsByCurrency[cur]) familiaAdsByCurrency[cur] = {};
+          familiaAdsByCurrency[cur][f] = (familiaAdsByCurrency[cur][f] || 0) + share;
+        }
+        if (matched.length === 0) {
+          adsSinClasificarByCurrency[cur] = (adsSinClasificarByCurrency[cur] || 0) + ac.cost;
+        }
+      }
+      // % sin clasificar por moneda
+      for (const cur of Object.keys(adsTotalsByCurrency)) {
+        const total = adsTotalsByCurrency[cur].cost;
+        const unclassified = adsSinClasificarByCurrency[cur] || 0;
+        adsTotalForUnclassifiedPctByCurrency[cur] = total > 0 ? Math.round((unclassified / total) * 1000) / 10 : 0;
+      }
+
+      // Combinar familias por moneda (suma influencers + ads) y ordenar por inversión total
+      const round = (n: number, d = 2) => Math.round(n * 10 ** d) / 10 ** d;
+      const familiaCombinadaByCurrency: Record<string, Array<{ familia: string; influencers: number; ads: number; total: number }>> = {};
+      const allCurrencies = new Set<string>([
+        ...Object.keys(influencersTotalsByCurrency),
+        ...Object.keys(adsTotalsByCurrency),
+      ]);
+      for (const cur of allCurrencies) {
+        const famSet = new Set<string>([
+          ...Object.keys(familiaInfluencersByCurrency[cur] || {}),
+          ...Object.keys(familiaAdsByCurrency[cur] || {}),
+        ]);
+        const arr = Array.from(famSet).map(f => {
+          const inf = (familiaInfluencersByCurrency[cur]?.[f]) || 0;
+          const ads = (familiaAdsByCurrency[cur]?.[f]) || 0;
+          return { familia: f, influencers: round(inf), ads: round(ads), total: round(inf + ads) };
+        }).sort((a, b) => b.total - a.total);
+        familiaCombinadaByCurrency[cur] = arr;
+      }
+
+      // % de mix por canal dentro de cada moneda
+      const mixByCurrency: Record<string, { influencers_pct: number; ads_pct: number; total: number }> = {};
+      for (const cur of allCurrencies) {
+        const inf = influencersTotalsByCurrency[cur] || 0;
+        const ads = adsTotalsByCurrency[cur]?.cost || 0;
+        const total = inf + ads;
+        mixByCurrency[cur] = {
+          influencers_pct: total > 0 ? round((inf / total) * 100, 1) : 0,
+          ads_pct: total > 0 ? round((ads / total) * 100, 1) : 0,
+          total: round(total),
+        };
+      }
+
+      const cross = {
+        period: { start: startStr, end: endStr, days: PERIOD_DAYS },
+        plan_includes_ads: campaignAccessAllowed,
+        spend_by_channel_by_currency: Object.fromEntries(
+          Array.from(allCurrencies).map(cur => [cur, {
+            influencers: round(influencersTotalsByCurrency[cur] || 0),
+            ads: round(adsTotalsByCurrency[cur]?.cost || 0),
+            total: mixByCurrency[cur].total,
+            influencers_pct_of_total: mixByCurrency[cur].influencers_pct,
+            ads_pct_of_total: mixByCurrency[cur].ads_pct,
+          }])
+        ),
+        by_familia_producto_by_currency: familiaCombinadaByCurrency,
+        ads_unclassified_pct_by_currency: adsTotalForUnclassifiedPctByCurrency,
+        engagement_vs_conversions: {
+          influencers_total_interactions_periodo: engagementInfluencers,
+          ads_total_conversions: Object.values(adsTotalsByCurrency).reduce((acc, v) => acc + v.conversions, 0),
+          note: "Engagement de influencers (interacciones suma de KPIs del periodo) NO es directamente comparable con conversions de ads (eventos de conversión). Son métricas distintas, mostrarlas lado a lado, no sumarlas.",
+        },
+        notes: [
+          "Gasto influencers = pagos con fecha_pago en la ventana (caja real), no prorrateo de acuerdos.",
+          "Cuando un pago corresponde a un acuerdo con varias familias, el monto se reparte en partes iguales entre ellas.",
+          "Para ads, la familia se asigna por match EXACTO (case-insensitive) del nombre de la familia dentro de campaign_name. Lo que no matchea va a _sin_clasificar.",
+          "NO sumar montos de monedas distintas. Reportar siempre por moneda.",
+        ],
+      };
+
+      const hasAnyCross = pagosPeriodo.length > 0 || adsCampaignsForCross.length > 0;
+      if (hasAnyCross) {
+        const crossJson = JSON.stringify(cross, null, 0);
+        crossChannelBlock = `\n### CRUCE INFLUENCERS vs ADS — Resumen agregado (últimos ${PERIOD_DAYS} días)\n${crossJson}\n`;
+        crossChannelInjected = true;
+      }
+    } catch (e) {
+      console.error("Error building cross-channel summary:", e);
+      crossChannelBlock = "";
+      crossChannelInjected = false;
+    }
+
     // ---------- Fase 1+2: auditoría SIEMPRE (no condicional al texto) ----------
     try {
       const { error: auditError } = await supabaseAdmin.from("audit_log").insert({
@@ -380,6 +575,7 @@ serve(async (req) => {
           campaign_access_allowed: campaignAccessAllowed,
           campaign_summary_injected: campaignSummaryInjected,
           campaigns_summary_size_bytes: campaignsSummarySizeBytes,
+          cross_channel_injected: crossChannelInjected,
           plan: planId,
           messages_count: incomingMessages.length,
           messages_truncated: messagesTruncated,
@@ -415,7 +611,7 @@ ${JSON.stringify(entregables, null, 0)}
 
 ### KPIs (${kpis.length} registros)
 ${JSON.stringify(kpis, null, 0)}
-${campaignsBlock}`;
+${campaignsBlock}${crossChannelBlock}`;
 
     const systemPrompt = `Eres EngineXpert, el asistente de IA especializado en influencer marketing del CRM InfluXpert by Cohete.
 
@@ -436,6 +632,7 @@ ${campaignAccessAllowed ? `- Analizar campañas pagadas: ROAS, CPA, CPC, CTR, ga
 - Recomendar pausas, cambios de creativo, redistribución de presupuesto
 - Hablar de keywords ganadoras/perdedoras
 - Reportar el pacing del consumo de presupuesto vs lo planeado` : ""}
+- Cruzar inversión y rendimiento entre influencers y ads pagados en el mismo período (ver sección CRUCE INFLUENCERS vs ADS)
 
 LINEAMIENTOS GENERALES:
 - Responde siempre en español
@@ -446,6 +643,18 @@ LINEAMIENTOS GENERALES:
 - Enfócate en insights accionables, no solo en listar datos
 - Si el usuario pregunta algo fuera del ámbito (CRM de influencers o campañas pagadas si están disponibles), indícale amablemente cuál es tu especialidad
 ${!campaignAccessAllowed ? `- IMPORTANTE: el plan actual NO incluye el módulo de Campaign Monitor (campañas pagadas). Si el usuario pregunta sobre Google Ads, Meta Ads, TikTok Ads, LinkedIn Ads, ROAS, CPA o keywords, respondé que ese módulo no está activo en su plan y sugerile contactar al administrador para activarlo. NO inventes datos de campañas pagadas.` : ""}
+
+REGLAS CRÍTICAS DE MULTI-MONEDA Y CRUCE DE CANALES (LEER CON ATENCIÓN):
+- 🚫 NUNCA sumes montos de monedas distintas. Si el tenant tiene pagos en USD y en COP, repórtalos por separado SIEMPRE. No conviertas, no estimes equivalencias FX.
+- ✅ Cuando muestres totales cruzados (influencers vs ads), agrúpalos por moneda. Si solo hay una moneda, usa esa. Si hay dos o más, listalas en bloques separados.
+- ✅ Cuando hables de familia de producto en el lado de ADS, mencioná SIEMPRE el cubo "_sin_clasificar" indicando el % del gasto de ads que no se pudo clasificar (campo ads_unclassified_pct_by_currency). Es importante para que el usuario entienda la limitación de ese desglose.
+- ✅ El % "sin clasificar" en ads ocurre porque la familia se asigna por match EXACTO del nombre de la familia dentro del nombre de la campaña. Si querés bajar ese %, sugerile al usuario nombrar las campañas incluyendo el nombre exacto de la familia.
+- 🚫 NUNCA sumes engagement de influencers (interacciones) con conversions de ads. Son métricas distintas. Mostralas lado a lado, no como un total único.
+
+EJEMPLOS DE PREGUNTAS CRUZADAS QUE PODÉS RESPONDER (usar la sección CRUCE INFLUENCERS vs ADS):
+- "¿Cuánto invertí este mes en influencers vs en Google Ads?" → Respondé con spend_by_channel_by_currency. Si hay varias monedas, mostrá ambas separadas.
+- "¿Qué familia de productos me rinde mejor combinando ambos canales?" → Usá by_familia_producto_by_currency, ordenada por total descendente. Mencioná el % sin clasificar de ads.
+- "¿Mi inversión digital total subió o bajó vs el mes pasado?" → Si la pregunta es sobre tendencia, usá period_comparison_vs_previous_30d del lado ads + comentá que el lado influencers no tiene comparativa de período previo (solo el actual).
 
 FORMATO DE RESPUESTA (MUY IMPORTANTE — el chat es angosto, ~400px):
 - ❌ NUNCA uses tablas markdown con barras (|). Se ven rotas en el chat.
