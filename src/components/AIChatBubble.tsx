@@ -127,7 +127,13 @@ export default function AIChatBubble() {
       }
     } catch (e) {
       console.error('Chat error:', e);
-      upsertAssistant('⚠️ Error de conexión con el asistente. Intenta de nuevo.');
+      const errMsg = e instanceof Error ? e.message : String(e);
+      console.error('Chat error details:', { message: errMsg, url: CHAT_URL });
+      upsertAssistant(
+        `⚠️ Error de conexión con el asistente.\n\n` +
+        `Detalle: ${errMsg}\n\n` +
+        `Si estás en preview, prueba en la URL publicada: https://accord-flow-dash.lovable.app`
+      );
     }
 
     setIsLoading(false);
