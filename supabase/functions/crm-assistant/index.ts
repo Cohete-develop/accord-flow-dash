@@ -86,7 +86,7 @@ serve(async (req) => {
     // Usamos service role para no depender de las RLS de inserción del usuario
     const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
     try {
-      await supabaseAdmin.from("audit_log").insert({
+      const { error: auditError } = await supabaseAdmin.from("audit_log").insert({
         user_id: userId,
         user_name: userEmail,
         action: "ai_assistant_invoke",
@@ -100,9 +100,19 @@ serve(async (req) => {
           messages_truncated: messagesTruncated,
         },
       });
+      if (auditError) {
+        console.error("audit_log insert returned error:", {
+          message: auditError.message,
+          code: auditError.code,
+          details: auditError.details,
+          hint: auditError.hint,
+          user_id: userId,
+          company_id: companyId,
+        });
+      }
     } catch (e) {
       // Nunca bloquear la respuesta del asistente por un fallo de auditoría
-      console.error("audit_log insert failed:", e);
+      console.error("audit_log insert threw exception:", e);
     }
 
     // Fetch all CRM data in parallel using the user's RLS context
