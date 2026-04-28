@@ -14,6 +14,7 @@ serve(async (req) => {
 
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
     const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
+    const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
     // Get and validate bearer token from request
     const authHeader = req.headers.get("Authorization");
@@ -40,7 +41,69 @@ serve(async (req) => {
       });
     }
 
+    const userId = claimsData.claims.sub as string;
+    const userEmail = (claimsData.claims.email as string | undefined) ?? "unknown";
+
     const { messages } = await req.json();
+
+    // ---------- Fase 1: cap de historial multi-turno ----------
+    const MAX_TURNS = 20; // 10 user + 10 assistant aprox
+    const incomingMessages = Array.isArray(messages) ? messages : [];
+    const messagesTruncated = incomingMessages.length > MAX_TURNS;
+    const trimmedMessages = messagesTruncated
+      ? incomingMessages.slice(-MAX_TURNS)
+      : incomingMessages;
+
+    // ---------- Fase 1: resolver company_id + plan + acceso a campañas ----------
+    // get_user_company_id respeta impersonación de super_admin automáticamente
+    let companyId: string | null = null;
+    let planId: string | null = null;
+    let modulesIncluded: string[] = [];
+    let campaignAccessAllowed = false;
+
+    try {
+      const { data: companyIdData } = await supabase.rpc("get_user_company_id", {
+        _user_id: userId,
+      });
+      companyId = (companyIdData as string | null) ?? null;
+
+      if (companyId) {
+        const { data: limits } = await supabase.rpc("get_company_plan_limits", {
+          _company_id: companyId,
+        });
+        const row = Array.isArray(limits) ? limits[0] : limits;
+        if (row) {
+          planId = (row.plan_id as string) ?? null;
+          modulesIncluded = (row.modules_included as string[] | null) ?? [];
+          campaignAccessAllowed = modulesIncluded.includes("campaign_monitor");
+        }
+      }
+    } catch (e) {
+      console.error("Error resolving plan/company for assistant:", e);
+    }
+
+    // ---------- Fase 1: auditoría SIEMPRE (no condicional al texto) ----------
+    // Usamos service role para no depender de las RLS de inserción del usuario
+    const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+    try {
+      await supabaseAdmin.from("audit_log").insert({
+        user_id: userId,
+        user_name: userEmail,
+        action: "ai_assistant_invoke",
+        module: "ai_assistant",
+        company_id: companyId,
+        details: {
+          model: "google/gemini-2.5-flash",
+          campaign_access_allowed: campaignAccessAllowed,
+          plan: planId,
+          messages_count: incomingMessages.length,
+          messages_truncated: messagesTruncated,
+        },
+      });
+    } catch (e) {
+      // Nunca bloquear la respuesta del asistente por un fallo de auditoría
+      console.error("audit_log insert failed:", e);
+    }
 
     // Fetch all CRM data in parallel using the user's RLS context
     const [acuerdosRes, pagosRes, entregablesRes, kpisRes] = await Promise.all([
@@ -134,10 +197,10 @@ Responde basándote en estos datos reales. Si el usuario pide algo que no está 
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
+        model: "google/gemini-2.5-flash",
         messages: [
           { role: "system", content: systemPrompt },
-          ...messages,
+          ...trimmedMessages,
         ],
         stream: true,
       }),
