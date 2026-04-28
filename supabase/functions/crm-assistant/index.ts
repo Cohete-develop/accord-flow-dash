@@ -122,6 +122,16 @@ serve(async (req) => {
     let campaignSummaryInjected = false;
     let campaignsSummarySizeBytes = 0;
 
+    // ---------- Fase 3: cruce influencers vs ads (siempre que haya pagos) ----
+    // Pro -> usa también totales de ads (mismas 30d).
+    // Trial/Starter -> solo lado influencers, sin bloque de ads.
+    let crossChannelBlock = "";
+    let crossChannelInjected = false;
+    // Estos los popula la rama Pro y los reutilizamos en el bloque de cruce
+    let adsTotalsByCurrency: Record<string, { cost: number; conversions: number }> = {};
+    let adsCampaignsForCross: Array<{ campaign_name: string; platform: string; cost: number; conversions: number; currency: string }> = [];
+    // -----------------------------------------------------------------------
+
     if (campaignAccessAllowed && companyId) {
       try {
         const today = new Date();
