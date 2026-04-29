@@ -9,6 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader } from "@/components/ui/
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 import logo from "@/assets/logo.png";
+import Footer from "@/components/Footer";
 
 export default function AuthPage() {
   const [email, setEmail] = useState("");
@@ -73,8 +74,9 @@ export default function AuthPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">
-      <Card className="w-full max-w-md">
+    <div className="min-h-screen flex flex-col bg-background">
+      <div className="flex-1 flex items-center justify-center p-4">
+        <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <img src={logo} alt="InfluXpert by Cohete" className="h-16 mx-auto mb-2" />
           <CardDescription>Inicia sesión en tu cuenta</CardDescription>
@@ -115,7 +117,9 @@ export default function AuthPage() {
             </Button>
           </form>
         </CardContent>
-      </Card>
+        </Card>
+      </div>
+      <Footer />
     </div>
   );
 }

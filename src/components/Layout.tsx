@@ -2,6 +2,7 @@ import companyLogo from "@/assets/company-logo.png";
 import fondoBg from "@/assets/Fondo_2026.png";
 import AIChatBubble from "@/components/AIChatBubble";
 import { NavLink } from "@/components/NavLink";
+import Footer from "@/components/Footer";
 import { Handshake, CreditCard, Package, BarChart3, LayoutDashboard, LogOut, Settings, Crown, Activity } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
@@ -175,6 +176,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         style={{ backgroundImage: `url(${fondoBg})` }}
       >
         <div className={`p-6 w-full backdrop-blur-sm ${impersonationActive ? 'pt-16' : ''}`}>{children}</div>
+        <Footer />
       </main>
       <AIChatBubble />
     </div>

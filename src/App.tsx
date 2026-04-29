@@ -22,6 +22,8 @@ import OAuthCallbackPage from "./pages/OAuthCallback";
 import ResetPasswordPage from "./pages/ResetPassword";
 import AcceptInvitePage from "./pages/AcceptInvite";
 import NotFound from "./pages/NotFound";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
+import TermsOfService from "./pages/TermsOfService";
 
 const queryClient = new QueryClient();
 
@@ -38,6 +40,8 @@ const App = () => (
             <Route path="/auth" element={<AuthPage />} />
             <Route path="/reset-password" element={<ResetPasswordPage />} />
             <Route path="/accept-invite" element={<AcceptInvitePage />} />
+            <Route path="/privacy" element={<PrivacyPolicy />} />
+            <Route path="/terms" element={<TermsOfService />} />
             <Route path="/" element={<RoleBasedRedirect />} />
             <Route path="/dashboard" element={<Layout><DashboardPage /></Layout>} />
             <Route path="/acuerdos" element={<Layout><AcuerdosPage /></Layout>} />
