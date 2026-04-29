@@ -1,133 +1,128 @@
-## Cómo está construido EngineXpert hoy
+## Objetivo
 
-**Frontend** (`src/components/AIChatBubble.tsx`): burbuja flotante en la esquina inferior derecha que abre un panel de chat de 400×600px. Mantiene historial de mensajes en estado local (no persiste entre sesiones), envía cada mensaje vía `fetch` con streaming SSE al edge function, renderiza markdown con `react-markdown`. Reglas de formato ya optimizadas para chat angosto (cards en vez de tablas).
+Mejorar `generate-demo-data` con (1) selector de cantidad small/medium/large, (2) datos de Campaign Monitor mucho más realistas (granularidad horaria, keywords, alertas), y (3) UX en el frontend que pregunte preset y advierta gating por plan. `clear-demo-data` ya está OK.
 
-**Backend** (`supabase/functions/crm-assistant/index.ts`): edge function pública (sin `verify_jwt` en config.toml). Flujo:
+---
 
-1. Valida el JWT del caller con `getClaims`
-2. Crea cliente Supabase autenticado con el token del usuario → todas las queries respetan RLS automáticamente (la empresa correcta sale sola, incluyendo impersonación de super admin)
-3. **Carga en paralelo 4 tablas** (límite 200 filas cada una): `acuerdos`, `pagos`, `entregables`, `kpis`
-4. Inyecta los 4 JSON crudos completos en un `systemPrompt` enorme
-5. Llama al gateway de Lovable AI con `google/gemini-3-flash-preview` y stream activado
-6. Devuelve el body de SSE directamente al frontend
+## Backend — `supabase/functions/generate-demo-data/index.ts`
 
-**Modelo actual**: `google/gemini-3-flash-preview` (rápido, barato, contexto grande — ideal para meter mucha data cruda).
+### 1. Parsear preset
 
-## Lo que NO ve hoy (Campaign Monitor)
+- Leer body: `const { preset: rawPreset } = await req.json().catch(() => ({}));`
+- Validar contra `PRESETS = { small, medium, large }`. Si inválido o ausente → `medium` + `console.warn`.
+- Constante `PRESETS` exactamente como especificada por el usuario.
 
-EngineXpert no tiene acceso a ninguna de las 6 tablas de campañas pagadas:
-- `ad_platform_connections` — qué cuentas de Google/Meta/TikTok/LinkedIn están conectadas
-- `campaigns_sync` — campañas sincronizadas (nombre, presupuesto diario/total, fechas, plataforma, estado)
-- `campaign_metrics` — métricas diarias y horarias por campaña (cost, impressions, clicks, ctr, conversions, conversion_value, cpc, cpa, roas)
-- `campaign_keywords` — keywords con CPC, CTR, quality score (Google Ads)
-- `campaign_alerts` y `alert_history` — alertas configuradas y disparadas
+### 2. Influencers (15)
 
-Por eso si le preguntas "¿cuál es mi mejor campaña por ROAS?" o "¿cómo va el gasto de Google Ads esta semana?" responde que no tiene esa información.
+- Reemplazar array `INFLUENCERS` de 5 a 15 entradas con nombres latinos variados, handles realistas, seguidores 50K–500K.
+- Usar `INFLUENCERS.slice(0, preset.acuerdos)` para construir acuerdos.
+- Pagos: mantener 3/acuerdo. Entregables: mantener 2/acuerdo. KPIs: el `while` actual (objetivo 20) se conserva pero se escala a `Math.max(20, 2 * acuerdos)` para que crezca con el preset.
 
-## Reto principal: tamaño del contexto
+### 3. Campaign Monitor (gated por plan `pro`/`enterprise`)
 
-Los acuerdos/pagos/KPIs son decenas o cientos de filas. Pero `campaign_metrics` tiene **una fila por campaña por día** (y opcionalmente por hora). Una empresa con 10 campañas activas durante 90 días = 900 filas. Si metiéramos eso crudo al prompt, el contexto explotaría y la respuesta sería más lenta y cara.
+Mantengo el check existente. Dentro:
 
-La solución es **pre-agregar la data antes de mandarla al modelo**, igual que hace `AutoInsights.tsx` y `PeriodComparisonCard.tsx` en el frontend. El modelo recibe resúmenes inteligentes en vez de filas crudas.
+- **Conexión**: una sola fila en `ad_platform_connections` (igual que hoy).
+- **Campañas**: insertar `preset.campaigns` filas ciclando `CAMPAIGN_TEMPLATES` (6 templates). Cada una con `status="active"`, `currency="COP"`, `start_date=sixMonthsAgo`, `total_budget = daily_budget * 30`, `external_campaign_id = "GADS-" + i.toString().padStart(3,"0")`. Guardar `id`, `name`, `type` para uso posterior.
 
-## Plan de implementación (FASE 1 — base sólida)
+- **Métricas por hora**: por cada campaña, por cada uno de los últimos `preset.days_metrics` días, generar 24 filas (hora 0–23). Aplicar `getActivityFactor(hour, dayOfWeek)` exactamente como especificado. Fórmulas de impressions/clicks/conversions/cost/conversionValue exactamente como en el brief. Calcular ctr, cpc, cpa, roas con la lógica actual.
 
-### 1. Edge function `crm-assistant/index.ts` — agregar contexto de campañas
+- **Inserts en lotes de 500**: helper local
+  ```
+  async function insertInChunks(table, rows, size = 500) {
+    for (let i = 0; i < rows.length; i += size) {
+      const { error } = await admin.from(table).insert(rows.slice(i, i + size));
+      if (error) throw new Error(`Error insertando ${table}: ${error.message}`);
+    }
+  }
+  ```
+  Usarlo solo para `campaign_metrics` (donde el volumen importa). El resto de tablas ya entra en una sola call.
 
-Después de cargar acuerdos/pagos/entregables/kpis, agregar en paralelo:
+- **Keywords**: solo para campañas `type === "search" || "shopping"`. Generar `preset.keywords_per_campaign` por campaña.
+  - Si `familiasNames.length > 0`: base = familias del tenant (ciclar). Si no, pool fijo `["zapatillas", "ropa deportiva", "mochilas", "audífonos", "smartwatch", "accesorios", "outlet", "ofertas"]`.
+  - Concatenar con sufijo aleatorio de `KEYWORD_SUFFIXES`.
+  - `match_type` aleatorio entre broad/phrase/exact, `quality_score` 5–10.
+  - `date` = último día (hoy en YYYY-MM-DD).
+  - Métricas: top-3 keywords reciben 10–30% del total agregado de la campaña, resto 1–5%. Calcular agregando los `metricsPayload` por `campaign_sync_id` antes de generar keywords.
 
-- `ad_platform_connections` (todas, sin límite — son pocas) → lista de plataformas conectadas
-- `campaigns_sync` (todas, sin límite — son pocas) → catálogo de campañas
-- `campaign_metrics` (últimos 90 días) → se agrega en código, NO se manda crudo
-- `campaign_keywords` (top 50 por clicks, últimos 30 días) → se agrega
-- `alert_history` (últimas 20 alertas no reconocidas) → para que pueda hablar de problemas activos
+- **Alertas**: insertar en `campaign_alerts` 3 filas (ciclar templates si hay menos de 3 campañas). Templates:
+  ```
+  [
+    { metric: "ctr",  condition: "below", threshold: 1.5,  is_active: true },
+    { metric: "cpc",  condition: "above", threshold: 3000, is_active: true },
+    { metric: "roas", condition: "below", threshold: 2.0,  is_active: true },
+  ]
+  ```
+  Campos requeridos según schema: `company_id`, `campaign_sync_id`, `metric`, `condition`, `threshold`, `created_by` (usar `creatorUserId`), `is_active`, `is_demo_data: true`. (El brief dice `enabled` pero el schema es `is_active` — uso `is_active`.)
 
-### 2. Pre-agregación en el edge function
+- **Historial de alertas**: 5–10 filas (random) en `alert_history` distribuidas en últimos 7 días:
+  - 60% sin `acknowledged_at`, 40% con `acknowledged_at` (timestamp posterior al trigger).
+  - Campos: `company_id`, `campaign_sync_id` (de la alerta), `alert_id`, `triggered_at`, `metric_value` (valor que viola el threshold), `threshold_value`, `message` descriptivo (ej. `"CTR de Search Branded cayó a 0.83% (umbral 1.5%)"`), `is_demo_data: true`.
 
-Construir un objeto resumido de campañas con la lógica que ya existe en `src/components/campaign-monitor/utils.ts` y `AutoInsights.tsx`, replicada en Deno:
+### 4. Summary y audit log
 
-- **Por plataforma** (últimos 30 días): cost, clicks, impressions, conversions, ctr, cpc, cpa, roas
-- **Por campaña** (últimos 30 días): nombre, plataforma, status, daily_budget, mismas métricas agregadas
-- **Comparativa período actual vs anterior** (30d vs 30d previos): % de cambio en cost, clicks, ctr, conversions, roas
-- **Top 5 keywords** por clicks con CPC/CTR/conversions
-- **Bottom 5 keywords** por ROI
-- **Pacing de presupuesto**: gasto total vs (daily_budget × días)
-- **Alertas activas no reconocidas**: últimas 20 con métrica, threshold y campaña afectada
+Extender el `summary` retornado y el `details` del `audit_log` con: `campaigns`, `campaign_metrics`, `campaign_keywords`, `campaign_alerts`, `alert_history`, `preset`. Para tenants Trial/Starter, esos campos van en 0.
 
-Mandar este resumen como JSON estructurado al prompt en vez de filas crudas. Resultado: ~3-5 KB en lugar de 100+ KB, y el modelo recibe data ya "interpretada".
+---
 
-### 3. Actualizar el `systemPrompt`
+## Frontend — `src/components/admin/DemoDataManager.tsx`
 
-Agregar a las CAPACIDADES:
-- Analizar campañas pagadas en Google Ads, Meta Ads, TikTok Ads, LinkedIn Ads
-- Comparar rendimiento entre plataformas
-- Detectar campañas que pierden dinero (ROAS bajo)
-- Identificar oportunidades de escalar (ROAS alto)
-- Recomendar pausas, cambios de creativo, redistribución de presupuesto
-- Hablar de keywords ganadoras/perdedoras
-- Reportar el estado del consumo de presupuesto
+### Estado nuevo
 
-Agregar al CONTEXTO DE DATOS la nueva sección `CAMPAÑAS PAGADAS` con el resumen.
+- `tenantPlan: string | null` — leer plan del tenant impersonado (`companies.plan`) en el mismo `useEffect` que ya carga `impersonating`.
+- `presetDialogOpen: boolean`.
+- `selectedPreset: "small" | "medium" | "large"` — default `"medium"`.
 
-Aclarar en el prompt que **InfluXpert combina dos mundos**: marketing con influencers (orgánico/acuerdos) Y campañas pagadas en plataformas de ads. EngineXpert puede cruzar ambos (ej. "estás gastando 5K en Google Ads y 8K en influencers este mes").
+### Reemplazar el AlertDialog actual de "Generar"
 
-### 4. Actualizar sugerencias en `AIChatBubble.tsx`
+Cambiar a un `Dialog` (shadcn) con:
 
-Agregar 2 chips de ejemplo nuevos en el estado vacío:
-- "¿Cuál es mi campaña con mejor ROAS?"
-- "¿Qué plataforma rinde mejor?"
+- Título: "Elegí el set de datos demo a generar".
+- Si `tenantPlan` ∈ {`trial`, `starter`}: banner amarillo destacado:
+  > ⚠️ Este tenant tiene plan **{plan}**. Solo se generarán datos de CRM (acuerdos, pagos, entregables, KPIs). El módulo Campaign Monitor no aplica a este plan.
+- 3 cards seleccionables (RadioGroup o tarjetas clicables):
+  - **Set chico** — 5 acuerdos, 2 campañas, 30 días métricas
+  - **Set mediano** (badge "Recomendado", default seleccionado) — 10 acuerdos, 4 campañas, 60 días métricas
+  - **Set grande** — 15 acuerdos, 6 campañas, 90 días métricas
+  - Si plan trial/starter: ocultar la línea "X campañas, Y días métricas" en cada card (solo mostrar acuerdos).
+- Botones: Cancelar / Generar.
+- Botón "Generar" con loading state ("Generando… esto puede tardar 10–30s") deshabilitado mientras `working === true`.
 
-### 5. Manejar empresas sin Campaign Monitor
+### Llamada
 
-Las empresas sin plan que incluya `campaign_monitor` simplemente no tendrán filas en esas tablas (RLS las bloquea o quedan vacías). El edge function debe:
-- No fallar si los queries devuelven 0 filas
-- Solo incluir la sección "CAMPAÑAS PAGADAS" en el prompt si hay al menos una conexión activa
-- Si no hay datos de campañas, instruir al modelo a NO inventar y, si le preguntan, decir "este módulo no está activo en tu plan"
-
-## Arquitectura técnica
-
-```text
-AIChatBubble (frontend)
-        │  POST /crm-assistant  { messages }
-        ▼
-crm-assistant (edge function)
-        │
-        ├── valida JWT
-        ├── crea cliente con token del usuario (RLS aplica → company_id correcto)
-        │
-        ├── carga en paralelo (Promise.all):
-        │     • acuerdos / pagos / entregables / kpis  (igual que hoy)
-        │     • ad_platform_connections                (NUEVO)
-        │     • campaigns_sync                         (NUEVO)
-        │     • campaign_metrics últimos 90d           (NUEVO)
-        │     • campaign_keywords top 50 últimos 30d   (NUEVO)
-        │     • alert_history no reconocidas           (NUEVO)
-        │
-        ├── PRE-AGREGA campañas en JS:
-        │     • aggregateByPlatform()
-        │     • aggregateByCampaign()
-        │     • periodComparison() 30d vs 30d previos
-        │     • topKeywords / bottomKeywords
-        │     • budgetPacing
-        │
-        ├── construye systemPrompt con:
-        │     CRM (crudo, como hoy) + CAMPAÑAS (resumen agregado)
-        │
-        └── stream a Lovable AI Gateway → SSE de vuelta al chat
+```ts
+supabase.functions.invoke('generate-demo-data', {
+  body: { preset: selectedPreset },
+});
 ```
 
-## Lo que queda fuera de esta fase (futuras iteraciones)
+### Toast de éxito
 
-Te lo dejo apuntado para cuando quieras avanzar:
+Construir mensaje según summary:
 
-- **Cruzar influencers vs ads**: "el ROI combinado de la campaña X considerando lo gastado en influencers + Google Ads del mismo periodo"
-- **Function calling**: que el modelo pida data adicional bajo demanda en vez de mandarle todo siempre (más eficiente con muchas campañas)
-- **Persistencia del historial**: guardar conversaciones en una tabla `ai_conversations` para retomar contexto entre sesiones
-- **Acciones desde el chat**: que pueda crear alertas, pausar campañas, etc. (requiere herramientas con confirmación del usuario)
-- **Cambiar de modelo a `gemini-2.5-pro` o `gpt-5-mini`** si la calidad de análisis no es suficiente con flash-preview
+- Trial/Starter: `"Generados: N acuerdos, N pagos, N entregables, N KPIs"`.
+- Pro/Enterprise: agrega `" · N métricas, N keywords, N alertas"` cuando esos campos > 0.
 
-## Pregunta antes de implementar
+---
 
-Una sola decisión que cambia el alcance: ¿la **ventana de tiempo** por defecto que debe analizar EngineXpert para campañas son **30 días** (lo más común en ads, balance entre detalle y costo de tokens) o prefieres **90 días** (mejor para tendencias largas, más data en el contexto)? Default propuesto: agregar siempre los **últimos 30 días en detalle** y los **30 días anteriores solo para comparativa de cambio %** — eso es lo que muestra hoy `PeriodComparisonCard` y es el estándar de la industria.
+## `clear-demo-data`
 
-Si confirmas (o me dices "como veas"), implemento la FASE 1 completa.
+Ya borra las 10 tablas en el orden correcto (verificado en el archivo). **No requiere cambios.**
+
+---
+
+## Detalles técnicos
+
+- **Volumen máximo (preset large)**: 6 × 90 × 24 = 12 960 filas en `campaign_metrics`. Con chunks de 500 son 26 inserts. Edge function tiene límite de wall-time ~150s; insertar secuencialmente. Si llegara a ser lento, queda margen.
+- **`days_metrics`**: iterar `for (let d = preset.days_metrics - 1; d >= 0; d--)` usando una fecha base `now` para que el último día sea hoy.
+- **`hour` en `campaign_metrics`**: la columna existe y es `integer` nullable — perfecto para granularidad horaria.
+- **Keywords de top vs bottom**: ordenar las keywords generadas, aplicar % decreciente al `clicks`/`cost`/`conversions` agregados de la campaña.
+- **`alert_history.alert_id`**: usar el `id` retornado del insert de `campaign_alerts` (hacer `.select("id, campaign_sync_id, metric, threshold")`).
+- **Constantes** (`PRESETS`, `INFLUENCERS`, `CAMPAIGN_TEMPLATES`, `KEYWORD_SUFFIXES`) declaradas dentro del handler o a nivel módulo (preferencia: módulo, son inmutables).
+- **No tocar**: auditoría existente, gating super_admin + impersonación, dependencias.
+
+---
+
+## Validación post-deploy (manual por el usuario)
+
+Como en el brief: generar `medium` en tenant Pro y verificar conteos vía SQL; chequear heatmap, keywords y alertas en UI; generar `small` en tenant Trial y confirmar 0 filas en tablas de Campaign Monitor; borrar demo del tenant Pro y confirmar 0 residuales.
