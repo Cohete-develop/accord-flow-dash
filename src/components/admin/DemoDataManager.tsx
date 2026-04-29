@@ -20,15 +20,43 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { Database, Trash2, Sparkles, AlertTriangle } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Badge } from '@/components/ui/badge';
+import { Database, Trash2, Sparkles, AlertTriangle, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
+
+type PresetKey = 'small' | 'medium' | 'large';
+
+const PRESET_OPTIONS: {
+  key: PresetKey;
+  label: string;
+  acuerdos: number;
+  campaigns: number;
+  days: number;
+  recommended?: boolean;
+}[] = [
+  { key: 'small',  label: 'Set chico',   acuerdos: 5,  campaigns: 2, days: 30 },
+  { key: 'medium', label: 'Set mediano', acuerdos: 10, campaigns: 4, days: 60, recommended: true },
+  { key: 'large',  label: 'Set grande',  acuerdos: 15, campaigns: 6, days: 90 },
+];
 
 export default function DemoDataManager() {
   const { user } = useAuth();
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [impersonating, setImpersonating] = useState<string | null>(null);
+  const [tenantPlan, setTenantPlan] = useState<string | null>(null);
   const [demoCount, setDemoCount] = useState(0);
   const [working, setWorking] = useState(false);
+  const [presetDialogOpen, setPresetDialogOpen] = useState(false);
+  const [selectedPreset, setSelectedPreset] = useState<PresetKey>('medium');
 
   useEffect(() => {
     if (!user) return;
@@ -44,7 +72,19 @@ export default function DemoDataManager() {
       const { data: imp } = await supabase.rpc('get_active_impersonation', {
         _user_id: user.id,
       });
-      setImpersonating((imp as string) || null);
+      const impCompanyId = (imp as string) || null;
+      setImpersonating(impCompanyId);
+
+      if (impCompanyId) {
+        const { data: company } = await supabase
+          .from('companies')
+          .select('plan')
+          .eq('id', impCompanyId)
+          .maybeSingle();
+        setTenantPlan((company as any)?.plan || null);
+      } else {
+        setTenantPlan(null);
+      }
     };
     check();
   }, [user]);
@@ -64,10 +104,13 @@ export default function DemoDataManager() {
 
   if (!isSuperAdmin || !impersonating) return null;
 
+  const isLowPlan = tenantPlan === 'trial' || tenantPlan === 'starter';
+
   const handleGenerate = async () => {
+    setPresetDialogOpen(false);
     setWorking(true);
     const { data, error } = await supabase.functions.invoke('generate-demo-data', {
-      body: {},
+      body: { preset: selectedPreset },
     });
     setWorking(false);
 
@@ -76,11 +119,15 @@ export default function DemoDataManager() {
       return;
     }
     const summary = (data as any)?.summary;
-    toast.success(
-      summary
-        ? `Datos demo generados — Acuerdos: ${summary.acuerdos}, Pagos: ${summary.pagos}, Entregables: ${summary.entregables}, KPIs: ${summary.kpis}`
-        : 'Datos demo generados',
-    );
+    if (summary) {
+      const base = `Acuerdos: ${summary.acuerdos}, Pagos: ${summary.pagos}, Entregables: ${summary.entregables}, KPIs: ${summary.kpis}`;
+      const cm = summary.is_premium && summary.campaigns > 0
+        ? ` · ${summary.campaigns} campañas, ${summary.campaign_metrics} métricas, ${summary.campaign_keywords} keywords, ${summary.campaign_alerts} alertas, ${summary.alert_history} hist.`
+        : '';
+      toast.success(`Datos demo generados (${summary.preset}) — ${base}${cm}`);
+    } else {
+      toast.success('Datos demo generados');
+    }
   };
 
   const handleClear = async () => {
@@ -113,31 +160,16 @@ export default function DemoDataManager() {
         <div className="text-sm text-muted-foreground">
           Registros demo actuales: <span className="font-semibold text-foreground">{demoCount}</span>{' '}
           acuerdos (y sus pagos, entregables y KPIs asociados).
+          {tenantPlan && (
+            <> · Plan tenant: <Badge variant="outline" className="ml-1">{tenantPlan}</Badge></>
+          )}
         </div>
 
         <div className="flex flex-wrap gap-3">
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button disabled={working} className="gap-2">
-                <Sparkles className="w-4 h-4" /> Generar datos demo
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>¿Generar datos demo?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  Se crearán 5 acuerdos, 15 pagos, 10 entregables y 20 KPIs con datos ficticios.
-                  Si el tenant tiene plan premium, también se sembrarán 2 campañas con 30 días de
-                  métricas. Todos los datos quedarán marcados como demo y podrás eliminarlos
-                  después.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                <AlertDialogAction onClick={handleGenerate}>Generar</AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
+          <Button disabled={working} className="gap-2" onClick={() => setPresetDialogOpen(true)}>
+            {working ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+            {working ? 'Generando…' : 'Generar datos demo'}
+          </Button>
 
           {demoCount > 0 && (
             <AlertDialog>
@@ -169,6 +201,71 @@ export default function DemoDataManager() {
             </AlertDialog>
           )}
         </div>
+
+        <Dialog open={presetDialogOpen} onOpenChange={(o) => !working && setPresetDialogOpen(o)}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>Elegí el set de datos demo a generar</DialogTitle>
+              <DialogDescription>
+                Cuanto más grande el set, más realista la demo, pero también más tiempo de generación
+                (10–30 segundos en grande).
+              </DialogDescription>
+            </DialogHeader>
+
+            {isLowPlan && (
+              <div className="rounded-md border border-yellow-500/40 bg-yellow-500/10 p-3 text-sm text-foreground">
+                ⚠️ Este tenant tiene plan <strong>{tenantPlan}</strong>. Solo se generarán datos de
+                CRM (acuerdos, pagos, entregables, KPIs). El módulo Campaign Monitor no aplica a
+                este plan.
+              </div>
+            )}
+
+            <div className="grid gap-3 sm:grid-cols-3">
+              {PRESET_OPTIONS.map((opt) => {
+                const isSelected = selectedPreset === opt.key;
+                return (
+                  <button
+                    key={opt.key}
+                    type="button"
+                    onClick={() => setSelectedPreset(opt.key)}
+                    className={cn(
+                      'relative flex flex-col items-start gap-2 rounded-lg border p-4 text-left transition',
+                      isSelected
+                        ? 'border-primary bg-primary/10 ring-2 ring-primary'
+                        : 'border-border hover:border-primary/40 hover:bg-muted/40',
+                    )}
+                  >
+                    <div className="flex w-full items-center justify-between">
+                      <span className="font-semibold text-foreground">{opt.label}</span>
+                      {opt.recommended && (
+                        <Badge variant="default" className="text-[10px]">Recomendado</Badge>
+                      )}
+                    </div>
+                    <div className="text-xs text-muted-foreground space-y-0.5">
+                      <div>{opt.acuerdos} acuerdos</div>
+                      {!isLowPlan && (
+                        <>
+                          <div>{opt.campaigns} campañas</div>
+                          <div>{opt.days} días de métricas</div>
+                        </>
+                      )}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+
+            <DialogFooter>
+              <Button variant="outline" disabled={working} onClick={() => setPresetDialogOpen(false)}>
+                Cancelar
+              </Button>
+              <Button disabled={working} onClick={handleGenerate} className="gap-2">
+                {working && <Loader2 className="w-4 h-4 animate-spin" />}
+                {working ? 'Generando… puede tardar 10–30s' : 'Generar'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </CardContent>
     </Card>
   );
