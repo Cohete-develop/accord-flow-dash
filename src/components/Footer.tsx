@@ -14,7 +14,7 @@ export default function Footer() {
               Términos de Servicio
             </Link>
             <a
-              href="mailto:soporte@cohete-it.com"
+              href="mailto:despeguemos@cohete-it.com"
               className="hover:text-foreground transition-colors"
             >
               Contacto
