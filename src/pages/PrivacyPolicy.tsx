@@ -70,7 +70,7 @@ export default function PrivacyPolicy() {
             De acuerdo con la <strong>Ley 1581 de 2012</strong> de la República de Colombia y demás
             normas aplicables, el usuario tiene derecho a acceder, rectificar, actualizar y solicitar
             la eliminación de sus datos personales. Para ejercer estos derechos puede escribirnos a{" "}
-            <a href="mailto:soporte@cohete-it.com">soporte@cohete-it.com</a>.
+            <a href="mailto:despeguemos@cohete-it.com">despeguemos@cohete-it.com</a>.
           </p>
 
           <h2>7. Uso de datos de Google APIs</h2>
@@ -90,7 +90,7 @@ export default function PrivacyPolicy() {
           <h2>8. Contacto</h2>
           <p>
             Para cualquier consulta relacionada con esta política, contáctanos en{" "}
-            <a href="mailto:soporte@cohete-it.com">soporte@cohete-it.com</a>.
+            <a href="mailto:despeguemos@cohete-it.com">despeguemos@cohete-it.com</a>.
           </p>
 
           <p className="text-sm text-muted-foreground mt-10">

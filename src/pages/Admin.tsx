@@ -380,7 +380,7 @@ export default function AdminPage() {
               </div>
             </div>
             <p className="text-xs text-muted-foreground border-t pt-3">
-              Para cambiar de plan, contacta a Cohete en <a href="mailto:soporte@cohete-it.com" className="text-primary font-medium hover:underline">soporte@cohete-it.com</a>
+              Para cambiar de plan, contacta a Cohete en <a href="mailto:despeguemos@cohete-it.com" className="text-primary font-medium hover:underline">despeguemos@cohete-it.com</a>
             </p>
           </CardContent>
         </Card>

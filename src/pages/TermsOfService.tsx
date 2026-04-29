@@ -69,7 +69,7 @@ export default function TermsOfService() {
           <h2>7. Cancelación y eliminación de datos</h2>
           <p>
             El usuario puede solicitar la cancelación de su cuenta y la eliminación de sus datos
-            escribiendo a <a href="mailto:soporte@cohete-it.com">soporte@cohete-it.com</a>. Algunos
+            escribiendo a <a href="mailto:despeguemos@cohete-it.com">despeguemos@cohete-it.com</a>. Algunos
             registros podrán conservarse por obligaciones legales o contables.
           </p>
 
@@ -83,7 +83,7 @@ export default function TermsOfService() {
           <h2>9. Contacto</h2>
           <p>
             Para cualquier consulta sobre estos términos, escríbenos a{" "}
-            <a href="mailto:soporte@cohete-it.com">soporte@cohete-it.com</a>.
+            <a href="mailto:despeguemos@cohete-it.com">despeguemos@cohete-it.com</a>.
           </p>
 
           <p className="text-sm text-muted-foreground mt-10">
