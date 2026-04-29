@@ -2,7 +2,90 @@ import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { getCorsHeaders } from "../_shared/cors.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
+// ============================================================
+// PRESETS
+// ============================================================
+const PRESETS = {
+  small:  { acuerdos: 5,  campaigns: 2, days_metrics: 30, keywords_per_campaign: 5 },
+  medium: { acuerdos: 10, campaigns: 4, days_metrics: 60, keywords_per_campaign: 6 },
+  large:  { acuerdos: 15, campaigns: 6, days_metrics: 90, keywords_per_campaign: 8 },
+} as const;
 
+type PresetKey = keyof typeof PRESETS;
+
+// ============================================================
+// CATÁLOGOS ESTÁTICOS
+// ============================================================
+const INFLUENCERS = [
+  { nombre: "Andrea López",       handle: "@andrealopez",     seguidores: 125000 },
+  { nombre: "Carlos Méndez",      handle: "@carlosmendez",    seguidores: 89000  },
+  { nombre: "Valeria Ruiz",       handle: "@valeriaruiz",     seguidores: 210000 },
+  { nombre: "Diego Torres",       handle: "@diegotorres",     seguidores: 67000  },
+  { nombre: "Sofía Ramírez",      handle: "@sofiramirez",     seguidores: 340000 },
+  { nombre: "Mateo Gutiérrez",    handle: "@mateogtz",        seguidores: 178000 },
+  { nombre: "Camila Vargas",      handle: "@camivargas",      seguidores: 95000  },
+  { nombre: "Sebastián Rojas",    handle: "@sebasrojas",      seguidores: 256000 },
+  { nombre: "Lucía Castaño",      handle: "@luciacastano",    seguidores: 410000 },
+  { nombre: "Tomás Restrepo",     handle: "@tomasrestrepo",   seguidores: 58000  },
+  { nombre: "Isabella Quintero",  handle: "@isaquintero",     seguidores: 305000 },
+  { nombre: "Joaquín Herrera",    handle: "@joaquinherrera",  seguidores: 142000 },
+  { nombre: "Mariana Ospina",     handle: "@mariospina",      seguidores: 78000  },
+  { nombre: "Felipe Cárdenas",    handle: "@felicardenas",    seguidores: 195000 },
+  { nombre: "Daniela Patiño",     handle: "@danipatino",      seguidores: 488000 },
+];
+
+const REDES = ["Instagram", "TikTok", "YouTube"];
+const TIPOS = ["Reel", "Story", "Collab", "UGC"];
+const ESTADOS_ACUERDO = ["Activo", "Finalizado", "Pausado"];
+const ESTADOS_PAGO = ["Pagado", "Pendiente", "Programado"];
+const ESTADOS_ENTREGABLE = ["Entregado", "Pendiente", "En progreso", "Aprobado"];
+
+const CAMPAIGN_TEMPLATES = [
+  { name: "Search Branded — Marca Principal",        type: "search",   daily_budget: 150000 },
+  { name: "Search Non-Branded — Genéricas",          type: "search",   daily_budget: 200000 },
+  { name: "Display Remarketing — Carrito Abandonado", type: "display", daily_budget: 100000 },
+  { name: "Performance Max — Conversiones",           type: "pmax",    daily_budget: 250000 },
+  { name: "Shopping — Catálogo Completo",             type: "shopping",daily_budget: 180000 },
+  { name: "YouTube Video Ads — Brand Awareness",      type: "video",   daily_budget: 120000 },
+];
+
+const KEYWORD_SUFFIXES = [
+  "comprar online", "envío gratis", "mejor precio", "promoción",
+  "ofertas", "tienda oficial", "descuento", "outlet",
+];
+
+const KEYWORD_FALLBACK_BASES = [
+  "zapatillas", "ropa deportiva", "mochilas", "audífonos",
+  "smartwatch", "accesorios", "outlet", "ofertas",
+];
+
+const MATCH_TYPES = ["broad", "phrase", "exact"];
+
+// ============================================================
+// HELPERS
+// ============================================================
+function getActivityFactor(hour: number, dayOfWeek: number): number {
+  const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+  let hourFactor: number;
+  if (hour >= 0 && hour < 6) hourFactor = 0.05;
+  else if (hour < 9)         hourFactor = 0.30;
+  else if (hour < 12)        hourFactor = 0.75;
+  else if (hour < 14)        hourFactor = 0.90;
+  else if (hour < 18)        hourFactor = 0.85;
+  else if (hour < 22)        hourFactor = 1.00;
+  else                       hourFactor = 0.50;
+  const dayFactor = isWeekend ? 0.65 : 1.00;
+  const jitter = 0.85 + Math.random() * 0.30;
+  return hourFactor * dayFactor * jitter;
+}
+
+function pick<T>(arr: T[], i: number): T {
+  return arr[i % arr.length];
+}
+
+function randInt(min: number, max: number): number {
+  return Math.floor(min + Math.random() * (max - min + 1));
+}
 
 serve(async (req) => {
   const corsHeaders = getCorsHeaders(req.headers.get("origin"));
@@ -65,19 +148,25 @@ serve(async (req) => {
 
     const companyId = impersonationCompanyId as string;
 
-    // ---------- Catálogos ----------
-    const INFLUENCERS = [
-      { nombre: "Andrea López", handle: "@andrealopez", seguidores: 125000 },
-      { nombre: "Carlos Méndez", handle: "@carlosmendez", seguidores: 89000 },
-      { nombre: "Valeria Ruiz", handle: "@valeriaruiz", seguidores: 210000 },
-      { nombre: "Diego Torres", handle: "@diegotorres", seguidores: 67000 },
-      { nombre: "Sofía Ramírez", handle: "@sofiramirez", seguidores: 340000 },
-    ];
-    const REDES = ["Instagram", "TikTok", "YouTube"];
-    const TIPOS = ["Reel", "Story", "Collab", "UGC"];
-    const ESTADOS_ACUERDO = ["Activo", "Finalizado", "Pausado"];
-    const ESTADOS_PAGO = ["Pagado", "Pendiente", "Programado"];
-    const ESTADOS_ENTREGABLE = ["Entregado", "Pendiente", "En progreso", "Aprobado"];
+    // Parsear preset
+    let body: any = {};
+    try { body = await req.json(); } catch { body = {}; }
+    const rawPreset = body?.preset;
+    let presetKey: PresetKey = "medium";
+    if (rawPreset === "small" || rawPreset === "medium" || rawPreset === "large") {
+      presetKey = rawPreset;
+    } else if (rawPreset !== undefined) {
+      console.warn(`Preset inválido "${rawPreset}", usando "medium" por default`);
+    }
+    const preset = PRESETS[presetKey];
+
+    // Helper para inserts en lotes
+    async function insertInChunks(table: string, rows: any[], size = 500) {
+      for (let i = 0; i < rows.length; i += size) {
+        const { error } = await admin.from(table).insert(rows.slice(i, i + size));
+        if (error) throw new Error(`Error insertando ${table}: ${error.message}`);
+      }
+    }
 
     // Familias del tenant
     const { data: familias } = await admin
@@ -103,18 +192,19 @@ serve(async (req) => {
     const sixMonthsAgo = new Date(now.getTime() - 180 * 24 * 60 * 60 * 1000);
 
     // ---------- 1. Acuerdos ----------
-    const acuerdosPayload = INFLUENCERS.map((inf, i) => {
-      const fechaInicio = new Date(sixMonthsAgo.getTime() + i * 20 * 24 * 60 * 60 * 1000);
+    const influencersUsed = INFLUENCERS.slice(0, preset.acuerdos);
+    const acuerdosPayload = influencersUsed.map((inf, i) => {
+      const fechaInicio = new Date(sixMonthsAgo.getTime() + i * 12 * 24 * 60 * 60 * 1000);
       const fechaFin = new Date(fechaInicio.getTime() + 90 * 24 * 60 * 60 * 1000);
       const valorMensual = 800000 + Math.floor(Math.random() * 3200000);
       return {
         company_id: companyId,
         user_id: creatorUserId,
         influencer: inf.nombre,
-        red_social: [REDES[i % REDES.length]],
-        plataforma: REDES[i % REDES.length],
+        red_social: [pick(REDES, i)],
+        plataforma: pick(REDES, i),
         seguidores: inf.seguidores,
-        tipo_contenido: [TIPOS[i % TIPOS.length], TIPOS[(i + 1) % TIPOS.length]],
+        tipo_contenido: [pick(TIPOS, i), pick(TIPOS, i + 1)],
         reels_pactados: 2 + (i % 3),
         stories_pactadas: 4 + (i % 5),
         fecha_inicio: fechaInicio.toISOString().slice(0, 10),
@@ -123,7 +213,7 @@ serve(async (req) => {
         valor_mensual: valorMensual,
         valor_total: valorMensual * 3,
         moneda: "COP",
-        estado: ESTADOS_ACUERDO[i % ESTADOS_ACUERDO.length],
+        estado: pick(ESTADOS_ACUERDO, i),
         contacto: inf.handle,
         familia_producto: [familiasNames[i % Math.max(familiasNames.length, 1)] || defaultFamilia],
         notas: `Acuerdo demo — ${inf.seguidores.toLocaleString()} seguidores`,
@@ -142,7 +232,7 @@ serve(async (req) => {
     const pagosPayload: any[] = [];
     acuerdosCreados!.forEach((acuerdo: any, idx: number) => {
       for (let m = 0; m < 3; m++) {
-        const fechaPago = new Date(sixMonthsAgo.getTime() + (idx * 20 + m * 30) * 24 * 60 * 60 * 1000);
+        const fechaPago = new Date(sixMonthsAgo.getTime() + (idx * 12 + m * 30) * 24 * 60 * 60 * 1000);
         pagosPayload.push({
           company_id: companyId,
           user_id: creatorUserId,
@@ -168,7 +258,7 @@ serve(async (req) => {
     const entregablesPayload: any[] = [];
     acuerdosCreados!.forEach((acuerdo: any, idx: number) => {
       for (let e = 0; e < 2; e++) {
-        const fechaProg = new Date(sixMonthsAgo.getTime() + (idx * 20 + e * 15) * 24 * 60 * 60 * 1000);
+        const fechaProg = new Date(sixMonthsAgo.getTime() + (idx * 12 + e * 15) * 24 * 60 * 60 * 1000);
         const baseAlcance = 30000 + Math.floor(Math.random() * 70000);
         const baseImpresiones = Math.floor(baseAlcance * (1.3 + Math.random() * 0.7));
         const baseInteracciones = Math.floor(baseAlcance * (0.04 + Math.random() * 0.06));
@@ -259,7 +349,8 @@ serve(async (req) => {
       }
     });
 
-    while (kpisPayload.length < 20 && acuerdosCreados!.length > 0) {
+    const kpiTarget = Math.max(20, 2 * acuerdosCreados!.length);
+    while (kpisPayload.length < kpiTarget && acuerdosCreados!.length > 0) {
       const randomAcuerdo: any = acuerdosCreados![kpisPayload.length % acuerdosCreados!.length];
       const alcance = 15000 + Math.floor(Math.random() * 85000);
       const impresiones = Math.floor(alcance * 1.5);
@@ -297,14 +388,21 @@ serve(async (req) => {
     if (errKpis) throw new Error(`Error creando KPIs: ${errKpis.message}`);
 
     // ---------- 5. Campaign Monitor (solo planes premium) ----------
+    let campaignsCreated = 0;
     let campaignMetricsCreated = 0;
+    let campaignKeywordsCreated = 0;
+    let campaignAlertsCreated = 0;
+    let alertHistoryCreated = 0;
+
     const { data: companyData } = await admin
       .from("companies")
       .select("plan")
       .eq("id", companyId)
       .maybeSingle();
 
-    if (companyData && ["pro", "enterprise"].includes(companyData.plan)) {
+    const isPremium = !!(companyData && ["pro", "enterprise"].includes(companyData.plan));
+
+    if (isPremium) {
       const { data: conn, error: errConn } = await admin
         .from("ad_platform_connections")
         .insert({
@@ -324,109 +422,235 @@ serve(async (req) => {
       if (errConn) console.error("Error conn:", errConn);
 
       if (conn) {
-        const campañasPayload = [
-          {
+        // 5.1 — Campañas
+        const campañasPayload = Array.from({ length: preset.campaigns }, (_, i) => {
+          const tpl = pick(CAMPAIGN_TEMPLATES, i);
+          return {
             company_id: companyId,
             connection_id: conn.id,
             platform: "google_ads",
-            external_campaign_id: "GADS-001",
-            campaign_name: "Campaña Search Demo",
+            external_campaign_id: `GADS-${String(i + 1).padStart(3, "0")}`,
+            campaign_name: tpl.name,
             status: "active",
-            daily_budget: 150000,
-            total_budget: 4500000,
+            daily_budget: tpl.daily_budget,
+            total_budget: tpl.daily_budget * 30,
             currency: "COP",
             start_date: sixMonthsAgo.toISOString().slice(0, 10),
             is_demo_data: true,
-          },
-          {
-            company_id: companyId,
-            connection_id: conn.id,
-            platform: "google_ads",
-            external_campaign_id: "GADS-002",
-            campaign_name: "Campaña Display Demo",
-            status: "active",
-            daily_budget: 200000,
-            total_budget: 6000000,
-            currency: "COP",
-            start_date: sixMonthsAgo.toISOString().slice(0, 10),
-            is_demo_data: true,
-          },
-        ];
+          };
+        });
 
         const { data: camps, error: errCamps } = await admin
           .from("campaigns_sync")
           .insert(campañasPayload)
-          .select("id");
+          .select("id, campaign_name");
 
         if (errCamps) console.error("Error camps:", errCamps);
 
         if (camps && camps.length > 0) {
+          campaignsCreated = camps.length;
+
+          // Map id -> template (para tipo y nombre)
+          const campMeta = camps.map((c: any, i: number) => ({
+            id: c.id,
+            name: c.campaign_name,
+            type: pick(CAMPAIGN_TEMPLATES, i).type,
+          }));
+
+          // 5.2 — Métricas por hora
           const metricsPayload: any[] = [];
-          for (const camp of camps as any[]) {
-            for (let d = 0; d < 30; d++) {
+          // Agregados por campaña para usar en keywords
+          const aggByCamp: Record<string, { impressions: number; clicks: number; cost: number; conversions: number }> = {};
+
+          for (const camp of campMeta) {
+            aggByCamp[camp.id] = { impressions: 0, clicks: 0, cost: 0, conversions: 0 };
+            for (let d = preset.days_metrics - 1; d >= 0; d--) {
               const date = new Date(now.getTime() - d * 24 * 60 * 60 * 1000);
-              const impressions = 5000 + Math.floor(Math.random() * 15000);
-              const clicks = Math.floor(impressions * (0.01 + Math.random() * 0.04));
-              const conversions = Math.floor(clicks * (0.02 + Math.random() * 0.08));
-              const cost = Math.round(clicks * (500 + Math.random() * 1500));
-              const conversionValue = conversions * (8000 + Math.random() * 12000);
-              metricsPayload.push({
+              const dateStr = date.toISOString().slice(0, 10);
+              const dow = date.getDay();
+              for (let hour = 0; hour < 24; hour++) {
+                const factor = getActivityFactor(hour, dow);
+                const baseImpressions = 800 + Math.random() * 1200;
+                const impressions = Math.floor(baseImpressions * factor);
+                const clicks = Math.floor(impressions * (0.01 + Math.random() * 0.04));
+                const conversions = Math.floor(clicks * (0.02 + Math.random() * 0.08));
+                const cost = Math.round(clicks * (500 + Math.random() * 1500));
+                const conversionValue = conversions * (8000 + Math.random() * 12000);
+
+                metricsPayload.push({
+                  company_id: companyId,
+                  campaign_sync_id: camp.id,
+                  date: dateStr,
+                  hour,
+                  impressions,
+                  clicks,
+                  conversions,
+                  conversion_value: Math.round(conversionValue),
+                  cost,
+                  ctr: Number(((clicks / Math.max(impressions, 1)) * 100).toFixed(2)),
+                  cpc: Math.round(cost / Math.max(clicks, 1)),
+                  cpa: conversions > 0 ? Math.round(cost / conversions) : 0,
+                  roas: cost > 0 ? Number((conversionValue / cost).toFixed(2)) : 0,
+                  platform_data: {},
+                  is_demo_data: true,
+                });
+
+                aggByCamp[camp.id].impressions += impressions;
+                aggByCamp[camp.id].clicks += clicks;
+                aggByCamp[camp.id].cost += cost;
+                aggByCamp[camp.id].conversions += conversions;
+              }
+            }
+          }
+
+          await insertInChunks("campaign_metrics", metricsPayload, 500);
+          campaignMetricsCreated = metricsPayload.length;
+
+          // 5.3 — Keywords (search/shopping)
+          const kwPool = familiasNames.length > 0 ? familiasNames : KEYWORD_FALLBACK_BASES;
+          const keywordsPayload: any[] = [];
+          const todayStr = now.toISOString().slice(0, 10);
+
+          for (const camp of campMeta) {
+            if (camp.type !== "search" && camp.type !== "shopping") continue;
+            const agg = aggByCamp[camp.id];
+            const n = preset.keywords_per_campaign;
+
+            for (let k = 0; k < n; k++) {
+              const base = pick(kwPool, k).toLowerCase();
+              const suffix = pick(KEYWORD_SUFFIXES, Math.floor(Math.random() * KEYWORD_SUFFIXES.length));
+              const keyword = `${base} ${suffix}`;
+              // Top-3 reciben 10-30%, resto 1-5%
+              const share = k < 3
+                ? 0.10 + Math.random() * 0.20
+                : 0.01 + Math.random() * 0.04;
+              const impressions = Math.floor(agg.impressions * share);
+              const clicks = Math.floor(agg.clicks * share);
+              const cost = Math.round(agg.cost * share);
+              const conversions = Math.floor(agg.conversions * share);
+              keywordsPayload.push({
                 company_id: companyId,
                 campaign_sync_id: camp.id,
-                date: date.toISOString().slice(0, 10),
+                keyword,
+                match_type: pick(MATCH_TYPES, Math.floor(Math.random() * MATCH_TYPES.length)),
+                quality_score: randInt(5, 10),
+                status: "active",
+                date: todayStr,
                 impressions,
                 clicks,
-                conversions,
-                conversion_value: Math.round(conversionValue),
                 cost,
+                conversions,
                 ctr: Number(((clicks / Math.max(impressions, 1)) * 100).toFixed(2)),
                 cpc: Math.round(cost / Math.max(clicks, 1)),
-                cpa: conversions > 0 ? Math.round(cost / conversions) : 0,
-                roas: cost > 0 ? Number((conversionValue / cost).toFixed(2)) : 0,
-                platform_data: {},
                 is_demo_data: true,
               });
             }
           }
 
-          const { error: errMet } = await admin.from("campaign_metrics").insert(metricsPayload);
-          if (errMet) {
-            console.error("Error metrics:", errMet);
-          } else {
-            campaignMetricsCreated = metricsPayload.length;
+          if (keywordsPayload.length > 0) {
+            await insertInChunks("campaign_keywords", keywordsPayload, 500);
+            campaignKeywordsCreated = keywordsPayload.length;
+          }
+
+          // 5.4 — Alertas (3 templates, ciclar campañas)
+          const alertTemplates = [
+            { metric: "ctr",  condition: "below", threshold: 1.5 },
+            { metric: "cpc",  condition: "above", threshold: 3000 },
+            { metric: "roas", condition: "below", threshold: 2.0 },
+          ];
+          const alertsPayload = alertTemplates.map((t, i) => ({
+            company_id: companyId,
+            campaign_sync_id: pick(campMeta, i).id,
+            metric: t.metric,
+            condition: t.condition,
+            threshold: t.threshold,
+            window_minutes: 60,
+            notify_channels: ["in_app"],
+            is_active: true,
+            created_by: creatorUserId,
+            is_demo_data: true,
+          }));
+
+          const { data: alertsCreated, error: errAlerts } = await admin
+            .from("campaign_alerts")
+            .insert(alertsPayload)
+            .select("id, campaign_sync_id, metric, threshold");
+
+          if (errAlerts) console.error("Error alerts:", errAlerts);
+
+          if (alertsCreated && alertsCreated.length > 0) {
+            campaignAlertsCreated = alertsCreated.length;
+
+            // 5.5 — Alert history (5-10 entradas, últimos 7 días)
+            const histCount = randInt(5, 10);
+            const historyPayload: any[] = [];
+            for (let i = 0; i < histCount; i++) {
+              const alert: any = pick(alertsCreated as any[], i);
+              const camp = campMeta.find((c) => c.id === alert.campaign_sync_id) || campMeta[0];
+              const triggered = new Date(now.getTime() - Math.random() * 7 * 24 * 60 * 60 * 1000);
+              const acknowledged = Math.random() < 0.40
+                ? new Date(triggered.getTime() + randInt(10, 240) * 60 * 1000)
+                : null;
+
+              // metric_value que viola el threshold
+              let metricValue: number;
+              let msg: string;
+              if (alert.condition === "below") {
+                metricValue = +(Number(alert.threshold) * (0.4 + Math.random() * 0.5)).toFixed(2);
+                msg = `${alert.metric.toUpperCase()} de "${camp.name}" cayó a ${metricValue} (umbral ${alert.threshold})`;
+              } else {
+                metricValue = +(Number(alert.threshold) * (1.1 + Math.random() * 0.6)).toFixed(2);
+                msg = `${alert.metric.toUpperCase()} de "${camp.name}" subió a ${metricValue} (umbral ${alert.threshold})`;
+              }
+
+              historyPayload.push({
+                company_id: companyId,
+                campaign_sync_id: alert.campaign_sync_id,
+                alert_id: alert.id,
+                triggered_at: triggered.toISOString(),
+                metric_value: metricValue,
+                threshold_value: Number(alert.threshold),
+                message: msg,
+                acknowledged_at: acknowledged ? acknowledged.toISOString() : null,
+                acknowledged_by: acknowledged ? creatorUserId : null,
+                is_demo_data: true,
+              });
+            }
+
+            const { error: errHist } = await admin.from("alert_history").insert(historyPayload);
+            if (errHist) console.error("Error alert_history:", errHist);
+            else alertHistoryCreated = historyPayload.length;
           }
         }
       }
     }
 
     // ---------- Audit log ----------
+    const summary = {
+      preset: presetKey,
+      acuerdos: acuerdosCreados!.length,
+      pagos: pagosPayload.length,
+      entregables: entregablesCreados!.length,
+      kpis: kpisPayload.length,
+      campaigns: campaignsCreated,
+      campaign_metrics: campaignMetricsCreated,
+      campaign_keywords: campaignKeywordsCreated,
+      campaign_alerts: campaignAlertsCreated,
+      alert_history: alertHistoryCreated,
+      is_premium: isPremium,
+    };
+
     await admin.from("audit_log").insert({
       user_id: user.id,
       user_name: user.email || "super_admin",
       action: "DEMO_DATA_GENERATED",
       module: "super_admin",
       company_id: companyId,
-      details: {
-        target_company_id: companyId,
-        acuerdos: acuerdosCreados!.length,
-        pagos: pagosPayload.length,
-        entregables: entregablesCreados!.length,
-        kpis: kpisPayload.length,
-        campaign_metrics: campaignMetricsCreated,
-      },
+      details: { target_company_id: companyId, ...summary },
     });
 
     return new Response(
-      JSON.stringify({
-        success: true,
-        summary: {
-          acuerdos: acuerdosCreados!.length,
-          pagos: pagosPayload.length,
-          entregables: entregablesCreados!.length,
-          kpis: kpisPayload.length,
-          campaign_metrics: campaignMetricsCreated,
-        },
-      }),
+      JSON.stringify({ success: true, summary }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   } catch (err: any) {
