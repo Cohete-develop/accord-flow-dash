@@ -61,6 +61,12 @@ Deno.serve(async (req) => {
     await admin.from("oauth_states").delete().eq("id", stateRow.id);
 
     // 2. Intercambiar code por tokens
+    console.log("OAuth token exchange config:", {
+      redirect_uri: redirectUri,
+      has_client_id: !!clientId,
+      has_client_secret: !!clientSecret,
+      code_length: code?.length,
+    });
     const tokenResp = await fetch("https://oauth2.googleapis.com/token", {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -72,9 +78,30 @@ Deno.serve(async (req) => {
         grant_type: "authorization_code",
       }),
     });
-    const tokenJson = await tokenResp.json();
+    const tokenResponseText = await tokenResp.text();
     if (!tokenResp.ok) {
-      return err("TOKEN_EXCHANGE_FAILED", tokenJson?.error_description || tokenJson?.error || "Error al obtener tokens", 400);
+      console.error("Google token endpoint error:", {
+        status: tokenResp.status,
+        statusText: tokenResp.statusText,
+        body: tokenResponseText.substring(0, 500),
+        redirect_uri_used: redirectUri,
+        client_id_used: clientId ? clientId.substring(0, 20) + "..." : null,
+      });
+      return err(
+        "TOKEN_EXCHANGE_FAILED",
+        `Google token exchange failed: ${tokenResp.status} - ${tokenResponseText.substring(0, 200)}`,
+        400,
+      );
+    }
+    let tokenJson: any;
+    try {
+      tokenJson = JSON.parse(tokenResponseText);
+    } catch (e) {
+      console.error("Failed to parse Google response as JSON:", {
+        responseText: tokenResponseText.substring(0, 500),
+        error: (e as Error).message,
+      });
+      return err("TOKEN_EXCHANGE_FAILED", "Invalid JSON from Google token endpoint", 400);
     }
     const accessToken = tokenJson.access_token as string;
     const refreshToken = tokenJson.refresh_token as string | undefined;
