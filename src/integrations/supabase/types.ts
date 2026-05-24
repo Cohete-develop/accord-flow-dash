@@ -1336,6 +1336,10 @@ export type Database = {
         Args: { _acuerdo_id: string; _new_entregables: Json; _new_pagos: Json }
         Returns: Json
       }
+      create_vault_secret: {
+        Args: { p_name: string; p_secret: string }
+        Returns: string
+      }
       end_impersonation: { Args: never; Returns: undefined }
       get_active_impersonation: { Args: { _user_id: string }; Returns: string }
       get_campaign_roas_ranking: {
