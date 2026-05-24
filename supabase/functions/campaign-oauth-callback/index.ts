@@ -118,9 +118,22 @@ Deno.serve(async (req) => {
         "developer-token": developerToken,
       },
     });
-    const customersJson = await customersResp.json();
+    const customersText = await customersResp.text();
     if (!customersResp.ok) {
-      return err("LIST_CUSTOMERS_FAILED", customersJson?.error?.message || "No se pudo listar cuentas de Google Ads", 400);
+      console.error("Google listAccessibleCustomers error:", {
+        status: customersResp.status,
+        statusText: customersResp.statusText,
+        body: customersText.substring(0, 500),
+        redirect_uri_used: redirectUri,
+      });
+      throw new Error(customersText.substring(0, 200));
+    }
+    let customersJson: any;
+    try {
+      customersJson = JSON.parse(customersText);
+    } catch (e) {
+      console.error("Failed to parse Google customers response as JSON:", customersText);
+      throw new Error("Invalid JSON from Google listAccessibleCustomers");
     }
     const resourceNames: string[] = customersJson.resourceNames || [];
     if (resourceNames.length === 0) {
