@@ -156,10 +156,10 @@ Deno.serve(async (req) => {
     const vaultName = `ad_conn_google_ads_${stateRow.company_id}_${accountId}_${crypto.randomUUID()}`;
     let vaultId: string | null = null;
     try {
-      const { data: vaultRes, error: vaultErr } = await admin.rpc("vault.create_secret" as any, {
-        secret: vaultPayload,
-        name: vaultName,
-      } as any);
+      const { data: vaultRes, error: vaultErr } = await admin.rpc("create_vault_secret", {
+        p_name: vaultName,
+        p_secret: vaultPayload,
+      });
       if (vaultErr) throw vaultErr;
       vaultId = (vaultRes as any) ?? null;
     } catch (vaultExc) {
