@@ -111,7 +111,7 @@ Deno.serve(async (req) => {
     }
 
     // 3. Listar cuentas accesibles
-    const customersResp = await fetch("https://googleads.googleapis.com/v17/customers:listAccessibleCustomers", {
+    const customersResp = await fetch("https://googleads.googleapis.com/v24/customers:listAccessibleCustomers", {
       method: "GET",
       headers: {
         "Authorization": `Bearer ${accessToken}`,
