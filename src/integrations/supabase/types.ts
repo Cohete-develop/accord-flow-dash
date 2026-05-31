@@ -1398,6 +1398,7 @@ export type Database = {
       }
       get_user_company_id: { Args: { _user_id: string }; Returns: string }
       get_user_email_domain: { Args: never; Returns: string }
+      get_vault_secret: { Args: { _secret_id: string }; Returns: string }
       has_premium_plan: { Args: { _company_id: string }; Returns: boolean }
       has_role: {
         Args: {
@@ -1416,6 +1417,10 @@ export type Database = {
       start_impersonation: {
         Args: { _ip?: string; _target_company_id: string; _ua?: string }
         Returns: string
+      }
+      update_vault_secret: {
+        Args: { _new_secret: string; _secret_id: string }
+        Returns: undefined
       }
     }
     Enums: {
