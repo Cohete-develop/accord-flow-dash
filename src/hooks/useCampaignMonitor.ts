@@ -382,7 +382,6 @@ export function useDisconnectPlatform() {
  *   refresca la lista de conexiones para reflejar el resultado del callback.
  */
 export function useGoogleAdsOAuth() {
-  const qc = useQueryClient();
   const [isLaunching, setIsLaunching] = useState(false);
 
   const start = async () => {
@@ -395,32 +394,11 @@ export function useGoogleAdsOAuth() {
       const url = (data as any)?.url;
       if (!url) throw new Error("No se recibió la URL de autorización");
 
-      const popup = window.open(url, "google_ads_oauth", "width=600,height=700");
-      if (!popup) {
-        toast.error("El navegador bloqueó la ventana emergente. Permite popups e intenta de nuevo.");
-        return;
-      }
-
-      const refresh = () => {
-        qc.invalidateQueries({ queryKey: ["ad_connections"] });
-        qc.invalidateQueries({ queryKey: ["campaigns_sync"] });
-      };
-
-      // Detectar cierre del popup mediante polling
-      const interval = window.setInterval(() => {
-        if (popup.closed) {
-          window.clearInterval(interval);
-          window.removeEventListener("focus", onFocus);
-          refresh();
-        }
-      }, 800);
-
-      // Refrescar también cuando la pestaña principal recupera el foco
-      const onFocus = () => refresh();
-      window.addEventListener("focus", onFocus);
+      // Redirigir en la MISMA pestaña — el callback /campaign-monitor/oauth/callback
+      // procesa el code y devuelve al usuario a /campaign-monitor.
+      window.location.href = url;
     } catch (e: any) {
       toast.error(e?.message || "No se pudo iniciar la conexión con Google Ads");
-    } finally {
       setIsLaunching(false);
     }
   };
