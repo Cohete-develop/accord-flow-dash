@@ -220,7 +220,7 @@ Deno.serve(async (req) => {
 
       // (c) Listar campañas
       const campRes = await callGoogle(
-        "SELECT campaign.id, campaign.name, campaign.status, campaign.start_date, campaign.end_date, campaign_budget.amount_micros FROM campaign WHERE campaign.status != 'REMOVED'",
+        "SELECT campaign.id, campaign.name, campaign.status, campaign_budget.amount_micros FROM campaign WHERE campaign.status != 'REMOVED'",
       );
       if ("pendingApproval" in campRes) {
         return json({
@@ -255,8 +255,6 @@ Deno.serve(async (req) => {
             campaign_name: row.campaign?.name ?? "",
             status: mapGoogleStatus(row.campaign?.status),
             daily_budget: dailyBudgetMicros ? Number(dailyBudgetMicros) / 1_000_000 : 0,
-            start_date: row.campaign?.startDate || null,
-            end_date: row.campaign?.endDate || null,
             currency: "USD",
           };
           const { data: upserted, error: upErr } = await admin
