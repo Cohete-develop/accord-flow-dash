@@ -416,17 +416,17 @@ export type Database = {
           conversion_value: number
           conversions: number
           cost: number
-          cpa: number
-          cpc: number
+          cpa: number | null
+          cpc: number | null
           created_at: string
-          ctr: number
+          ctr: number | null
           date: string
           hour: number | null
           id: string
           impressions: number
           is_demo_data: boolean
           platform_data: Json
-          roas: number
+          roas: number | null
         }
         Insert: {
           campaign_sync_id: string
@@ -435,17 +435,17 @@ export type Database = {
           conversion_value?: number
           conversions?: number
           cost?: number
-          cpa?: number
-          cpc?: number
+          cpa?: number | null
+          cpc?: number | null
           created_at?: string
-          ctr?: number
+          ctr?: number | null
           date: string
           hour?: number | null
           id?: string
           impressions?: number
           is_demo_data?: boolean
           platform_data?: Json
-          roas?: number
+          roas?: number | null
         }
         Update: {
           campaign_sync_id?: string
@@ -454,17 +454,17 @@ export type Database = {
           conversion_value?: number
           conversions?: number
           cost?: number
-          cpa?: number
-          cpc?: number
+          cpa?: number | null
+          cpc?: number | null
           created_at?: string
-          ctr?: number
+          ctr?: number | null
           date?: string
           hour?: number | null
           id?: string
           impressions?: number
           is_demo_data?: boolean
           platform_data?: Json
-          roas?: number
+          roas?: number | null
         }
         Relationships: [
           {
