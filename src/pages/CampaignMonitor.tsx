@@ -20,6 +20,7 @@ import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianG
 import { Tooltip as UITooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Info } from "lucide-react";
 import { SpendByPlatformCard } from "@/components/campaign-monitor/SpendByPlatformCard";
+import { ManualImportDialog } from "@/components/campaign-monitor/ManualImportDialog";
 import { PlatformComparisonCard } from "@/components/campaign-monitor/PlatformComparisonCard";
 import { TopBottomCampaignsCard } from "@/components/campaign-monitor/TopBottomCampaignsCard";
 import { PeriodComparisonCard } from "@/components/campaign-monitor/PeriodComparisonCard";
@@ -706,6 +707,7 @@ function ConexionesTab() {
   const googleOAuth = useGoogleAdsOAuth();
   const disconnect = useDisconnectPlatform();
   const sync = useSyncCampaigns();
+  const [importPlatform, setImportPlatform] = useState<Platform | null>(null);
 
   const platforms: Platform[] = ["google_ads", "meta_ads", "tiktok_ads", "linkedin_ads"];
 
@@ -721,11 +723,16 @@ function ConexionesTab() {
                 <CardTitle className="flex items-center gap-2">
                   <Plug className="h-5 w-5" /> {PLATFORM_LABELS[p]}
                 </CardTitle>
-                {conn ? (
-                  <Badge variant={conn.status === "active" ? "default" : "destructive"}>{conn.status}</Badge>
-                ) : (
-                  <Badge variant="outline">Desconectada</Badge>
-                )}
+                <div className="flex items-center gap-2">
+                  {conn ? (
+                    <Badge variant={conn.status === "active" ? "default" : "destructive"}>{conn.status}</Badge>
+                  ) : (
+                    <Badge variant="outline">Desconectada</Badge>
+                  )}
+                  <Button size="sm" variant="outline" onClick={() => setImportPlatform(p)}>
+                    Importar métricas
+                  </Button>
+                </div>
               </div>
             </CardHeader>
             <CardContent className="space-y-3">
@@ -771,6 +778,13 @@ function ConexionesTab() {
         );
       })}
       </div>
+      {importPlatform && (
+        <ManualImportDialog
+          open={!!importPlatform}
+          onOpenChange={(v) => { if (!v) setImportPlatform(null); }}
+          platform={importPlatform}
+        />
+      )}
     </TooltipProvider>
   );
 }
