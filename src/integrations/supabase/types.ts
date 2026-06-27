@@ -420,6 +420,7 @@ export type Database = {
           cpc: number | null
           created_at: string
           ctr: number | null
+          data_source: string
           date: string
           hour: number | null
           id: string
@@ -439,6 +440,7 @@ export type Database = {
           cpc?: number | null
           created_at?: string
           ctr?: number | null
+          data_source?: string
           date: string
           hour?: number | null
           id?: string
@@ -458,6 +460,7 @@ export type Database = {
           cpc?: number | null
           created_at?: string
           ctr?: number | null
+          data_source?: string
           date?: string
           hour?: number | null
           id?: string
@@ -491,6 +494,7 @@ export type Database = {
           created_at: string
           currency: string
           daily_budget: number
+          data_source: string
           end_date: string | null
           external_campaign_id: string
           id: string
@@ -509,6 +513,7 @@ export type Database = {
           created_at?: string
           currency?: string
           daily_budget?: number
+          data_source?: string
           end_date?: string | null
           external_campaign_id: string
           id?: string
@@ -527,6 +532,7 @@ export type Database = {
           created_at?: string
           currency?: string
           daily_budget?: number
+          data_source?: string
           end_date?: string | null
           external_campaign_id?: string
           id?: string
@@ -1406,6 +1412,15 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      import_campaign_metrics: {
+        Args: {
+          _period_end: string
+          _period_start: string
+          _platform: string
+          _rows: Json
+        }
+        Returns: Json
       }
       is_blocked_domain: { Args: { _domain: string }; Returns: boolean }
       is_platform_domain: { Args: { _domain: string }; Returns: boolean }
