@@ -22,7 +22,6 @@ const PLATFORM_LABELS: Record<Platform, string> = {
 };
 
 type NumFmt = "es" | "us" | "plain";
-type PctFmt = "percent" | "decimal";
 type DateFmt = "dmy" | "mdy" | "iso";
 
 type Row = {
@@ -78,6 +77,10 @@ function parseDate(raw: string, fmt: DateFmt): string | null {
     if (y < 100) y += 2000;
   }
   if (m < 1 || m > 12 || d < 1 || d > 31) return null;
+  // Validar días reales por mes (incluye bisiestos). new Date "corrige" fechas
+  // inválidas (Feb 30 -> Mar 2), así que comparamos componentes.
+  const dt = new Date(y, m - 1, d);
+  if (dt.getFullYear() !== y || dt.getMonth() !== m - 1 || dt.getDate() !== d) return null;
   const iso = `${y.toString().padStart(4, "0")}-${m.toString().padStart(2, "0")}-${d.toString().padStart(2, "0")}`;
   return iso;
 }
@@ -102,11 +105,16 @@ export function ManualImportDialog({
   const qc = useQueryClient();
   const [step, setStep] = useState(1);
 
-  // Step 1
-  const today = new Date().toISOString().slice(0, 10);
-  const thirtyAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
-  const [periodStart, setPeriodStart] = useState(thirtyAgo);
-  const [periodEnd, setPeriodEnd] = useState(today);
+  // Step 1 — recalculamos defaults en cada reset() para evitar fechas viejas
+  // si el diálogo estuvo montado desde antes de medianoche.
+  const computeDefaults = () => {
+    const today = new Date().toISOString().slice(0, 10);
+    const thirtyAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    return { today, thirtyAgo };
+  };
+  const initialDefaults = computeDefaults();
+  const [periodStart, setPeriodStart] = useState(initialDefaults.thirtyAgo);
+  const [periodEnd, setPeriodEnd] = useState(initialDefaults.today);
   const [currency, setCurrency] = useState("COP");
 
   // Step 2
@@ -114,19 +122,19 @@ export function ManualImportDialog({
 
   // Step 3
   const [numFmt, setNumFmt] = useState<NumFmt | "">("");
-  const [pctFmt, setPctFmt] = useState<PctFmt | "">("");
   const [dateFmt, setDateFmt] = useState<DateFmt | "">("");
 
   // Submission
   const [submitting, setSubmitting] = useState(false);
 
   const reset = () => {
+    const { today, thirtyAgo } = computeDefaults();
     setStep(1);
     setPeriodStart(thirtyAgo);
     setPeriodEnd(today);
     setCurrency("COP");
     setRows(Array.from({ length: 30 }, emptyRow));
-    setNumFmt(""); setPctFmt(""); setDateFmt("");
+    setNumFmt(""); setDateFmt("");
     setSubmitting(false);
   };
 
@@ -185,30 +193,56 @@ export function ManualImportDialog({
     return false;
   };
 
-  // Build interpreted payload
+  // Build interpreted payload — alineado 1:1 con validCandidates.
+  type InterpretedEntry =
+    | { parseStatus: "ok"; row: any; errors: [] }
+    | { parseStatus: "invalid"; row: null; errors: string[] };
   const interpreted = useMemo(() => {
-    if (!numFmt) return { rows: [] as any[], invalid: 0 };
-    const out: any[] = [];
+    const entries: InterpretedEntry[] = [];
+    const validRows: any[] = [];
+    if (!numFmt) {
+      for (let i = 0; i < validCandidates.length; i++) {
+        entries.push({ parseStatus: "invalid", row: null, errors: ["Formato numérico no declarado"] });
+      }
+      return { entries, validRows, invalid: validCandidates.length };
+    }
     let invalid = 0;
     for (const r of validCandidates) {
+      const errors: string[] = [];
       const impressions = parseNumber(r.impressions, numFmt);
       const clicks = parseNumber(r.clicks, numFmt);
       const cost = parseNumber(r.cost, numFmt);
-      if (!r.campaign_name.trim() || impressions === null || clicks === null || cost === null) {
-        invalid++; continue;
-      }
+      if (!r.campaign_name.trim()) errors.push("Campaña vacía");
+      if (impressions === null) errors.push("impressions inválido");
+      if (clicks === null) errors.push("clicks inválido");
+      if (cost === null) errors.push("cost inválido");
+
       let dateIso: string | null = null;
       if (r.date.trim()) {
-        if (!dateFmt) { invalid++; continue; }
-        dateIso = parseDate(r.date, dateFmt);
-        if (!dateIso) { invalid++; continue; }
+        if (!dateFmt) {
+          errors.push("Formato de fecha no declarado");
+        } else {
+          dateIso = parseDate(r.date, dateFmt);
+          if (!dateIso) errors.push("Fecha inválida");
+        }
       } else {
         dateIso = periodEnd;
       }
       const conv = r.conversions.trim() ? parseNumber(r.conversions, numFmt) : 0;
       const convVal = r.conversion_value.trim() ? parseNumber(r.conversion_value, numFmt) : 0;
-      if (conv === null || convVal === null) { invalid++; continue; }
-      out.push({
+      if (conv === null) errors.push("conversions inválido");
+      if (convVal === null) errors.push("conversion_value inválido");
+
+      if (
+        errors.length > 0 ||
+        impressions === null || clicks === null || cost === null ||
+        conv === null || convVal === null || !dateIso
+      ) {
+        invalid++;
+        entries.push({ parseStatus: "invalid", row: null, errors });
+        continue;
+      }
+      const row = {
         campaign_name: r.campaign_name.trim(),
         date: dateIso,
         impressions: Math.max(0, Math.round(impressions)),
@@ -218,25 +252,27 @@ export function ManualImportDialog({
         conversion_value: convVal,
         currency,
         familia_producto: r.familia_producto.trim() || null,
-      });
+      };
+      validRows.push(row);
+      entries.push({ parseStatus: "ok", row, errors: [] });
     }
-    return { rows: out, invalid };
+    return { entries, validRows, invalid };
   }, [validCandidates, numFmt, dateFmt, periodEnd, currency]);
 
   const uniqueCampaigns = useMemo(() => {
-    const s = new Set(interpreted.rows.map((r) => r.campaign_name.toLowerCase()));
+    const s = new Set(interpreted.validRows.map((r) => r.campaign_name.toLowerCase()));
     return s.size;
-  }, [interpreted.rows]);
+  }, [interpreted.validRows]);
 
   // Step navigation guards
   const canNextFromStep1 = periodStart && periodEnd && periodStart <= periodEnd;
   const canNextFromStep2 = validCandidates.length > 0;
   const step3NeedsDate = hasAnyDate;
-  const canNextFromStep3 = !!numFmt && !!pctFmt && (!step3NeedsDate || !!dateFmt);
+  const canNextFromStep3 = !!numFmt && (!step3NeedsDate || !!dateFmt);
 
   // Submit
   const handleSubmit = async () => {
-    if (interpreted.rows.length === 0) {
+    if (interpreted.validRows.length === 0) {
       toast.error("No hay filas válidas para importar");
       return;
     }
@@ -247,8 +283,7 @@ export function ManualImportDialog({
           platform,
           period_start: periodStart,
           period_end: periodEnd,
-          currency,
-          rows: interpreted.rows,
+          rows: interpreted.validRows,
         },
       });
       if (error) throw new Error(error.message || "Error al invocar la función");
@@ -406,7 +441,7 @@ export function ManualImportDialog({
           )}
 
           {step === 3 && (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4">
               <Card>
                 <CardHeader><CardTitle className="text-sm">¿Cómo vienen los números en tu archivo?</CardTitle></CardHeader>
                 <CardContent>
@@ -418,25 +453,6 @@ export function ManualImportDialog({
                     ].map((o) => (
                       <label key={o.v} className="flex items-start gap-2 py-1.5 cursor-pointer">
                         <RadioGroupItem value={o.v} id={`num-${o.v}`} />
-                        <div className="flex-1">
-                          <div className="font-mono text-sm">{o.label}</div>
-                          <div className="text-xs text-muted-foreground">{o.hint}</div>
-                        </div>
-                      </label>
-                    ))}
-                  </RadioGroup>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader><CardTitle className="text-sm">¿Las columnas de porcentaje vienen como?</CardTitle></CardHeader>
-                <CardContent>
-                  <RadioGroup value={pctFmt} onValueChange={(v) => setPctFmt(v as PctFmt)}>
-                    {[
-                      { v: "percent", label: "51.77", hint: "Representa 51.77%" },
-                      { v: "decimal", label: "0.5177", hint: "Representa 51.77%" },
-                    ].map((o) => (
-                      <label key={o.v} className="flex items-start gap-2 py-1.5 cursor-pointer">
-                        <RadioGroupItem value={o.v} id={`pct-${o.v}`} />
                         <div className="flex-1">
                           <div className="font-mono text-sm">{o.label}</div>
                           <div className="text-xs text-muted-foreground">{o.hint}</div>
@@ -493,14 +509,26 @@ export function ManualImportDialog({
                       </thead>
                       <tbody>
                         {validCandidates.slice(0, 5).map((r, i) => {
-                          const interp = interpreted.rows[i];
+                          const entry = interpreted.entries[i];
+                          const isInvalid = !entry || entry.parseStatus === "invalid";
+                          const errMsg = isInvalid
+                            ? `⚠️ Error de parse: ${entry?.errors.join("; ") || "desconocido"}`
+                            : "";
                           return (
-                            <tr key={i} className="border-t">
-                              <td className="px-2 py-1">{r.campaign_name}</td>
+                            <tr key={i} className={`border-t ${isInvalid ? "bg-destructive/5" : ""}`}>
+                              <td className="px-2 py-1">{r.campaign_name || <span className="text-muted-foreground italic">(vacío)</span>}</td>
                               <td className="px-2 py-1 font-mono">{r.cost}</td>
-                              <td className="px-2 py-1 font-mono">{interp ? `${interp.cost.toLocaleString("en-US")} ${currency}` : "—"}</td>
-                              <td className="px-2 py-1 font-mono">{r.date || "(vacío)"}</td>
-                              <td className="px-2 py-1 font-mono">{interp?.date || "—"}</td>
+                              <td className="px-2 py-1 font-mono" colSpan={isInvalid ? 3 : 1}>
+                                {isInvalid
+                                  ? <span className="text-destructive">{errMsg}</span>
+                                  : `${entry.row.cost.toLocaleString("en-US")} ${currency}`}
+                              </td>
+                              {!isInvalid && (
+                                <>
+                                  <td className="px-2 py-1 font-mono">{r.date || "(vacío)"}</td>
+                                  <td className="px-2 py-1 font-mono">{entry.row.date}</td>
+                                </>
+                              )}
                             </tr>
                           );
                         })}
@@ -517,7 +545,7 @@ export function ManualImportDialog({
                   <p><span className="text-muted-foreground">Período:</span> {periodStart} al {periodEnd}</p>
                   <p><span className="text-muted-foreground">Moneda:</span> {currency}</p>
                   <p><span className="text-muted-foreground">Campañas únicas:</span> {uniqueCampaigns}</p>
-                  <p><span className="text-muted-foreground">Filas a importar:</span> {interpreted.rows.length}</p>
+                  <p><span className="text-muted-foreground">Filas a importar:</span> {interpreted.validRows.length}</p>
                   <p><span className="text-muted-foreground">Filas descartadas:</span> {totals.length + interpreted.invalid} ({totals.length} totales, {interpreted.invalid} inválidas)</p>
                 </CardContent>
               </Card>
@@ -560,7 +588,7 @@ export function ManualImportDialog({
                 Siguiente
               </Button>
             ) : (
-              <Button variant="gradient" onClick={handleSubmit} disabled={submitting || interpreted.rows.length === 0}>
+              <Button variant="gradient" onClick={handleSubmit} disabled={submitting || interpreted.validRows.length === 0}>
                 {submitting ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Importando...</> : "Confirmar e Importar"}
               </Button>
             )}
