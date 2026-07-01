@@ -42,6 +42,21 @@ const fmtMoney = (n: number) => `$${(n || 0).toLocaleString("en-US", { maximumFr
 const fmtNum = (n: number) => (n || 0).toLocaleString("en-US");
 const fmtPct = (n: number) => `${(n || 0).toFixed(2)}%`;
 
+const CM_RANGE_KEY = "influxpert_cm_range";
+function getInitialRange(fallback = "90") {
+  try {
+    const v = localStorage.getItem(CM_RANGE_KEY);
+    return v || fallback;
+  } catch {
+    return fallback;
+  }
+}
+function persistRange(v: string) {
+  try {
+    localStorage.setItem(CM_RANGE_KEY, v);
+  } catch {}
+}
+
 // KPI definitions + dynamic interpretation based on current value
 const KPI_INFO: Record<string, { desc: string; interpret: (v: number) => { text: string; tone: "good" | "warn" | "bad" | "neutral" } }> = {
   Gasto: {
