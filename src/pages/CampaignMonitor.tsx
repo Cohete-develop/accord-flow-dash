@@ -248,14 +248,20 @@ function ResumenTab({ range, setRange }: { range: string; setRange: (v: string) 
 
       {!analytics.loading && analytics.hasData && (
         <>
-          <NorthStarHero
-            score={analytics.northStar}
-            daily={analytics.daily}
-            revenueDelta={analytics.deltas.revenue}
-            range={analytics.range}
-          />
-          <SmartNarrative analytics={analytics} />
-          <KpiGridWithSparklines analytics={analytics} />
+          <div className="animate-fade-in" style={{ animationDelay: "0ms", animationFillMode: "backwards" }}>
+            <NorthStarHero
+              score={analytics.northStar}
+              daily={analytics.daily}
+              revenueDelta={analytics.deltas.revenue}
+              range={analytics.range}
+            />
+          </div>
+          <div className="animate-fade-in" style={{ animationDelay: "80ms", animationFillMode: "backwards" }}>
+            <SmartNarrative analytics={analytics} />
+          </div>
+          <div className="animate-fade-in" style={{ animationDelay: "160ms", animationFillMode: "backwards" }}>
+            <KpiGridWithSparklines analytics={analytics} />
+          </div>
         </>
       )}
       {!analytics.loading && !analytics.hasData && (
@@ -294,7 +300,7 @@ function ResumenTab({ range, setRange }: { range: string; setRange: (v: string) 
       <PeriodComparisonCard metrics={metrics} days={parseInt(range, 10)} />
 
       {!analytics.loading && analytics.hasData && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 animate-fade-in" style={{ animationDelay: "240ms", animationFillMode: "backwards" }}>
           <ConversionFunnelDeluxe totals={analytics.totals} />
           <RoasHeatmap daily={analytics.daily} />
         </div>
@@ -302,8 +308,12 @@ function ResumenTab({ range, setRange }: { range: string; setRange: (v: string) 
 
       {!analytics.loading && analytics.hasData && (
         <>
-          <MomentumChart daily={analytics.daily} />
-          <PlatformDuel platforms={analytics.platforms} />
+          <div className="animate-fade-in" style={{ animationDelay: "320ms", animationFillMode: "backwards" }}>
+            <MomentumChart daily={analytics.daily} />
+          </div>
+          <div className="animate-fade-in" style={{ animationDelay: "400ms", animationFillMode: "backwards" }}>
+            <PlatformDuel platforms={analytics.platforms} />
+          </div>
         </>
       )}
 
