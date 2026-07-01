@@ -149,7 +149,8 @@ function UpgradeScreen({ plan }: { plan: string }) {
 }
 
 function ResumenTab() {
-  const [range, setRange] = useState("30");
+  const [range, setRangeState] = useState(getInitialRange);
+  const setRange = (v: string) => { setRangeState(v); persistRange(v); };
   const { data: campaigns = [], isLoading: loadingCampaigns } = useCampaigns();
   const { data: metrics = [], isLoading: loadingMetrics } = useCampaignMetrics(undefined, Number(range));
   const { data: history = [], isLoading: loadingHistory } = useAlertHistory();
