@@ -30,6 +30,9 @@ import { EfficiencyChart } from "@/components/campaign-monitor/EfficiencyChart";
 import { CpaEfficiencyChart } from "@/components/campaign-monitor/CpaEfficiencyChart";
 import { HourlyHeatmap } from "@/components/campaign-monitor/HourlyHeatmap";
 import { AutoInsights } from "@/components/campaign-monitor/AutoInsights";
+import { useResumenAnalytics } from "@/hooks/useResumenAnalytics";
+import { NorthStarHero } from "@/components/campaign-monitor/NorthStarHero";
+import { KpiGridWithSparklines } from "@/components/campaign-monitor/KpiGridWithSparklines";
 
 const PLATFORM_LABELS: Record<Platform, string> = {
   google_ads: "Google Ads",
@@ -153,6 +156,7 @@ function ResumenTab({ range, setRange }: { range: string; setRange: (v: string) 
   const { data: metrics = [], isLoading: loadingMetrics } = useCampaignMetrics(undefined, Number(range));
   const { data: history = [], isLoading: loadingHistory } = useAlertHistory();
   const isLoading = loadingCampaigns || loadingMetrics || loadingHistory;
+  const analytics = useResumenAnalytics(Number(range));
 
   const filtered = useMemo(() => {
     const days = parseInt(range, 10);
@@ -175,8 +179,6 @@ function ResumenTab({ range, setRange }: { range: string; setRange: (v: string) 
     );
   }, [filtered]);
 
-  const ctr = totals.impressions > 0 ? (totals.clicks / totals.impressions) * 100 : 0;
-  const roas = totals.cost > 0 ? totals.conversion_value / totals.cost : 0;
   const unack = history.filter((h) => !h.acknowledged_at).length;
 
   // Trend: cost vs conversions per day
@@ -239,16 +241,29 @@ function ResumenTab({ range, setRange }: { range: string; setRange: (v: string) 
         )}
       </div>
 
-      <TooltipProvider delayDuration={150}>
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-          <SummaryCard label="Gasto" value={fmtMoney(totals.cost)} raw={totals.cost} />
-          <SummaryCard label="Impresiones" value={fmtNum(totals.impressions)} raw={totals.impressions} />
-          <SummaryCard label="Clicks" value={fmtNum(totals.clicks)} raw={totals.clicks} />
-          <SummaryCard label="CTR" value={fmtPct(ctr)} raw={ctr} />
-          <SummaryCard label="Conversiones" value={fmtNum(totals.conversions)} raw={totals.conversions} />
-          <SummaryCard label="ROAS" value={`${roas.toFixed(2)}x`} raw={roas} />
-        </div>
-      </TooltipProvider>
+      {!analytics.loading && analytics.hasData && (
+        <>
+          <NorthStarHero
+            score={analytics.northStar}
+            daily={analytics.daily}
+            revenueDelta={analytics.deltas.revenue}
+            range={analytics.range}
+          />
+          <KpiGridWithSparklines analytics={analytics} />
+        </>
+      )}
+      {!analytics.loading && !analytics.hasData && (
+        <TooltipProvider delayDuration={150}>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+            <SummaryCard label="Gasto" value={fmtMoney(totals.cost)} raw={totals.cost} />
+            <SummaryCard label="Impresiones" value={fmtNum(totals.impressions)} raw={totals.impressions} />
+            <SummaryCard label="Clicks" value={fmtNum(totals.clicks)} raw={totals.clicks} />
+            <SummaryCard label="CTR" value={fmtPct(totals.impressions > 0 ? (totals.clicks / totals.impressions) * 100 : 0)} raw={totals.impressions > 0 ? (totals.clicks / totals.impressions) * 100 : 0} />
+            <SummaryCard label="Conversiones" value={fmtNum(totals.conversions)} raw={totals.conversions} />
+            <SummaryCard label="ROAS" value={`${(totals.cost > 0 ? totals.conversion_value / totals.cost : 0).toFixed(2)}x`} raw={totals.cost > 0 ? totals.conversion_value / totals.cost : 0} />
+          </div>
+        </TooltipProvider>
+      )}
 
       <Card>
         <CardHeader>
