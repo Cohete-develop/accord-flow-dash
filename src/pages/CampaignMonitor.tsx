@@ -843,9 +843,7 @@ export default function CampaignMonitorPage() {
   );
 }
 
-function AnalisisTab() {
-  const [range, setRangeState] = useState(getInitialRange);
-  const setRange = (v: string) => { setRangeState(v); persistRange(v); };
+function AnalisisTab({ range, setRange }: { range: string; setRange: (v: string) => void }) {
   const { data: campaigns = [], isLoading: loadingCampaigns } = useCampaigns();
   const { data: metrics = [], isLoading: loadingMetrics } = useCampaignMetrics(undefined, Number(range));
   const { data: keywords = [], isLoading: loadingKeywords } = useCampaignKeywords();
