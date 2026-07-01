@@ -13,7 +13,7 @@ export function CampaignMonitorWidget() {
   const { data: campaigns = [] } = useCampaigns();
   const { data: metrics = [] } = useCampaignMetrics(undefined, 1);
   const { data: history = [] } = useAlertHistory();
-  const { data: metrics30 = [] } = useCampaignMetrics(undefined, 30);
+  const { data: metrics30 = [] } = useCampaignMetrics(undefined, 180);
 
   const todayCost = metrics.reduce((s, m) => s + Number(m.cost), 0);
   const totalBudget = campaigns.reduce((s, c) => s + Number(c.daily_budget || 0), 0);
@@ -120,7 +120,7 @@ export function CampaignMonitorWidget() {
                 </TooltipTrigger>
                 <TooltipContent side="top" className="max-w-xs">
                   <p className="font-semibold mb-1">ROAS (Return on Ad Spend)</p>
-                  <p className="text-xs">Ingresos generados por cada $1 invertido. ROAS 3x = $3 de retorno por $1 gastado. Estas son las 3 campañas con mejor retorno en los últimos 30 días.</p>
+                  <p className="text-xs">Ingresos generados por cada $1 invertido. ROAS 3x = $3 de retorno por $1 gastado. Estas son las 3 campañas con mejor retorno en los últimos 6 meses.</p>
                 </TooltipContent>
               </Tooltip>
             </div>
