@@ -13,7 +13,7 @@ export function CampaignMonitorWidget() {
   const { data: campaigns = [] } = useCampaigns();
   const { data: metrics = [] } = useCampaignMetrics(undefined, 1);
   const { data: history = [] } = useAlertHistory();
-  const { data: metrics30 = [] } = useCampaignMetrics(undefined, 30);
+  const { data: metrics30 = [] } = useCampaignMetrics(undefined, 180);
 
   const todayCost = metrics.reduce((s, m) => s + Number(m.cost), 0);
   const totalBudget = campaigns.reduce((s, c) => s + Number(c.daily_budget || 0), 0);
