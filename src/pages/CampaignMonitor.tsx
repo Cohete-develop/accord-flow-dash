@@ -148,15 +148,7 @@ function UpgradeScreen({ plan }: { plan: string }) {
   );
 }
 
-function ResumenTab() {
-  return <ResumenTabInner />;
-}
-
-function ResumenTabInner({ range, setRange }: { range: string; setRange: (v: string) => void } = {} as any) {
-  // Fallback for standalone usage
-  const [localRange, setLocalRange] = useState(getInitialRange);
-  const r = range ?? localRange;
-  const sr = setRange ?? ((v: string) => { setLocalRange(v); persistRange(v); });
+function ResumenTab({ range, setRange }: { range: string; setRange: (v: string) => void }) {
   const { data: campaigns = [], isLoading: loadingCampaigns } = useCampaigns();
   const { data: metrics = [], isLoading: loadingMetrics } = useCampaignMetrics(undefined, Number(range));
   const { data: history = [], isLoading: loadingHistory } = useAlertHistory();
