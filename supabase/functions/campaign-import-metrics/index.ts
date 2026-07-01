@@ -38,6 +38,7 @@ Deno.serve(async (req) => {
     const periodStart = String(body.period_start || "");
     const periodEnd = String(body.period_end || "");
     const rows = body.rows;
+    const dryRun = body.dry_run === true;
 
     if (!VALID_PLATFORMS.includes(platform)) {
       return err("INVALID_PLATFORM", `platform debe ser uno de: ${VALID_PLATFORMS.join(", ")}`, 400);
@@ -84,6 +85,7 @@ Deno.serve(async (req) => {
         _period_start: periodStart,
         _period_end: periodEnd,
         _rows: rows,
+        _dry_run: dryRun,
       },
     );
     if (rpcErr) {
@@ -91,10 +93,16 @@ Deno.serve(async (req) => {
       return err("IMPORT_FAILED", rpcErr.message || "Error al importar", 500);
     }
 
+    // Dry run: return preview payload as-is without audit logging
+    if (dryRun) {
+      return json({ ok: true, ...(result as any) }, 200);
+    }
+
     const inserted = Number((result as any)?.inserted ?? 0);
     const updated = Number((result as any)?.updated ?? 0);
     const skipped = Number((result as any)?.skipped ?? 0);
     const campaignsTouched = Number((result as any)?.campaigns_touched ?? 0);
+    const rowsReceived = Number((result as any)?.rows_received ?? 0);
 
     // Audit log (fail-open)
     try {
@@ -128,6 +136,7 @@ Deno.serve(async (req) => {
       inserted,
       updated,
       skipped,
+      rows_received: rowsReceived,
       campaigns_touched: campaignsTouched,
     }, 200);
   } catch (e) {
