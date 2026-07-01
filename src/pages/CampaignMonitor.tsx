@@ -846,7 +846,8 @@ export default function CampaignMonitorPage() {
 }
 
 function AnalisisTab() {
-  const [range, setRange] = useState("30");
+  const [range, setRangeState] = useState(getInitialRange);
+  const setRange = (v: string) => { setRangeState(v); persistRange(v); };
   const { data: campaigns = [], isLoading: loadingCampaigns } = useCampaigns();
   const { data: metrics = [], isLoading: loadingMetrics } = useCampaignMetrics(undefined, Number(range));
   const { data: keywords = [], isLoading: loadingKeywords } = useCampaignKeywords();
