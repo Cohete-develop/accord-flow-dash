@@ -37,6 +37,7 @@ import { ConversionFunnelDeluxe } from "@/components/campaign-monitor/Conversion
 import { RoasHeatmap } from "@/components/campaign-monitor/RoasHeatmap";
 import { PlatformDuel } from "@/components/campaign-monitor/PlatformDuel";
 import { MomentumChart } from "@/components/campaign-monitor/MomentumChart";
+import { SmartNarrative } from "@/components/campaign-monitor/SmartNarrative";
 
 const PLATFORM_LABELS: Record<Platform, string> = {
   google_ads: "Google Ads",
@@ -253,6 +254,7 @@ function ResumenTab({ range, setRange }: { range: string; setRange: (v: string) 
             revenueDelta={analytics.deltas.revenue}
             range={analytics.range}
           />
+          <SmartNarrative analytics={analytics} />
           <KpiGridWithSparklines analytics={analytics} />
         </>
       )}
