@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -13,6 +13,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Info, AlertTriangle, Loader2, Plus } from "lucide-react";
 import type { Platform } from "@/hooks/useCampaignMonitor";
+import { fmtMoney, fmtNum } from "./utils";
 
 const PLATFORM_LABELS: Record<Platform, string> = {
   google_ads: "Google Ads",
@@ -127,6 +128,13 @@ export function ManualImportDialog({
   // Submission
   const [submitting, setSubmitting] = useState(false);
 
+  // Dry run (server-side aggregated preview)
+  const [dryRun, setDryRun] = useState<{ loading: boolean; data: any | null; error: string | null }>({
+    loading: false,
+    data: null,
+    error: null,
+  });
+
   const reset = () => {
     const { today, thirtyAgo } = computeDefaults();
     setStep(1);
@@ -136,6 +144,7 @@ export function ManualImportDialog({
     setRows(Array.from({ length: 30 }, emptyRow));
     setNumFmt(""); setDateFmt("");
     setSubmitting(false);
+    setDryRun({ loading: false, data: null, error: null });
   };
 
   const handleClose = (v: boolean) => {
@@ -264,6 +273,45 @@ export function ManualImportDialog({
     return s.size;
   }, [interpreted.validRows]);
 
+  // Fetch server-side aggregated preview when entering step 4.
+  useEffect(() => {
+    if (step !== 4) {
+      setDryRun({ loading: false, data: null, error: null });
+      return;
+    }
+    if (interpreted.validRows.length === 0) return;
+    let cancelled = false;
+    setDryRun({ loading: true, data: null, error: null });
+    (async () => {
+      try {
+        const { data, error } = await supabase.functions.invoke("campaign-import-metrics", {
+          body: {
+            platform,
+            period_start: periodStart,
+            period_end: periodEnd,
+            rows: interpreted.validRows,
+            dry_run: true,
+          },
+        });
+        if (cancelled) return;
+        if (error) {
+          setDryRun({ loading: false, data: null, error: error.message || "Error calculando preview" });
+          return;
+        }
+        const res = data as any;
+        if (!res?.ok) {
+          setDryRun({ loading: false, data: null, error: res?.error || "Error calculando preview" });
+          return;
+        }
+        setDryRun({ loading: false, data: res, error: null });
+      } catch (e: any) {
+        if (!cancelled) setDryRun({ loading: false, data: null, error: e?.message || "Error inesperado" });
+      }
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step]);
+
   // Step navigation guards
   const canNextFromStep1 = periodStart && periodEnd && periodStart <= periodEnd;
   const canNextFromStep2 = validCandidates.length > 0;
@@ -297,7 +345,7 @@ export function ManualImportDialog({
         return;
       }
       toast.success(
-        `Importación completada: ${res.inserted} nuevas, ${res.updated} actualizadas${res.skipped ? `, ${res.skipped} descartadas` : ""}`
+        `Importación completada: ${res.rows_received} filas → ${res.campaigns_touched} campañas (${res.inserted} nuevas, ${res.updated} actualizadas)`
       );
       qc.invalidateQueries({ queryKey: ["campaigns_sync"] });
       qc.invalidateQueries({ queryKey: ["campaign_metrics"] });
@@ -493,6 +541,68 @@ export function ManualImportDialog({
 
           {step === 4 && (
             <div className="space-y-4 pt-4">
+              <Card className="border-primary/40">
+                <CardHeader>
+                  <CardTitle className="text-sm">Totales previsualizados (calculados por el servidor)</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {dryRun.loading && (
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Loader2 className="h-4 w-4 animate-spin" /> Calculando totales…
+                    </div>
+                  )}
+                  {dryRun.error && (
+                    <Alert variant="destructive">
+                      <AlertTriangle className="h-4 w-4" />
+                      <AlertDescription>{dryRun.error}</AlertDescription>
+                    </Alert>
+                  )}
+                  {dryRun.data && (
+                    <>
+                      <div className="overflow-auto">
+                        <table className="w-full text-xs">
+                          <thead className="bg-muted/40">
+                            <tr>
+                              <th className="text-left px-2 py-1">Moneda</th>
+                              <th className="text-right px-2 py-1">Gasto</th>
+                              <th className="text-right px-2 py-1">Impresiones</th>
+                              <th className="text-right px-2 py-1">Clicks</th>
+                              <th className="text-right px-2 py-1">Conversiones</th>
+                              <th className="text-right px-2 py-1">Valor conv.</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {Array.isArray(dryRun.data.totals_by_currency) && dryRun.data.totals_by_currency.length > 0 ? (
+                              dryRun.data.totals_by_currency.map((t: any, i: number) => (
+                                <tr key={i} className="border-t">
+                                  <td className="px-2 py-1 font-semibold">{t.currency}</td>
+                                  <td className="px-2 py-1 text-right font-mono">{fmtMoney(Number(t.cost) || 0)}</td>
+                                  <td className="px-2 py-1 text-right font-mono">{fmtNum(Number(t.impressions) || 0)}</td>
+                                  <td className="px-2 py-1 text-right font-mono">{fmtNum(Number(t.clicks) || 0)}</td>
+                                  <td className="px-2 py-1 text-right font-mono">{fmtNum(Number(t.conversions) || 0)}</td>
+                                  <td className="px-2 py-1 text-right font-mono">{fmtMoney(Number(t.conversion_value) || 0)}</td>
+                                </tr>
+                              ))
+                            ) : (
+                              <tr><td colSpan={6} className="px-2 py-2 text-muted-foreground italic">Sin totales</td></tr>
+                            )}
+                          </tbody>
+                        </table>
+                      </div>
+                      <div className="text-xs text-muted-foreground space-y-0.5">
+                        <p>Campañas: <strong>{dryRun.data.campaigns_count ?? 0}</strong></p>
+                        <p>
+                          Filas recibidas: {dryRun.data.rows_received ?? 0} · válidas: {dryRun.data.rows_valid ?? 0} · descartadas: {dryRun.data.rows_skipped ?? 0}
+                        </p>
+                      </div>
+                      <p className="text-xs text-muted-foreground/80 italic">
+                        Compara estos totales con tu archivo original antes de importar. Estos son exactamente los valores que se guardarán.
+                      </p>
+                    </>
+                  )}
+                </CardContent>
+              </Card>
+
               <Card>
                 <CardHeader><CardTitle className="text-sm">Original vs Interpretado (primeras 5 filas)</CardTitle></CardHeader>
                 <CardContent>
@@ -588,7 +698,7 @@ export function ManualImportDialog({
                 Siguiente
               </Button>
             ) : (
-              <Button variant="gradient" onClick={handleSubmit} disabled={submitting || interpreted.validRows.length === 0}>
+              <Button variant="gradient" onClick={handleSubmit} disabled={submitting || interpreted.validRows.length === 0 || dryRun.loading}>
                 {submitting ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Importando...</> : "Confirmar e Importar"}
               </Button>
             )}
