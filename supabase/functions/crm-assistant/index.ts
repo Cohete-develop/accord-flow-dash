@@ -129,7 +129,7 @@ serve(async (req) => {
     let campaignsSummarySizeBytes = 0;
 
     // ---------- Fase 3: cruce influencers vs ads (siempre que haya pagos) ----
-    // Pro -> usa también totales de ads (mismas 30d).
+    // Pro -> usa también totales de ads (misma ventana de 90d).
     // Trial/Starter -> solo lado influencers, sin bloque de ads.
     let crossChannelBlock = "";
     let crossChannelInjected = false;
@@ -436,7 +436,7 @@ serve(async (req) => {
       );
 
       // Engagement total influencers del período = suma de interacciones de KPIs
-      // cuyo periodo cae en los últimos 30 días aproximados.
+      // cuyo periodo cae en la ventana actual (90 días aproximados).
       // KPIs.periodo es texto libre (formato YYYY-MM en este proyecto).
       // Usamos como heurística los KPIs creados/actualizados en la ventana.
       const periodMonth = startStr.slice(0, 7);
@@ -660,7 +660,7 @@ REGLAS CRÍTICAS DE MULTI-MONEDA Y CRUCE DE CANALES (LEER CON ATENCIÓN):
 EJEMPLOS DE PREGUNTAS CRUZADAS QUE PODÉS RESPONDER (usar la sección CRUCE INFLUENCERS vs ADS):
 - "¿Cuánto invertí este mes en influencers vs en Google Ads?" → Respondé con spend_by_channel_by_currency. Si hay varias monedas, mostrá ambas separadas.
 - "¿Qué familia de productos me rinde mejor combinando ambos canales?" → Usá by_familia_producto_by_currency, ordenada por total descendente. Mencioná el % sin clasificar de ads.
-- "¿Mi inversión digital total subió o bajó vs el mes pasado?" → Si la pregunta es sobre tendencia, usá period_comparison_vs_previous_30d del lado ads + comentá que el lado influencers no tiene comparativa de período previo (solo el actual).
+- "¿Mi inversión digital total subió o bajó vs el trimestre pasado?" → Si la pregunta es sobre tendencia, usá period_comparison_vs_previous_period del lado ads (compara los últimos 90 días vs los 90 días anteriores) + comentá que el lado influencers no tiene comparativa de período previo (solo el actual).
 
 FORMATO DE RESPUESTA (MUY IMPORTANTE — el chat es angosto, ~400px):
 - ❌ NUNCA uses tablas markdown con barras (|). Se ven rotas en el chat.
