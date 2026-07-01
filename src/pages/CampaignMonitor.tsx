@@ -33,6 +33,8 @@ import { AutoInsights } from "@/components/campaign-monitor/AutoInsights";
 import { useResumenAnalytics } from "@/hooks/useResumenAnalytics";
 import { NorthStarHero } from "@/components/campaign-monitor/NorthStarHero";
 import { KpiGridWithSparklines } from "@/components/campaign-monitor/KpiGridWithSparklines";
+import { ConversionFunnelDeluxe } from "@/components/campaign-monitor/ConversionFunnelDeluxe";
+import { RoasHeatmap } from "@/components/campaign-monitor/RoasHeatmap";
 
 const PLATFORM_LABELS: Record<Platform, string> = {
   google_ads: "Google Ads",
@@ -286,6 +288,13 @@ function ResumenTab({ range, setRange }: { range: string; setRange: (v: string) 
       </Card>
 
       <PeriodComparisonCard metrics={metrics} days={parseInt(range, 10)} />
+
+      {!analytics.loading && analytics.hasData && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <ConversionFunnelDeluxe totals={analytics.totals} />
+          <RoasHeatmap daily={analytics.daily} />
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <SpendByPlatformCard metrics={filtered} campaigns={campaigns} />
