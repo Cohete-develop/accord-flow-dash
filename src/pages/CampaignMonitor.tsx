@@ -35,6 +35,8 @@ import { NorthStarHero } from "@/components/campaign-monitor/NorthStarHero";
 import { KpiGridWithSparklines } from "@/components/campaign-monitor/KpiGridWithSparklines";
 import { ConversionFunnelDeluxe } from "@/components/campaign-monitor/ConversionFunnelDeluxe";
 import { RoasHeatmap } from "@/components/campaign-monitor/RoasHeatmap";
+import { PlatformDuel } from "@/components/campaign-monitor/PlatformDuel";
+import { MomentumChart } from "@/components/campaign-monitor/MomentumChart";
 
 const PLATFORM_LABELS: Record<Platform, string> = {
   google_ads: "Google Ads",
@@ -294,6 +296,13 @@ function ResumenTab({ range, setRange }: { range: string; setRange: (v: string) 
           <ConversionFunnelDeluxe totals={analytics.totals} />
           <RoasHeatmap daily={analytics.daily} />
         </div>
+      )}
+
+      {!analytics.loading && analytics.hasData && (
+        <>
+          <MomentumChart daily={analytics.daily} />
+          <PlatformDuel platforms={analytics.platforms} />
+        </>
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
