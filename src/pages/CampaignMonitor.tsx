@@ -135,9 +135,9 @@ function UpgradeScreen({ plan }: { plan: string }) {
 
 function ResumenTab() {
   const { data: campaigns = [], isLoading: loadingCampaigns } = useCampaigns();
-  const { data: metrics = [], isLoading: loadingMetrics } = useCampaignMetrics(undefined, 30);
+  const { data: metrics = [], isLoading: loadingMetrics } = useCampaignMetrics(undefined, Number(range));
   const { data: history = [], isLoading: loadingHistory } = useAlertHistory();
-  const [range, setRange] = useState("7");
+  const [range, setRange] = useState("30");
   const isLoading = loadingCampaigns || loadingMetrics || loadingHistory;
 
   const filtered = useMemo(() => {
@@ -211,6 +211,10 @@ function ResumenTab() {
               <SelectItem value="7">Últimos 7 días</SelectItem>
               <SelectItem value="14">Últimos 14 días</SelectItem>
               <SelectItem value="30">Últimos 30 días</SelectItem>
+              <SelectItem value="60">Últimos 60 días</SelectItem>
+              <SelectItem value="90">Últimos 90 días</SelectItem>
+              <SelectItem value="180">Últimos 6 meses</SelectItem>
+              <SelectItem value="365">Último año</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -827,7 +831,7 @@ export default function CampaignMonitorPage() {
 
 function AnalisisTab() {
   const { data: campaigns = [], isLoading: loadingCampaigns } = useCampaigns();
-  const { data: metrics = [], isLoading: loadingMetrics } = useCampaignMetrics(undefined, 30);
+  const { data: metrics = [], isLoading: loadingMetrics } = useCampaignMetrics(undefined, Number(range));
   const { data: keywords = [], isLoading: loadingKeywords } = useCampaignKeywords();
   const [range, setRange] = useState("30");
   const isLoading = loadingCampaigns || loadingMetrics || loadingKeywords;
@@ -854,6 +858,10 @@ function AnalisisTab() {
             <SelectItem value="7">Últimos 7 días</SelectItem>
             <SelectItem value="14">Últimos 14 días</SelectItem>
             <SelectItem value="30">Últimos 30 días</SelectItem>
+            <SelectItem value="60">Últimos 60 días</SelectItem>
+            <SelectItem value="90">Últimos 90 días</SelectItem>
+            <SelectItem value="180">Últimos 6 meses</SelectItem>
+            <SelectItem value="365">Último año</SelectItem>
           </SelectContent>
         </Select>
       </div>
