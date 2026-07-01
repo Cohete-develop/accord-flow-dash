@@ -134,10 +134,10 @@ function UpgradeScreen({ plan }: { plan: string }) {
 }
 
 function ResumenTab() {
+  const [range, setRange] = useState("30");
   const { data: campaigns = [], isLoading: loadingCampaigns } = useCampaigns();
   const { data: metrics = [], isLoading: loadingMetrics } = useCampaignMetrics(undefined, Number(range));
   const { data: history = [], isLoading: loadingHistory } = useAlertHistory();
-  const [range, setRange] = useState("30");
   const isLoading = loadingCampaigns || loadingMetrics || loadingHistory;
 
   const filtered = useMemo(() => {
@@ -830,10 +830,10 @@ export default function CampaignMonitorPage() {
 }
 
 function AnalisisTab() {
+  const [range, setRange] = useState("30");
   const { data: campaigns = [], isLoading: loadingCampaigns } = useCampaigns();
   const { data: metrics = [], isLoading: loadingMetrics } = useCampaignMetrics(undefined, Number(range));
   const { data: keywords = [], isLoading: loadingKeywords } = useCampaignKeywords();
-  const [range, setRange] = useState("30");
   const isLoading = loadingCampaigns || loadingMetrics || loadingKeywords;
 
   const filtered = useMemo(() => {
