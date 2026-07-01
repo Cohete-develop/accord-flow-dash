@@ -6,6 +6,7 @@ import { MetricHelp } from "./MetricHelp";
 import type { NorthStarScore, DailyPoint } from "@/hooks/useResumenAnalytics";
 import { Line, LineChart, ResponsiveContainer } from "recharts";
 import { cn } from "@/lib/utils";
+import { useCountUp } from "@/hooks/useCountUp";
 
 interface Props {
   score: NorthStarScore;
@@ -25,6 +26,8 @@ export function NorthStarHero({ score, daily, revenueDelta, range }: Props) {
   const style = GRADE_STYLES[score.grade];
   const sparkData = daily.map((d) => ({ v: d.roas }));
   const positive = revenueDelta >= 0;
+  const animatedScore = useCountUp(score.score, 1100);
+  const animatedDelta = useCountUp(revenueDelta, 900);
 
   return (
     <Card className={cn("relative overflow-hidden border-0 ring-1", style.ring)}>
@@ -50,7 +53,9 @@ export function NorthStarHero({ score, daily, revenueDelta, range }: Props) {
               />
             </div>
             <div className="flex items-baseline gap-2">
-              <span className={cn("text-6xl font-bold tabular-nums", style.text)}>{score.score}</span>
+              <span className={cn("text-6xl font-bold tabular-nums", style.text)}>
+                {Math.round(animatedScore)}
+              </span>
               <span className="text-2xl text-muted-foreground font-light">/100</span>
             </div>
             <Badge variant="secondary" className={cn("gap-1", style.text)}>{style.label}</Badge>
@@ -96,7 +101,8 @@ export function NorthStarHero({ score, daily, revenueDelta, range }: Props) {
                     stroke={positive ? "hsl(142 70% 45%)" : "hsl(0 75% 55%)"}
                     strokeWidth={2}
                     dot={false}
-                    isAnimationActive={false}
+                    isAnimationActive
+                    animationDuration={900}
                   />
                 </LineChart>
               </ResponsiveContainer>
@@ -108,7 +114,7 @@ export function NorthStarHero({ score, daily, revenueDelta, range }: Props) {
                 <TrendingDown className="h-4 w-4 text-destructive" />
               )}
               <span className={cn("font-semibold tabular-nums", positive ? "text-green-500" : "text-destructive")}>
-                {positive ? "+" : ""}{revenueDelta.toFixed(1)}%
+                {animatedDelta >= 0 ? "+" : ""}{animatedDelta.toFixed(1)}%
               </span>
               <span className="text-muted-foreground text-xs">ingresos vs período anterior</span>
             </div>
