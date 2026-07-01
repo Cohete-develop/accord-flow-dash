@@ -146,7 +146,7 @@ function KpiCard({ kpi, daily }: { kpi: KpiConfig; daily: DailyPoint[] }) {
   const sparkData = daily.map((d) => ({ v: Number(d[kpi.key] || 0) }));
 
   return (
-    <Card className="relative overflow-hidden group hover:shadow-md transition-shadow">
+    <Card className="relative overflow-hidden group transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5 hover:border-primary/30">
       <CardContent className="pt-4 pb-3">
         <div className="flex items-center gap-1 mb-1">
           <p className="text-[11px] text-muted-foreground uppercase tracking-wide font-medium">{kpi.label}</p>
