@@ -120,7 +120,7 @@ export function CampaignMonitorWidget() {
                 </TooltipTrigger>
                 <TooltipContent side="top" className="max-w-xs">
                   <p className="font-semibold mb-1">ROAS (Return on Ad Spend)</p>
-                  <p className="text-xs">Ingresos generados por cada $1 invertido. ROAS 3x = $3 de retorno por $1 gastado. Estas son las 3 campañas con mejor retorno en los últimos 30 días.</p>
+                  <p className="text-xs">Ingresos generados por cada $1 invertido. ROAS 3x = $3 de retorno por $1 gastado. Estas son las 3 campañas con mejor retorno en los últimos 6 meses.</p>
                 </TooltipContent>
               </Tooltip>
             </div>
