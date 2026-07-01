@@ -18,14 +18,14 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 const MAX_TURNS = 20;                  // cap historial: ~10 user + 10 assistant
 const MAX_RESPONSE_TOKENS = 2000;      // cap tokens por respuesta del modelo
 const MIN_COST_FOR_RANKING = 10;       // USD mínimo para entrar al ranking ROAS
-const PERIOD_DAYS = 30;                // ventana del resumen de campañas
+const PERIOD_DAYS = 90;                // ventana del resumen de campañas (3 meses)
 const TOP_BOTTOM_N = 3;                // top 3 + bottom 3 por plataforma
 const TOP_KEYWORDS = 5;
 const RECENT_ALERTS = 20;
 // ---------- Fase 4: function calling (search_campaign_by_name) --------------
 const MAX_TOOL_ITERATIONS = 2;         // máximo de rondas de tool calling por request
 const MAX_CAMPAIGN_RESULTS = 5;        // filas devueltas por search_campaign_by_name
-const DEFAULT_SEARCH_DAYS = 30;        // ventana default de la tool
+const DEFAULT_SEARCH_DAYS = 90;        // ventana default de la tool
 const MAX_SEARCH_DAYS = 180;           // cap de la ventana
 const MIN_QUERY_LENGTH = 3;            // largo mínimo del fragmento de búsqueda
 // -----------------------------------------------------------------------------
@@ -374,7 +374,7 @@ serve(async (req) => {
               conversions: totalsCurr.conversions,
               conversion_value: round(totalsCurr.conversion_value),
             },
-            period_comparison_vs_previous_30d: periodComparison,
+            period_comparison_vs_previous_period: periodComparison,
             by_platform: platformSummary,
             campaigns: campaignSummary,
             roas_ranking_by_platform: rankingByPlatform,
