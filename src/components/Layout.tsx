@@ -3,22 +3,66 @@ import fondoBg from "@/assets/Fondo_2026.png";
 import AIChatBubble from "@/components/AIChatBubble";
 import { NavLink } from "@/components/NavLink";
 import Footer from "@/components/Footer";
-import { Handshake, CreditCard, Package, BarChart3, LayoutDashboard, LogOut, Settings, Crown, Activity } from "lucide-react";
+import { Handshake, CreditCard, Package, BarChart3, LayoutDashboard, LogOut, Settings, Crown, Activity, Users, Megaphone, ChevronDown } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
-import { Navigate } from "react-router-dom";
+import { Navigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useImpersonation } from "@/hooks/useImpersonation";
 import { useQuery } from "@tanstack/react-query";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { useEffect, useState } from "react";
+import { cn } from "@/lib/utils";
 
-const navItems = [
-  { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+const influencerItems = [
   { to: "/acuerdos", label: "Acuerdos", icon: Handshake },
   { to: "/pagos", label: "Pagos", icon: CreditCard },
   { to: "/entregables", label: "Entregables Detalles", icon: Package },
   { to: "/kpis", label: "KPIs", icon: BarChart3 },
 ];
+
+const campaignItems = [
+  { to: "/campaign-monitor", label: "Campaign Monitor", icon: Activity, premium: true },
+];
+
+function NavGroup({
+  label,
+  icon: Icon,
+  children,
+  defaultOpen,
+}: {
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+  children: React.ReactNode;
+  defaultOpen: boolean;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
+  useEffect(() => {
+    if (defaultOpen) setOpen(true);
+  }, [defaultOpen]);
+  return (
+    <Collapsible open={open} onOpenChange={setOpen}>
+      <CollapsibleTrigger
+        className={cn(
+          "flex w-full items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+          "data-[state=open]:text-sidebar-accent-foreground",
+        )}
+      >
+        <Icon className="h-4 w-4" />
+        <span className="flex-1 text-left">{label}</span>
+        <ChevronDown
+          className={cn("h-4 w-4 transition-transform", open && "rotate-180")}
+        />
+      </CollapsibleTrigger>
+      <CollapsibleContent className="overflow-hidden data-[state=open]:animate-accordion-down data-[state=closed]:animate-accordion-up">
+        <div className="ml-3 mt-1 space-y-1 border-l border-sidebar-border/60 pl-2">
+          {children}
+        </div>
+      </CollapsibleContent>
+    </Collapsible>
+  );
+}
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   const { signOut, user, loading } = useAuth();
@@ -61,6 +105,10 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const isPremium = layoutData?.isPremium ?? false;
   const hasActiveImpersonation = layoutData?.hasActiveImpersonation ?? false;
 
+  const { pathname } = useLocation();
+  const influencerOpen = influencerItems.some((i) => pathname.startsWith(i.to));
+  const campaignsOpen = campaignItems.some((i) => pathname.startsWith(i.to));
+
   if (loading) {
     return <div className="min-h-screen flex items-center justify-center bg-background"><p>Cargando...</p></div>;
   }
@@ -93,26 +141,43 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           {/* Módulos CRM: ocultos para super_admin sin impersonar */}
           {(!isSuperAdmin || hasActiveImpersonation) && (
             <>
-              {navItems.map((item) => (
-                <NavLink
-                  key={item.to}
-                  to={item.to}
-                  className="flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-                  activeClassName="bg-sidebar-accent text-sidebar-accent-foreground"
-                >
-                  <item.icon className="h-4 w-4" />
-                  {item.label}
-                </NavLink>
-              ))}
+              <NavLink
+                to="/dashboard"
+                className="flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                activeClassName="bg-sidebar-accent text-sidebar-accent-foreground"
+              >
+                <LayoutDashboard className="h-4 w-4" />
+                Dashboard
+              </NavLink>
+
+              <NavGroup label="Influencer Marketing" icon={Users} defaultOpen={influencerOpen}>
+                {influencerItems.map((item) => (
+                  <NavLink
+                    key={item.to}
+                    to={item.to}
+                    className="flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                    activeClassName="bg-sidebar-accent text-sidebar-accent-foreground"
+                  >
+                    <item.icon className="h-4 w-4" />
+                    {item.label}
+                  </NavLink>
+                ))}
+              </NavGroup>
+
               {isPremium && (
-                <NavLink
-                  to="/campaign-monitor"
-                  className="flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-                  activeClassName="bg-sidebar-accent text-sidebar-accent-foreground"
-                >
-                  <Activity className="h-4 w-4" />
-                  Campaign Monitor
-                </NavLink>
+                <NavGroup label="Campañas" icon={Megaphone} defaultOpen={campaignsOpen}>
+                  {campaignItems.map((item) => (
+                    <NavLink
+                      key={item.to}
+                      to={item.to}
+                      className="flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                      activeClassName="bg-sidebar-accent text-sidebar-accent-foreground"
+                    >
+                      <item.icon className="h-4 w-4" />
+                      {item.label}
+                    </NavLink>
+                  ))}
+                </NavGroup>
               )}
             </>
           )}
