@@ -18,14 +18,14 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 const MAX_TURNS = 20;                  // cap historial: ~10 user + 10 assistant
 const MAX_RESPONSE_TOKENS = 2000;      // cap tokens por respuesta del modelo
 const MIN_COST_FOR_RANKING = 10;       // USD mínimo para entrar al ranking ROAS
-const PERIOD_DAYS = 30;                // ventana del resumen de campañas
+const PERIOD_DAYS = 90;                // ventana del resumen de campañas (3 meses)
 const TOP_BOTTOM_N = 3;                // top 3 + bottom 3 por plataforma
 const TOP_KEYWORDS = 5;
 const RECENT_ALERTS = 20;
 // ---------- Fase 4: function calling (search_campaign_by_name) --------------
 const MAX_TOOL_ITERATIONS = 2;         // máximo de rondas de tool calling por request
 const MAX_CAMPAIGN_RESULTS = 5;        // filas devueltas por search_campaign_by_name
-const DEFAULT_SEARCH_DAYS = 30;        // ventana default de la tool
+const DEFAULT_SEARCH_DAYS = 90;        // ventana default de la tool
 const MAX_SEARCH_DAYS = 180;           // cap de la ventana
 const MIN_QUERY_LENGTH = 3;            // largo mínimo del fragmento de búsqueda
 // -----------------------------------------------------------------------------
@@ -129,7 +129,7 @@ serve(async (req) => {
     let campaignsSummarySizeBytes = 0;
 
     // ---------- Fase 3: cruce influencers vs ads (siempre que haya pagos) ----
-    // Pro -> usa también totales de ads (mismas 30d).
+    // Pro -> usa también totales de ads (misma ventana de 90d).
     // Trial/Starter -> solo lado influencers, sin bloque de ads.
     let crossChannelBlock = "";
     let crossChannelInjected = false;
@@ -374,7 +374,7 @@ serve(async (req) => {
               conversions: totalsCurr.conversions,
               conversion_value: round(totalsCurr.conversion_value),
             },
-            period_comparison_vs_previous_30d: periodComparison,
+            period_comparison_vs_previous_period: periodComparison,
             by_platform: platformSummary,
             campaigns: campaignSummary,
             roas_ranking_by_platform: rankingByPlatform,
@@ -436,7 +436,7 @@ serve(async (req) => {
       );
 
       // Engagement total influencers del período = suma de interacciones de KPIs
-      // cuyo periodo cae en los últimos 30 días aproximados.
+      // cuyo periodo cae en la ventana actual (90 días aproximados).
       // KPIs.periodo es texto libre (formato YYYY-MM en este proyecto).
       // Usamos como heurística los KPIs creados/actualizados en la ventana.
       const periodMonth = startStr.slice(0, 7);
@@ -660,7 +660,7 @@ REGLAS CRÍTICAS DE MULTI-MONEDA Y CRUCE DE CANALES (LEER CON ATENCIÓN):
 EJEMPLOS DE PREGUNTAS CRUZADAS QUE PODÉS RESPONDER (usar la sección CRUCE INFLUENCERS vs ADS):
 - "¿Cuánto invertí este mes en influencers vs en Google Ads?" → Respondé con spend_by_channel_by_currency. Si hay varias monedas, mostrá ambas separadas.
 - "¿Qué familia de productos me rinde mejor combinando ambos canales?" → Usá by_familia_producto_by_currency, ordenada por total descendente. Mencioná el % sin clasificar de ads.
-- "¿Mi inversión digital total subió o bajó vs el mes pasado?" → Si la pregunta es sobre tendencia, usá period_comparison_vs_previous_30d del lado ads + comentá que el lado influencers no tiene comparativa de período previo (solo el actual).
+- "¿Mi inversión digital total subió o bajó vs el trimestre pasado?" → Si la pregunta es sobre tendencia, usá period_comparison_vs_previous_period del lado ads (compara los últimos 90 días vs los 90 días anteriores) + comentá que el lado influencers no tiene comparativa de período previo (solo el actual).
 
 FORMATO DE RESPUESTA (MUY IMPORTANTE — el chat es angosto, ~400px):
 - ❌ NUNCA uses tablas markdown con barras (|). Se ven rotas en el chat.
