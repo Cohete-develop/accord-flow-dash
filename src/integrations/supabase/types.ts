@@ -1413,15 +1413,26 @@ export type Database = {
         }
         Returns: boolean
       }
-      import_campaign_metrics: {
-        Args: {
-          _period_end: string
-          _period_start: string
-          _platform: string
-          _rows: Json
-        }
-        Returns: Json
-      }
+      import_campaign_metrics:
+        | {
+            Args: {
+              _period_end: string
+              _period_start: string
+              _platform: string
+              _rows: Json
+            }
+            Returns: Json
+          }
+        | {
+            Args: {
+              _dry_run?: boolean
+              _period_end: string
+              _period_start: string
+              _platform: string
+              _rows: Json
+            }
+            Returns: Json
+          }
       is_blocked_domain: { Args: { _domain: string }; Returns: boolean }
       is_platform_domain: { Args: { _domain: string }; Returns: boolean }
       is_protected_user: { Args: { _user_id: string }; Returns: boolean }
