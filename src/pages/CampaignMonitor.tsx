@@ -809,6 +809,15 @@ function ConexionesTab() {
 
 export default function CampaignMonitorPage() {
   const { isPremium, plan, loading } = useIsPremium();
+  const [range, setRangeState] = useState(getInitialRange);
+  const setRange = (v: string) => { setRangeState(v); persistRange(v); };
+  const [tab, setTab] = useState<string>(() => {
+    try { return localStorage.getItem("influxpert_cm_tab") || "resumen"; } catch { return "resumen"; }
+  });
+  const onTabChange = (v: string) => {
+    setTab(v);
+    try { localStorage.setItem("influxpert_cm_tab", v); } catch {}
+  };
 
   if (loading) {
     return <div className="flex items-center justify-center min-h-[60vh]"><p>Cargando...</p></div>;
@@ -825,7 +834,7 @@ export default function CampaignMonitorPage() {
         </div>
       </div>
 
-      <Tabs defaultValue="resumen">
+      <Tabs value={tab} onValueChange={onTabChange}>
         <TabsList>
           <TabsTrigger value="resumen">Resumen</TabsTrigger>
           <TabsTrigger value="campanas">Campañas</TabsTrigger>
@@ -833,9 +842,9 @@ export default function CampaignMonitorPage() {
           <TabsTrigger value="alertas">Alertas</TabsTrigger>
           <TabsTrigger value="conexiones">Conexiones</TabsTrigger>
         </TabsList>
-        <TabsContent value="resumen" className="mt-4"><ResumenTab /></TabsContent>
+        <TabsContent value="resumen" className="mt-4"><ResumenTab range={range} setRange={setRange} /></TabsContent>
         <TabsContent value="campanas" className="mt-4"><CampanasTab /></TabsContent>
-        <TabsContent value="analisis" className="mt-4"><AnalisisTab /></TabsContent>
+        <TabsContent value="analisis" className="mt-4"><AnalisisTab range={range} setRange={setRange} /></TabsContent>
         <TabsContent value="alertas" className="mt-4"><AlertasTab /></TabsContent>
         <TabsContent value="conexiones" className="mt-4"><ConexionesTab /></TabsContent>
       </Tabs>
